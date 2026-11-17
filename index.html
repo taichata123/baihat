@@ -81,7 +81,7 @@
   .step p{margin:0;color:var(--muted);font-size:14px}
 
   /* ---------- Form + danh sách ---------- */
-  .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;align-items:start}
+  .grid{display:grid;grid-template-columns:minmax(0,640px);justify-content:center;gap:16px;align-items:start}
   .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px}
   .card h3{font-size:20px;margin-bottom:4px}
   .card .lead{color:var(--muted);font-size:14px;margin:0 0 6px}
@@ -285,11 +285,6 @@
           <p class="lead">Chata tạm ngưng nhận bài. Bạn quay lại sau ít phút nhé!</p>
         </div>
       </div>
-      <div class="card">
-        <h3 id="qTitleG">Sắp phát</h3>
-        <p class="lead">Danh sách tự cập nhật, bạn không cần tải lại trang.</p>
-        <ol class="q" id="queueG"><li class="empty">Đang tải…</li></ol>
-      </div>
     </div>
   </section>
 
@@ -464,11 +459,6 @@
     $('nowSongG').textContent = p ? plain(p.song) : 'Chờ bài đầu tiên của bạn…';
     $('nowMetaG').textContent = p ? [plain(p.artist), who(p)].filter(Boolean).join(' · ') : 'Gửi bài ngay để mở màn nhé!';
     $('cntG').textContent = w.length;
-    $('qTitleG').textContent = 'Sắp phát' + (w.length ? ' ('+w.length+')' : '');
-    $('queueG').innerHTML = w.length ? w.map(function(r,i){
-      var meta = [plain(r.artist), r.name ? 'Bạn '+plain(r.name) : ''].filter(Boolean).join(' · ');
-      return '<li><div class="num">'+(i+1)+'</div><div class="qi"><b>'+esc(r.song)+'</b><small>'+kindTag(r)+esc(meta)+'</small></div></li>';
-    }).join('') : '<li class="empty">Chưa có bài nào. Bạn là người đầu tiên nhé! 🎉</li>';
     $('formCard').hidden = !d.open;
     $('closedCard').hidden = !!d.open;
   }
