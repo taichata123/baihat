@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chata – Đăng ký bài hát</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Lora:ital,wght@0,600;0,700;1,600&display=swap">
+<style>
+  :root{
+    color-scheme:light;
+    --bg:#F4F6F1; --surface:#FFFFFF; --sunk:#E9EEE7; --ink:#1A2926; --muted:#5A6B65; --line:#D6DFD7;
+    --accent:#0D6C68; --accent-d:#0A5552; --accent-ink:#FFFFFF; --accent-soft:#D5ECE8;
+    --leaf:#4E7A36; --leaf-soft:#E2EDD7; --sun:#F2B544; --sun-soft:#FBEFD3;
+    --bad:#B23A2E; --bad-soft:#F6DCD8; --band:#0D6C68; --band-ink:#EAF6F4;
+    --f-display:"Lora",Georgia,"Times New Roman",serif;
+    --f-body:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --r:14px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  h1,h2,h3{font-family:var(--f-display);margin:0;line-height:1.2;text-wrap:balance}
+  button,input,textarea{font:inherit;color:inherit}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  [hidden]{display:none!important}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 18px}
+  .eyebrow{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+  /* ---------- Thanh trên + hero ---------- */
+  .top{background:var(--band);color:var(--band-ink)}
+  .top-in{display:flex;align-items:center;gap:10px;padding-top:14px;padding-bottom:14px}
+  .brand{font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.2px}
+  .brand small{font-family:var(--f-body);font-weight:500;font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.8;margin-left:8px}
+  .top-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .top .link{color:var(--band-ink);text-decoration:none;font-size:13px;font-weight:600;border:1px solid rgba(234,246,244,.4);background:transparent;padding:7px 12px;border-radius:999px;cursor:pointer;white-space:nowrap}
+  .top .link.solid{background:rgba(255,255,255,.14)}
+  /* ---------- Đăng nhập ---------- */
+  .login-wrap{max-width:440px;padding-top:44px;padding-bottom:64px}
+  .login-card h2{font-size:26px;margin:6px 0 6px}
+  .remember{display:flex!important;gap:8px;align-items:center;font-weight:500!important;margin-top:14px!important}
+  .remember input{width:auto;accent-color:var(--accent)}
+  .back{background:none;border:none;color:var(--accent);margin-top:16px;cursor:pointer;font-weight:600;padding:0;font-size:14px}
+  .hero{background:var(--band);color:var(--band-ink);position:relative;overflow:hidden;padding:26px 0 92px}
+  .hero h1{font-size:clamp(32px,7vw,54px);color:#fff;max-width:14ch}
+  .hero h1 em{font-style:italic;color:var(--sun)}
+  .hero p{font-size:17px;max-width:46ch;margin:14px 0 24px;opacity:.92}
+  .cta{display:inline-flex;align-items:center;gap:8px;background:var(--sun);color:#2b2118;font-weight:700;text-decoration:none;padding:14px 22px;border-radius:999px;font-size:16px;box-shadow:0 6px 18px rgba(0,0,0,.15)}
+  .cta:hover{filter:brightness(1.05)}
+  .hero .notes{position:absolute;right:-10px;top:10px;width:min(46vw,360px);opacity:.16;pointer-events:none}
+  .wave{position:absolute;left:0;right:0;bottom:-1px;width:100%;height:56px;color:var(--bg);display:block}
+
+  /* ---------- Đang phát ---------- */
+  .now-wrap{margin-top:-64px;position:relative;z-index:2}
+  .now{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;display:flex;align-items:center;gap:16px;box-shadow:0 10px 30px rgba(13,108,104,.12)}
+  .disc{flex:0 0 58px;height:58px;border-radius:50%;background:radial-gradient(circle at center,var(--sun) 0 7px,#1A2926 8px 100%);position:relative;animation:spin 6s linear infinite}
+  .disc::after{content:"";position:absolute;inset:7px;border-radius:50%;border:1px solid rgba(255,255,255,.12)}
+  .now.idle .disc{animation:none;opacity:.5}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .now .info{flex:1;min-width:0}
+  .now .song{font-family:var(--f-display);font-weight:700;font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .now .meta{color:var(--muted);font-size:14px}
+  .eq{display:inline-flex;gap:2px;align-items:flex-end;height:11px;margin-right:6px;vertical-align:-1px}
+  .eq i{width:3px;background:var(--accent);border-radius:2px;animation:eq 1s infinite ease-in-out}
+  .eq i:nth-child(2){animation-delay:.2s}.eq i:nth-child(3){animation-delay:.4s}
+  .now.idle .eq{display:none}
+  @keyframes eq{0%,100%{height:3px}50%{height:11px}}
+  .count{text-align:center;flex:0 0 auto;padding-left:16px;border-left:1px solid var(--line)}
+  .count b{display:block;font-family:var(--f-display);font-size:26px;color:var(--accent);line-height:1}
+  .count span{font-size:12px;color:var(--muted)}
+
+  /* ---------- Các bước ---------- */
+  section{padding:40px 0 0}
+  .sec-h{margin-bottom:18px}
+  .sec-h h2{font-size:clamp(24px,4.5vw,32px);margin-top:6px}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .step{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+  .step .n{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-family:var(--f-display);font-weight:700;font-size:18px;margin-bottom:10px}
+  .step h3{font-size:18px;margin-bottom:4px}
+  .step p{margin:0;color:var(--muted);font-size:14px}
+
+  /* ---------- Form + danh sách ---------- */
+  .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;align-items:start}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+  .card h3{font-size:20px;margin-bottom:4px}
+  .card .lead{color:var(--muted);font-size:14px;margin:0 0 6px}
+  label{display:block;font-size:13px;font-weight:600;margin:14px 0 6px}
+  label .opt{font-weight:400;color:var(--muted)}
+  input,textarea{width:100%;font-size:16px;padding:12px 13px;border:1px solid var(--line);border-radius:10px;background:#FBFCFA}
+  input:focus,textarea:focus{outline:2px solid var(--accent);border-color:transparent;background:#fff}
+  textarea{resize:vertical;min-height:72px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .types{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 4px}
+  .type{position:relative;margin:0!important;cursor:pointer}
+  .type input{position:absolute;opacity:0;pointer-events:none}
+  .type .box{display:block;height:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px;background:#FBFCFA;transition:.15s}
+  .type .box b{display:block;font-size:15px;color:var(--ink)}
+  .type .box small{display:block;font-weight:400;color:var(--muted);font-size:12.5px;margin-top:2px}
+  .type input:checked + .box{border-color:var(--accent);background:var(--accent-soft)}
+  .type input:focus-visible + .box{outline:2px solid var(--accent);outline-offset:2px}
+  .kind{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;margin-right:6px;background:var(--sun-soft);color:#7a5200}
+  .kind.req{background:var(--leaf-soft);color:#2f5220}
+  .chip{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 11px;font-size:13px;cursor:pointer}
+  .chip:hover{border-color:var(--accent);color:var(--accent)}
+  .send{width:100%;margin-top:18px;padding:15px;border:none;border-radius:12px;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:16px;cursor:pointer}
+  .send:hover{background:var(--accent-d)}
+  .send:disabled{opacity:.6;cursor:default}
+  .msg{margin-top:12px;padding:12px 14px;border-radius:10px;font-size:14px;display:none}
+  .msg.ok{display:block;background:var(--leaf-soft);color:#2f5220}
+  .msg.err{display:block;background:var(--bad-soft);color:#7c271f}
+  .closed{text-align:center;padding:34px 20px}
+  .closed .big{font-size:40px}
+  ol.q{list-style:none;margin:10px 0 0;padding:0}
+  ol.q li{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-top:1px solid var(--line)}
+  ol.q li:first-child{border-top:none}
+  .num{flex:0 0 30px;height:30px;border-radius:50%;background:var(--sunk);color:var(--muted);font-weight:700;font-size:13px;display:grid;place-items:center}
+  ol.q li:first-child .num{background:var(--sun-soft);color:#8a5a00}
+  .qi{flex:1;min-width:0}
+  .qi b{display:block;font-size:15px;font-weight:600}
+  .qi small{color:var(--muted);font-size:13px}
+  .empty{color:var(--muted);font-size:14px;text-align:center;padding:16px 4px}
+  .rules{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 18px;margin:0;padding:0;list-style:none}
+  .rules li{display:flex;gap:10px;font-size:14px;color:var(--muted)}
+  .rules li::before{content:"";flex:0 0 8px;height:8px;border-radius:50%;background:var(--leaf);margin-top:7px}
+
+  /* ---------- Chân trang ---------- */
+  .gy .stars{display:flex;gap:4px;margin-top:2px}
+  .gy .star{font-size:32px;line-height:1;background:none;border:none;cursor:pointer;color:var(--line);padding:2px 3px}
+  .gy .star.on{color:var(--sun)}
+  .gy .star-lbl{font-size:13px;color:var(--muted);margin-top:4px;min-height:18px}
+  .ctas{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .cta2{display:inline-flex;align-items:center;gap:6px;color:var(--band-ink);font-weight:600;font-size:15px;text-decoration:none;padding:13px 16px;border-radius:999px;border:1px solid rgba(234,246,244,.45)}
+  .gg-in{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .gg-ic{flex:0 0 48px;height:48px;border-radius:50%;background:var(--sun-soft);display:grid;place-items:center;font-size:24px}
+  .gg-txt{flex:1;min-width:200px}
+  .gg-txt h3{font-size:19px;margin-bottom:2px}
+  .gg-txt .lead{margin:0}
+  .gg-btn{display:inline-flex;align-items:center;gap:6px;background:#fff;color:var(--ink);border:1.5px solid var(--line);font-weight:700;text-decoration:none;padding:11px 16px;border-radius:999px;font-size:14px;white-space:nowrap}
+  .gg-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .gg-inline{display:flex;justify-content:center;margin-top:10px}
+  .alert-card{margin-top:14px;border:1.5px solid #E7A79D;background:#FFF6F4}
+  .alert-h{font-size:16px;color:var(--bad);font-weight:700}
+  .stars-s{color:var(--sun);letter-spacing:1px}
+  .gg-note{margin:14px 0 0;padding-top:12px;border-top:1px dashed var(--line);font-size:14px;color:var(--muted)}
+  .gg-note a{color:var(--accent);font-weight:700}
+  .modal{position:fixed;inset:0;z-index:50;background:rgba(15,30,28,.55);display:flex;align-items:flex-end;justify-content:center;padding:12px}
+  .modal-box{position:relative;width:100%;max-width:520px;max-height:92vh;overflow:auto;border-radius:18px;animation:mup .22s ease-out}
+  .modal-x{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;border:none;background:var(--sunk);color:var(--ink);font-size:16px;cursor:pointer}
+  @keyframes mup{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+  @media (min-width:600px){.modal{align-items:center}}
+  body.noscroll{overflow:hidden}
+  .fb{margin:44px 0 0;background:var(--leaf-soft);border-radius:var(--r);padding:26px 22px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .fb h3{font-size:22px;color:#2f5220}
+  .fb p{margin:4px 0 0;color:#3f5d31;font-size:14px}
+  .fb a{margin-left:auto;background:var(--leaf);color:#fff;text-decoration:none;font-weight:700;padding:12px 18px;border-radius:999px;font-size:14px}
+  footer{text-align:center;color:var(--muted);font-size:13px;padding:28px 0 36px}
+  .preview{background:var(--sun-soft);color:#7a5200;font-size:12px;text-align:center;padding:6px}
+
+  /* ---------- Quầy nhạc ---------- */
+  .admin-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  .switch{display:flex;align-items:center;gap:10px;font-weight:600}
+  .tog{width:50px;height:30px;border-radius:15px;background:#c8d0cb;position:relative;cursor:pointer;transition:.2s;flex:none}
+  .tog::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+  .tog.on{background:var(--leaf)} .tog.on::after{left:23px}
+  .stat{font-size:14px;color:var(--muted)}
+  .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .acts button,.acts a{font-size:13px;padding:7px 11px;border-radius:8px;text-decoration:none;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+  .acts .play{background:var(--accent);border-color:var(--accent);color:#fff}
+  .acts .skip{color:var(--bad);border-color:var(--bad-soft)}
+  .tag{display:inline-block;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;margin-right:6px}
+  .note{margin-top:5px;font-size:13px;background:var(--sun-soft);border-radius:8px;padding:6px 9px;color:var(--ink)}
+
+  @media (max-width:760px){
+    .steps{grid-template-columns:1fr}
+    .grid{grid-template-columns:1fr}
+    .rules{grid-template-columns:1fr}
+    .step{display:flex;gap:14px;align-items:flex-start}
+    .step .n{flex:none;margin:0}
+  }
+  @media (max-width:420px){
+    .count{display:none}
+    #fbTop{display:none}
+    .row2{grid-template-columns:1fr}
+    .fb a{margin-left:0}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto}}
+</style>
+</head>
+<body data-admin="false" data-pin="" data-fb="https://www.facebook.com/795212637001945">
+
+<div class="preview" id="previewBar" hidden>Bản xem trước · dữ liệu mẫu · bấm "Ban nhạc", nhập mã bất kỳ để xem trang quản lý</div>
+
+<div class="top">
+  <div class="wrap top-in">
+    <div class="brand">Chata<small id="topLabel">Góc âm nhạc</small></div>
+    <div class="top-actions">
+      <a class="link" id="fbTop" href="#" target="_blank" rel="noopener">Fanpage Chata</a>
+      <button class="link solid" id="loginBtn" type="button">🎸 Ban nhạc</button>
+      <button class="link" id="logoutBtn" type="button" hidden>Đăng xuất</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== ĐĂNG NHẬP BAN NHẠC ===================== -->
+<div id="login" hidden>
+  <div class="wrap login-wrap">
+    <div class="card login-card">
+      <div class="eyebrow">Dành cho ban nhạc</div>
+      <h2>Đăng nhập quầy nhạc</h2>
+      <p class="lead">Nhập mã đăng nhập để quản lý danh sách bài hát khách gửi.</p>
+      <form id="loginForm" novalidate>
+        <label for="pw">Mã đăng nhập</label>
+        <input id="pw" type="password" autocomplete="current-password" maxlength="60">
+        <label class="remember"><input type="checkbox" id="remember" checked> Ghi nhớ đăng nhập trên máy này</label>
+        <button class="send" id="loginSubmit" type="submit">Đăng nhập</button>
+        <div class="msg" id="loginMsg" role="status" aria-live="polite"></div>
+      </form>
+      <button type="button" class="back" id="backBtn">← Quay lại trang đăng ký bài hát</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== TRANG KHÁCH ===================== -->
+<div id="guest" hidden>
+  <div class="hero">
+    <svg class="notes" viewBox="0 0 200 200" aria-hidden="true" fill="currentColor">
+      <path d="M150 20v100a22 22 0 1 1-10-18V52L80 66v74a22 22 0 1 1-10-18V40z"/>
+      <circle cx="170" cy="160" r="8"/><circle cx="30" cy="40" r="5"/>
+    </svg>
+    <div class="wrap">
+      <div class="eyebrow" style="color:var(--band-ink);opacity:.8">Cà phê · Hồ bơi · Khu vui chơi</div>
+      <h1 style="margin-top:10px">Hôm nay bạn muốn nghe <em>bài gì?</em></h1>
+      <p>Lên hát cùng ban nhạc Chata, hoặc gửi bài để ban nhạc hát tặng bạn. Tặng người thương, tặng bé, hay chỉ để chill bên ly cà phê.</p>
+      <div class="ctas"><a class="cta" href="#dang-ky">♪ Đăng ký bài hát</a><a class="cta2" href="#gop-y">💛 Ủng hộ đêm nhạc</a></div>
+    </div>
+    <svg class="wave" viewBox="0 0 1440 56" preserveAspectRatio="none" aria-hidden="true">
+      <path fill="currentColor" d="M0 32c120-18 240-26 360-14s240 30 360 26 240-28 360-30 240 14 360 22V56H0z"/>
+    </svg>
+  </div>
+
+  <div class="wrap now-wrap">
+    <div class="now idle" id="nowG">
+      <div class="disc" aria-hidden="true"></div>
+      <div class="info">
+        <div class="eyebrow"><span class="eq"><i></i><i></i><i></i></span><span id="nowLblG">Đang phát</span></div>
+        <div class="song" id="nowSongG">Đang tải…</div>
+        <div class="meta" id="nowMetaG"></div>
+      </div>
+      <div class="count"><b id="cntG">–</b><span>bài đang chờ</span></div>
+    </div>
+  </div>
+
+  <section id="dang-ky">
+    <div class="wrap grid">
+      <div>
+        <div class="card" id="formCard">
+          <h3>🎵 Đăng ký bài hát</h3>
+          <p class="lead">Mỗi bạn gửi 1 bài, 10 phút sau gửi tiếp được nhé.</p>
+          <form id="f" autocomplete="off" novalidate>
+            <div class="types" role="radiogroup" aria-label="Cách tham gia">
+              <label class="type"><input type="radio" name="kind" value="hat" checked><span class="box"><b>🎤 Đăng ký bài hát</b><small>Bạn lên hát cùng ban nhạc</small></span></label>
+              <label class="type"><input type="radio" name="kind" value="yeucau"><span class="box"><b>🎶 Gửi yêu cầu</b><small>Ban nhạc hát cho bạn nghe</small></span></label>
+            </div>
+            <label for="song">Tên bài hát *</label>
+            <input id="song" maxlength="100" placeholder="VD: Nơi Này Có Anh" required>
+            <div id="artistWrap">
+              <label for="artist">Ca sĩ <span class="opt">(không bắt buộc)</span></label>
+              <input id="artist" maxlength="60" placeholder="VD: Sơn Tùng M-TP">
+            </div>
+            <label for="name">Tên bạn <span class="opt" id="nameOpt">(tuỳ chọn)</span></label>
+            <input id="name" maxlength="40" placeholder="VD: Minh">
+            <div id="noteWrap">
+              <label for="note">Lời nhắn / tặng ai <span class="opt">(tuỳ chọn)</span></label>
+              <textarea id="note" maxlength="150" placeholder="VD: Tặng bé Na nhân ngày sinh nhật 🎂"></textarea>
+            </div>
+            <button class="send" id="sendBtn" type="submit">Đăng ký bài hát</button>
+            <div class="msg" id="msg" role="status" aria-live="polite"></div>
+          </form>
+        </div>
+        <div class="card closed" id="closedCard" hidden>
+          <div class="big">🌙</div>
+          <h3>Quầy nhạc đang nghỉ một chút</h3>
+          <p class="lead">Chata tạm ngưng nhận bài. Bạn quay lại sau ít phút nhé!</p>
+        </div>
+      </div>
+      <div class="card">
+        <h3 id="qTitleG">Sắp phát</h3>
+        <p class="lead">Danh sách tự cập nhật, bạn không cần tải lại trang.</p>
+        <ol class="q" id="queueG"><li class="empty">Đang tải…</li></ol>
+      </div>
+    </div>
+  </section>
+
+  <section id="gop-y" class="gy">
+    <div class="wrap">
+      <div class="card">
+        <div class="gg-in">
+          <div class="gg-ic" aria-hidden="true">⭐</div>
+          <div class="gg-txt">
+            <h3>Ủng hộ ban nhạc &amp; Chata</h3>
+            <p class="lead">Nếu bạn muốn ủng hộ ban nhạc và Chata, hãy dành 1 phút chia sẻ trải nghiệm tối nay của bạn trên Google. Mỗi chia sẻ giúp thêm nhiều người biết đến đêm nhạc và giúp ban nhạc có động lực mỗi tuần 💛</p>
+          </div>
+          <a class="gg-btn" href="https://search.google.com/local/writereview?placeid=ChIJEegwNQAlbDERaQY0_tJUsGc" target="_blank" rel="noopener">Chia sẻ trên Google ↗</a>
+        </div>
+        <p class="gg-note">Có điều gì chưa ổn tối nay? <a class="jump" href="#gop-y-form">Nói với Chata ngay</a> để mình xử lý liền.</p>
+      </div>
+      <div class="modal" id="fbModal" hidden role="dialog" aria-modal="true" aria-label="Góp ý cho Chata">
+      <div class="card modal-box" id="gop-y-form">
+        <button type="button" class="modal-x" id="fbClose" aria-label="Đóng">✕</button>
+        <div class="eyebrow">Góp ý cho Chata</div>
+        <h3 style="margin-top:6px">Có điều gì chưa ổn? Nói với Chata nhé</h3>
+        <p class="lead">Đêm nhạc Chata vẫn đang trong quá trình xây dựng và hoàn thiện, hướng đến một hoạt động định kỳ mỗi tuần. Âm thanh, bài hát, chỗ ngồi hay phục vụ có điều gì chưa vừa ý, bạn cứ nói thẳng. Chata sẽ xử lý ngay trong tối nay và làm tốt hơn ở những tuần sau.</p>
+        <form id="fbForm" autocomplete="off" novalidate>
+          <label for="fbText">Góp ý của bạn *</label>
+          <textarea id="fbText" maxlength="500" placeholder="VD: Âm thanh hơi to, muốn thêm nhạc acoustic, nên có đêm nhạc vào tối thứ 7…"></textarea>
+          <label for="fbName">Tên bạn <span class="opt">(tuỳ chọn)</span></label>
+          <input id="fbName" maxlength="40" placeholder="VD: Minh">
+          <label for="fbPhone">Số điện thoại <span class="opt">(nếu bạn muốn Chata liên hệ lại)</span></label>
+          <input id="fbPhone" type="tel" inputmode="tel" maxlength="15" placeholder="VD: 0912 345 678">
+          <button class="send" id="fbBtn" type="submit">Gửi góp ý</button>
+          <div class="msg" id="fbMsg" role="status" aria-live="polite"></div>
+          <div class="gg-inline" id="fbGg" hidden><a class="gg-btn" href="https://search.google.com/local/writereview?placeid=ChIJEegwNQAlbDERaQY0_tJUsGc" target="_blank" rel="noopener">💛 Chia sẻ trải nghiệm trên Google để ủng hộ ban nhạc</a></div>
+        </form>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="card">
+        <div class="eyebrow" style="margin-bottom:12px">Một vài lưu ý nhỏ</div>
+        <ul class="rules">
+          <li>Bài được phát theo thứ tự gửi. Bài đã có trong danh sách thì không cần gửi lại.</li>
+          <li>Chata là không gian gia đình, có nhiều bé nhỏ. Quầy có thể bỏ qua bài có lời chưa phù hợp.</li>
+          <li>Vào giờ đông khách, danh sách có thể dài hơn. Cảm ơn bạn đã kiên nhẫn chờ!</li>
+          <li>Muốn tặng bài bất ngờ? Ghi lời nhắn, quầy nhạc sẽ chuẩn bị giúp bạn.</li>
+        </ul>
+      </div>
+      <div class="fb">
+        <div>
+          <h3>Thích trang Chata nhé 💛</h3>
+          <p>Để không bỏ lỡ ưu đãi, sự kiện cuối tuần và các hoạt động cho bé.</p>
+        </div>
+        <a id="fbBottom" href="#" target="_blank" rel="noopener">Ghé Fanpage Chata</a>
+      </div>
+    </div>
+  </section>
+  <footer>Chata · Cà phê – Hồ bơi – Khu vui chơi trẻ em</footer>
+</div>
+
+<!-- ===================== QUẦY NHẠC ===================== -->
+<div id="admin" hidden>
+  <div class="wrap" style="padding-top:18px">
+    <div class="card">
+      <div class="admin-bar">
+        <div class="switch"><div class="tog" id="tog" role="switch" tabindex="0" aria-label="Mở nhận bài"></div><span id="togLbl">Đang nhận bài</span></div>
+        <div class="stat" id="stat"></div>
+      </div>
+    </div>
+    <div class="card alert-card" id="alertCard" hidden>
+      <div class="alert-h">⚠️ Góp ý cần xử lý ngay <span id="alertCnt"></span></div>
+      <p class="lead" style="margin:4px 0 0">Khách vừa gửi góp ý. Quản lý đọc và ra hỏi han khách sớm nhé, xử lý xong bấm "Đã xử lý".</p>
+      <ol class="q" id="alertList"></ol>
+    </div>
+    <div class="now idle" id="nowA" style="margin-top:14px">
+      <div class="disc" aria-hidden="true"></div>
+      <div class="info">
+        <div class="eyebrow"><span class="eq"><i></i><i></i><i></i></span>Đang phát</div>
+        <div class="song" id="nowSongA">Chưa phát bài nào</div>
+        <div class="meta" id="nowMetaA"></div>
+        <div id="nowExtraA"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h3 id="qTitleA">Sắp phát</h3>
+      <ol class="q" id="queueA"><li class="empty">Đang tải…</li></ol>
+    </div>
+    <footer>Màn hình quầy nhạc · tự cập nhật mỗi 10 giây</footer>
+  </div>
+</div>
+
+<script>
+(function(){
+  var body = document.body;
+  var IS_ADMIN = body.getAttribute('data-admin') === 'true';
+  var PIN = body.getAttribute('data-pin') || '';
+  var FB = body.getAttribute('data-fb') || '';
+  if (!/^https:\/\//.test(FB)) FB = 'https://www.facebook.com/';
+  var COOLDOWN_MIN = 10;
+  var SUGGEST = [
+    ['Baby Shark',''], ['Chú Ếch Con','Bé Bảo An'], ['Nơi Này Có Anh','Sơn Tùng M-TP'],
+    ['Có Chắc Yêu Là Đây','Sơn Tùng M-TP'], ['Diễm Xưa','Trịnh Công Sơn'], ['Hạ Trắng','Trịnh Công Sơn'],
+    ['Ngày Đầu Tiên','Đức Phúc'], ['Happy Birthday','']
+  ];
+  var $ = function(id){ return document.getElementById(id); };
+
+  /* ---- Xem trước khi chưa chạy trên Google Apps Script ---- */
+  var API = 'https://script.google.com/macros/s/AKfycbxvRhb0Jjbrokyew1RBqWwBTCiqSIsvciWx_Vns9LeOs9LLCvTJcxOk71-7CMKuI1I/exec';
+  var PREVIEW = !API && (typeof google === 'undefined' || !google.script);
+  if (PREVIEW) { $('previewBar').hidden = false; }
+  var mock = { open:true, done:12, rows:[
+    {id:'R1',kind:'hat',name:'Lan',place:'Bàn 3',song:'Ngày Đầu Tiên',artist:'Đức Phúc',note:'',status:'Đang phát'},
+    {id:'R2',kind:'yeucau',name:'Minh',place:'Hồ bơi',song:'Nơi Này Có Anh',artist:'Sơn Tùng M-TP',note:'Tặng vợ yêu 💕',status:'Chờ'},
+    {id:'R3',kind:'yeucau',name:'',place:'Khu vui chơi',song:'Baby Shark',artist:'',note:'Cho bé Bin 4 tuổi',status:'Chờ'},
+    {id:'R4',kind:'hat',name:'Hà',place:'Bàn 8',song:'Hạ Trắng',artist:'Trịnh Công Sơn',note:'',status:'Chờ'}
+  ]};
+  mock.alerts = [{row:5, time:Date.now()-600000, star:2, text:'Âm thanh to quá, bàn gần loa nói chuyện không nghe được.', name:'Hoa'}];
+  function mockQueue(){
+    return {open:mock.open, doneToday:mock.done, fbToday:3, alerts:mock.alerts,
+      playing:mock.rows.filter(function(r){return r.status==='Đang phát';}),
+      waiting:mock.rows.filter(function(r){return r.status==='Chờ';})};
+  }
+  function call(fn, args, ok, fail){
+    fail = fail || function(e){ console.error(e); };
+    if (API) {
+      fetch(API, { method:'POST', redirect:'follow', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({ fn: fn, args: args }) })
+        .then(function(r){ return r.json(); })
+        .then(function(j){ if (j && j.ok) ok(j.data); else fail(new Error(j && j.error || 'Lỗi kết nối')); })
+        .catch(fail);
+      return;
+    }
+    if (!PREVIEW) {
+      var r = google.script.run.withSuccessHandler(ok).withFailureHandler(fail || function(e){ console.error(e); });
+      r[fn].apply(r, args); return;
+    }
+    setTimeout(function(){
+      if (fn==='getQueue') return ok(mockQueue());
+      if (fn==='submitRequest') {
+        var d=args[0], s=d.song.trim().toLowerCase();
+        if (mock.rows.some(function(r){return (r.status==='Chờ'||r.status==='Đang phát') && r.song.toLowerCase()===s;}))
+          return ok({ok:false,msg:'Bài này đã có trong danh sách rồi, sắp tới lượt nha! 🎶'});
+        mock.rows.push({id:'R'+Date.now(),kind:d.kind,name:d.name,place:d.place,song:d.song.trim(),artist:d.artist,note:d.note,status:'Chờ'});
+        return ok({ok:true,pos:mockQueue().waiting.length});
+      }
+      if (fn==='adminSetStatus') {
+        if (args[2]==='Đang phát') mock.rows.forEach(function(r){ if(r.status==='Đang phát'){ r.status='Đã phát'; mock.done++; }});
+        mock.rows.forEach(function(r){ if(r.id===args[1]){ r.status=args[2]; if(args[2]==='Đã phát') mock.done++; }});
+        return ok(mockQueue());
+      }
+      if (fn==='adminSetOpen') { mock.open=args[1]; return ok(mockQueue()); }
+      if (fn==='adminAckFeedback') { mock.alerts = mock.alerts.filter(function(a){ return a.row !== args[1]; }); return ok(mockQueue()); }
+      if (fn==='submitFeedback' && String(args[0].text||'').trim()) mock.alerts.push({row:Date.now(), time:Date.now(), star:args[0].star, text:args[0].text, name:args[0].name});
+      if (fn==='submitFeedback') return ok(String(args[0].text||'').trim() ? {ok:true} : {ok:false,msg:'Bạn viết vài dòng góp ý giúp Chata nhé.'});
+      if (fn==='adminLogin') return ok(args[0] ? {ok:true} : {ok:false,msg:'Bạn nhập mã đăng nhập nhé.'});
+    }, 250);
+  }
+
+  /* ---- Hiển thị ---- */
+  function esc(s){ return String(s==null?'':s).replace(/^'/,'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function plain(s){ return String(s||'').replace(/^'/,''); }
+  function yt(r){ return 'https://www.youtube.com/results?search_query='+encodeURIComponent((plain(r.song)+' '+plain(r.artist)).trim()); }
+
+  function isReq(r){ return r.kind === 'yeucau'; }
+  function kindTag(r){ return isReq(r) ? '<span class="kind req">🎶 Yêu cầu</span>' : '<span class="kind">🎤 Khách hát</span>'; }
+  function who(r){ if (!r.name) return isReq(r) ? 'Yêu cầu của khách' : 'Khách lên hát'; return isReq(r) ? 'Bạn '+plain(r.name)+' yêu cầu' : 'Bạn '+plain(r.name)+' đang hát'; }
+
+  function renderGuest(d){
+    var p = d.playing && d.playing[0], w = d.waiting || [];
+    $('nowG').classList.toggle('idle', !p);
+    $('nowSongG').textContent = p ? plain(p.song) : 'Chờ bài đầu tiên của bạn…';
+    $('nowMetaG').textContent = p ? [plain(p.artist), who(p)].filter(Boolean).join(' · ') : 'Gửi bài ngay để mở màn nhé!';
+    $('cntG').textContent = w.length;
+    $('qTitleG').textContent = 'Sắp phát' + (w.length ? ' ('+w.length+')' : '');
+    $('queueG').innerHTML = w.length ? w.map(function(r,i){
+      var meta = [plain(r.artist), r.name ? 'Bạn '+plain(r.name) : ''].filter(Boolean).join(' · ');
+      return '<li><div class="num">'+(i+1)+'</div><div class="qi"><b>'+esc(r.song)+'</b><small>'+kindTag(r)+esc(meta)+'</small></div></li>';
+    }).join('') : '<li class="empty">Chưa có bài nào. Bạn là người đầu tiên nhé! 🎉</li>';
+    $('formCard').hidden = !d.open;
+    $('closedCard').hidden = !!d.open;
+  }
+
+  /* ---- Thông báo góp ý dưới 3 sao ---- */
+  var seenAlerts = [], alertInit = false, audioCtx = null;
+  function hhmm(t){ var x = new Date(t); return ('0'+x.getHours()).slice(-2)+':'+('0'+x.getMinutes()).slice(-2); }
+  function ting(){
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.18].forEach(function(dt){
+        var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.frequency.value = 880; o.connect(g); g.connect(audioCtx.destination);
+        var t0 = audioCtx.currentTime + dt;
+        g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.15);
+        o.start(t0); o.stop(t0 + 0.16);
+      });
+    } catch(e){}
+    try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch(e){}
+  }
+  document.addEventListener('click', function(){ try { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); else if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){} }, { once: true });
+  function renderAlerts(al){
+    $('alertCard').hidden = !al.length;
+    $('alertCnt').textContent = al.length ? '(' + al.length + ')' : '';
+    $('alertList').innerHTML = al.map(function(a){
+      var s = Math.max(0, Math.min(5, a.star || 0));
+      return '<li><div class="qi"><b>' + (s ? '<span class="stars-s">' + '★'.repeat(s) + '☆'.repeat(5 - s) + '</span> · ' : '') + hhmm(a.time) + (a.name ? ' · ' + esc(a.name) : '') + (a.phone ? ' · <a href="tel:' + esc(a.phone) + '">📞 ' + esc(a.phone) + '</a>' : '') + '</b>' +
+        '<div class="note">' + esc(a.text) + '</div>' +
+        '<div class="acts"><button class="play" data-ack="' + a.row + '">✓ Đã xử lý</button></div></div></li>';
+    }).join('');
+    var ids = al.map(function(a){ return a.row; });
+    if (alertInit && ids.some(function(id){ return seenAlerts.indexOf(id) < 0; })) ting();
+    seenAlerts = ids; alertInit = true;
+    document.title = al.length ? '(' + al.length + ') ⚠️ Chata – Quầy nhạc' : 'Chata – Quầy nhạc';
+  }
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('button[data-ack]');
+    if (!b || mode !== 'admin') return;
+    b.disabled = true;
+    call('adminAckFeedback', [PIN, +b.getAttribute('data-ack')], render, function(){ b.disabled = false; });
+  });
+
+  function renderAdmin(d){
+    // Mã đã bị đổi trên máy chủ → đăng xuất, mời đăng nhập lại
+    if (d.doneToday === undefined) { logout(); openLogin('Mã đăng nhập đã thay đổi, bạn đăng nhập lại nhé.'); return; }
+    var p = d.playing && d.playing[0], w = d.waiting || [];
+    $('nowA').classList.toggle('idle', !p);
+    $('nowSongA').textContent = p ? plain(p.song) : 'Chưa phát bài nào';
+    $('nowMetaA').innerHTML = p ? (p.place?'<span class="tag">'+esc(p.place)+'</span>':'') + kindTag(p) + esc([plain(p.artist), plain(p.name)].filter(Boolean).join(' · ')) : 'Bấm ▶ Phát ở một bài bên dưới';
+    $('nowExtraA').innerHTML = p ? ((p.note?'<div class="note">💬 '+esc(p.note)+'</div>':'') +
+      '<div class="acts"><button data-id="'+esc(p.id)+'" data-s="Đã phát">✓ Xong bài</button><a href="'+yt(p)+'" target="_blank" rel="noopener">YouTube</a></div>') : '';
+    $('qTitleA').textContent = 'Sắp phát' + (w.length ? ' ('+w.length+')' : '');
+    $('queueA').innerHTML = w.length ? w.map(function(r,i){
+      return '<li><div class="num">'+(i+1)+'</div><div class="qi"><b>'+esc(r.song)+'</b><small>'+
+        kindTag(r)+(r.place?'<span class="tag">'+esc(r.place)+'</span>':'')+esc([plain(r.artist), plain(r.name)].filter(Boolean).join(' · '))+'</small>'+
+        (r.note?'<div class="note">💬 '+esc(r.note)+'</div>':'')+
+        '<div class="acts"><button class="play" data-id="'+esc(r.id)+'" data-s="Đang phát">▶ Phát</button>'+
+        '<a href="'+yt(r)+'" target="_blank" rel="noopener">YouTube</a>'+
+        '<button class="skip" data-id="'+esc(r.id)+'" data-s="Bỏ qua">✕ Bỏ</button></div></div></li>';
+    }).join('') : '<li class="empty">Chưa có bài nào đang chờ.</li>';
+    $('tog').classList.toggle('on', !!d.open);
+    $('tog').setAttribute('aria-checked', d.open ? 'true' : 'false');
+    $('togLbl').textContent = d.open ? 'Đang nhận bài' : 'Đã tạm ngưng nhận bài';
+    $('stat').textContent = 'Hôm nay đã phát: ' + (d.doneToday || 0) + ' bài · Góp ý: ' + (d.fbToday || 0);
+    renderAlerts(d.alerts || []);
+  }
+
+  /* ---- Chuyển màn hình: khách / đăng nhập / quầy nhạc ---- */
+  var mode = 'guest';
+  function setMode(m){
+    mode = m;
+    $('guest').hidden = m !== 'guest';
+    $('login').hidden = m !== 'login';
+    $('admin').hidden = m !== 'admin';
+    $('loginBtn').hidden = m === 'admin';
+    $('logoutBtn').hidden = m !== 'admin';
+    $('fbTop').hidden = m === 'admin';
+    $('topLabel').textContent = m === 'admin' ? 'Quầy nhạc' : (m === 'login' ? 'Ban nhạc' : 'Góc âm nhạc');
+    document.title = m === 'admin' ? 'Chata – Quầy nhạc' : 'Chata – Đăng ký bài hát';
+    window.scrollTo(0, 0);
+    if (m !== 'login') load();
+  }
+  function render(d){ if (mode === 'admin') renderAdmin(d); else if (mode === 'guest') renderGuest(d); }
+  function load(){ var m = mode; call('getQueue', [m === 'admin' ? PIN : ''], function(d){ if (m === mode) render(d); }); }
+
+  var KEY = 'chata_band_login';
+  function getSaved(){ try { return localStorage.getItem(KEY) || ''; } catch(e){ return ''; } }
+  function save(pin){ try { localStorage.setItem(KEY, pin); } catch(e){} }
+  function clearSaved(){ try { localStorage.removeItem(KEY); } catch(e){} }
+  function logout(){ PIN = ''; clearSaved(); setMode('guest'); }
+  function loginMsg(t){ var m=$('loginMsg'); m.className = t ? 'msg err' : 'msg'; m.textContent = t || ''; }
+  function openLogin(msg){ setMode('login'); loginMsg(msg || ''); $('pw').value=''; setTimeout(function(){ $('pw').focus(); }, 50); }
+
+  $('loginBtn').addEventListener('click', function(){ openLogin(); });
+  $('backBtn').addEventListener('click', function(){ setMode('guest'); });
+  $('logoutBtn').addEventListener('click', logout);
+  $('loginForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var pw = $('pw').value.trim();
+    if (!pw) { loginMsg('Bạn nhập mã đăng nhập nhé.'); return; }
+    var btn = $('loginSubmit'); btn.disabled = true; btn.textContent = 'Đang kiểm tra…';
+    call('adminLogin', [pw], function(res){
+      btn.disabled = false; btn.textContent = 'Đăng nhập';
+      if (res && res.ok) {
+        PIN = pw;
+        if ($('remember').checked) save(pw); else clearSaved();
+        setMode('admin');
+      } else loginMsg((res && res.msg) || 'Mã đăng nhập chưa đúng.');
+    }, function(){ btn.disabled = false; btn.textContent = 'Đăng nhập'; loginMsg('Mạng đang chập chờn, bạn thử lại nhé.'); });
+  });
+
+  /* ---- Khách gửi bài ---- */
+  function lastSent(){ try { return +localStorage.getItem('chata_song_last') || 0; } catch(e){ return 0; } }
+  function markSent(){ try { localStorage.setItem('chata_song_last', String(Date.now())); } catch(e){} }
+  function showMsg(t, ok){ var m=$('msg'); m.className='msg '+(ok?'ok':'err'); m.textContent=t; }
+
+
+  function kind(){ var k = document.querySelector('input[name=kind]:checked'); return k ? k.value : 'hat'; }
+  function sendLabel(){ return kind() === 'hat' ? 'Đăng ký bài hát' : 'Gửi yêu cầu'; }
+  function updateKind(){
+    var hat = kind() === 'hat';
+    $('nameOpt').textContent = hat ? '*' : '(tuỳ chọn)';
+    $('name').placeholder = hat ? 'Để ban nhạc mời bạn lên' : 'VD: Minh';
+    $('artistWrap').hidden = hat;
+    $('noteWrap').hidden = hat;
+    $('sendBtn').textContent = sendLabel();
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=kind]'), function(el){ el.addEventListener('change', updateKind); });
+  updateKind();
+
+  $('f').addEventListener('submit', function(e){
+    e.preventDefault();
+    var song = $('song').value.trim();
+    if (!song) { showMsg('Bạn nhập tên bài hát giúp Chata nhé.', false); $('song').focus(); return; }
+    if (kind() === 'hat' && !$('name').value.trim()) { showMsg('Bạn ghi tên để ban nhạc mời bạn lên hát nhé.', false); $('name').focus(); return; }
+    var waitMs = COOLDOWN_MIN*60000 - (Date.now() - lastSent());
+    if (!PREVIEW && waitMs > 0) { showMsg('Bạn vừa gửi bài rồi. Khoảng '+Math.ceil(waitMs/60000)+' phút nữa gửi tiếp được nhé!', false); return; }
+    var btn = $('sendBtn'); btn.disabled = true; btn.textContent = 'Đang gửi…';
+    call('submitRequest', [{ kind:kind(), song:song, artist: kind() === 'hat' ? '' : $('artist').value, name:$('name').value, place:'', note: kind() === 'hat' ? '' : $('note').value }],
+      function(res){
+        btn.disabled = false; btn.textContent = sendLabel();
+        if (res && res.ok) {
+          markSent();
+          showMsg(kind() === 'hat'
+            ? '🎤 Đăng ký thành công! Bạn đang ở vị trí số '+res.pos+'. Tới lượt, ban nhạc sẽ mời bạn lên nhé.'
+            : '🎶 Chata đã nhận yêu cầu! Bài của bạn ở vị trí số '+res.pos+' trong danh sách.', true);
+          $('song').value=''; $('artist').value=''; $('note').value='';
+          load();
+        } else showMsg((res && res.msg) || 'Có lỗi, bạn thử lại nhé.', false);
+      },
+      function(){ btn.disabled = false; btn.textContent = sendLabel(); showMsg('Mạng đang chập chờn, bạn thử gửi lại nhé.', false); });
+  });
+
+  /* ---- Quầy nhạc ---- */
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('button[data-id]');
+    if (!b || mode !== 'admin') return;
+    b.disabled = true;
+    call('adminSetStatus', [PIN, b.getAttribute('data-id'), b.getAttribute('data-s')], render,
+      function(){ b.disabled = false; $('stat').textContent = 'Lỗi kết nối, thử lại nhé'; });
+  });
+  function toggleOpen(){ call('adminSetOpen', [PIN, !$('tog').classList.contains('on')], render); }
+  $('tog').addEventListener('click', toggleOpen);
+  $('tog').addEventListener('keydown', function(e){ if (e.key===' '||e.key==='Enter'){ e.preventDefault(); toggleOpen(); } });
+
+  /* ---- Khởi động ---- */
+  Array.prototype.forEach.call(document.querySelectorAll('.cta, .cta2, .jump'), function(a){
+    a.addEventListener('click', function(e){
+      e.preventDefault(); var id = a.getAttribute('href').slice(1);
+      if (id === 'gop-y-form') { openFb(); return; }
+      var t = $(id); if (t) t.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  });
+
+  /* ---- Góp ý đêm nhạc (cửa sổ bật lên) ---- */
+  function openFb(){
+    $('fbModal').hidden = false; document.body.classList.add('noscroll');
+    setTimeout(function(){ try { $('fbText').focus(); } catch(e){} }, 150);
+  }
+  function closeFb(){ $('fbModal').hidden = true; document.body.classList.remove('noscroll'); }
+  $('fbClose').addEventListener('click', closeFb);
+  $('fbModal').addEventListener('click', function(e){ if (e.target === $('fbModal')) closeFb(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !$('fbModal').hidden) closeFb(); });
+  var star = 0;
+  function fbMsg(t, ok){ var m=$('fbMsg'); m.className='msg '+(ok?'ok':'err'); m.textContent=t; }
+  $('fbForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var text = $('fbText').value.trim();
+    if (!text) { fbMsg('Bạn viết vài dòng góp ý giúp Chata nhé.', false); $('fbText').focus(); return; }
+    var phone = $('fbPhone').value.trim();
+    var digits = phone.replace(/\D/g, '');
+    if (phone && (digits.length < 9 || digits.length > 12)) { fbMsg('Số điện thoại chưa đúng, bạn kiểm tra lại giúp Chata nhé.', false); $('fbPhone').focus(); return; }
+    var last = 0; try { last = +localStorage.getItem('chata_fb_last') || 0; } catch(err){}
+    if (!PREVIEW && Date.now() - last < 120000) { fbMsg('Bạn vừa gửi góp ý rồi, cảm ơn bạn nhiều nhé! 💛', true); return; }
+    var btn = $('fbBtn'); btn.disabled = true; btn.textContent = 'Đang gửi…';
+    call('submitFeedback', [{ star: star, text: text, name: $('fbName').value, phone: phone }], function(res){
+      btn.disabled = false; btn.textContent = 'Gửi góp ý';
+      if (res && res.ok) {
+        try { localStorage.setItem('chata_fb_last', String(Date.now())); } catch(err){}
+        fbMsg('💛 Cảm ơn bạn! Chata đã nhận được góp ý và sẽ xử lý sớm nhất có thể.', true);
+        $('fbText').value = ''; $('fbPhone').value = '';
+        $('fbGg').hidden = false;
+      } else fbMsg((res && res.msg) || 'Có lỗi, bạn thử lại nhé.', false);
+    }, function(){ btn.disabled = false; btn.textContent = 'Gửi góp ý'; fbMsg('Mạng đang chập chờn, bạn thử gửi lại nhé.', false); });
+  });
+  $('fbTop').href = FB; $('fbBottom').href = FB;
+  // Link cũ ?admin=mã vẫn dùng được; máy đã ghi nhớ thì vào thẳng trang quản lý
+  if (IS_ADMIN && PIN) { save(PIN); setMode('admin'); }
+  else if (getSaved()) { PIN = getSaved(); setMode('admin'); }
+  else setMode('guest');
+  (function tick(){
+    setTimeout(function(){ if (!document.hidden && mode !== 'login') load(); tick(); }, mode === 'admin' ? 10000 : 20000);
+  })();
+})();
+</script>
+</body>
+</html>
