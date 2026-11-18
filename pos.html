@@ -130,6 +130,17 @@
   .acts small{display:block;font-weight:400;opacity:.85;font-size:12px}
   .a-exit{background:var(--red)}.a-save{background:#4F6487}.a-more{background:#6B7FA0}.a-cancel{background:#8E3B3B;flex:.8!important}.a-pay{background:var(--blue);font-size:17px!important}
   .cempty{color:var(--muted);text-align:center;padding:40px 10px}
+  .tile.hl{outline:4px solid #FFD54A;outline-offset:-4px}
+  .ln.sel{background:#EEF5FF;box-shadow:inset 4px 0 0 var(--blue)}
+  .togo{border:1px solid var(--line);background:#F4F6F9;border-radius:6px;padding:6px 10px;font-weight:700;cursor:pointer;color:var(--ink)}
+  .togo.on{background:#14213A;color:#fff;border-color:#14213A}
+  .rchips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}.rchips button{border:1px solid var(--line);background:#F4F6F9;border-radius:16px;padding:6px 11px;font-weight:600;color:var(--ink)}.rchips button b{color:var(--blue);margin-right:5px}
+  .plist{max-height:190px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin:0 0 10px;font-size:14px;line-height:1.45}
+  .plist i{color:var(--orange)}
+  .kh{font-size:12.5px;color:var(--muted);margin-top:6px}
+  .findOrd{width:100%;padding:10px;border:1px solid var(--line);border-radius:6px;font-size:15px}
+  .set textarea.rs{width:100%;font:inherit;font-size:14px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;resize:vertical;margin-top:4px}
+  .ocode .tg{background:#14213A;color:#fff;border-radius:4px;padding:0 6px;font-weight:700}
 
   /* modal */
   .mask{position:fixed;inset:0;background:rgba(10,18,32,.6);display:flex;align-items:center;justify-content:center;z-index:50}
@@ -227,6 +238,7 @@
     <div class="rep" id="repView" hidden></div>
     <div class="side">
       <button class="new" id="newBtn" type="button">＋ Tạo đơn mới <small style="font-weight:400">(F2)</small></button>
+      <input class="findOrd" id="findOrd" placeholder="Mở đơn: gõ số thẻ / mã + Enter" maxlength="10" autocomplete="off">
       <div class="stat">
         <h4>Hôm nay</h4>
         <div><span>Đơn đã thu</span><b class="num" id="sPaid">0</b></div>
@@ -251,7 +263,7 @@
   <div class="cats" id="cats"></div>
   <div class="mid">
     <div class="mtop">
-      <input id="search" placeholder="Tìm món (F4)" autocomplete="off">
+      <input id="search" placeholder="Gõ tên hoặc chữ đầu món (VD: ts) + Enter · ↑↓ chọn" autocomplete="off">
       <select id="menuPick" title="Bảng giá"><option value="cur">Menu hiện tại</option><option value="other">Menu khác</option></select>
     </div>
     <div class="grid" id="grid"></div>
@@ -262,6 +274,7 @@
       <input class="nm" id="cName" placeholder="Tên khách (Khách lẻ)" maxlength="30">
       <input class="ph" id="cPhone" placeholder="SĐT" inputmode="tel" maxlength="15">
       <input class="pg" id="cPager" placeholder="Thẻ rung" maxlength="10">
+      <button type="button" class="togo" id="togoBtn">🥡 Mang đi (F8)</button>
     </div>
     <div class="lines" id="lines"></div>
     <div class="cnote"><input id="cNote" placeholder="Ghi chú đơn" maxlength="200"></div>
@@ -271,7 +284,7 @@
       <button class="a-exit" id="exitBtn" type="button">Thoát<small>(Esc)</small></button>
       <button class="a-save" id="saveBtn" type="button">Lưu đơn<small>(F3)</small></button>
       <button class="a-cancel" id="cancelBtn" type="button">Hủy đơn<small>ghi lại cho QL</small></button>
-      <button class="a-more" id="moreBtn" type="button">Báo bếp<small>in trước</small></button>
+      <button class="a-more" id="moreBtn" type="button">Báo bếp<small>in trước (F7)</small></button>
       <button class="a-pay" id="payBtn" type="button">Thanh toán<small>(F1)</small></button>
     </div>
   </div>
@@ -283,13 +296,15 @@
     <h3 id="payTitle">Thanh toán</h3>
     <div class="paytot num" id="payTot">0đ</div>
     <div id="payDisc" style="text-align:center;color:#B36B00;font-weight:600;margin:-4px 0 8px" hidden></div>
+    <div class="plist" id="payList"></div>
     <div class="methods">
-      <button class="meth on" data-m="Tiền mặt" type="button">💵 Tiền mặt</button>
-      <button class="meth" data-m="Chuyển khoản" type="button">🏦 Chuyển khoản</button>
+      <button class="meth on" data-m="Tiền mặt" type="button">💵 Tiền mặt (T)</button>
+      <button class="meth" data-m="Chuyển khoản" type="button">🏦 Chuyển khoản (C)</button>
     </div>
     <div class="given" id="givenBox">
-      <input id="given" class="num" inputmode="numeric" placeholder="Tiền khách đưa">
+      <input id="given" class="num" inputmode="numeric" placeholder="Tiền khách đưa (gõ 100 = 100.000)">
       <div class="quick" id="quick"></div>
+      <div class="kh">Để trống = khách đưa vừa đủ · Enter = xác nhận · phím C = chuyển khoản</div>
       <div class="change"><span>Tiền thừa</span><b class="num" id="change">0đ</b></div>
     </div>
     <label class="chk"><input type="checkbox" id="pBill"> In hóa đơn</label>
@@ -308,9 +323,10 @@
     <h3 id="noteTitle">Ghi chú món</h3>
     <input id="noteIn" maxlength="60" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font-size:16px" placeholder="VD: ít đá, ít ngọt, không cay">
     <div class="quick" id="noteQuick"></div>
+    <div class="kh">Bấm phím số 1–9 để chọn nhanh ghi chú.</div>
     <label style="display:block;margin-top:12px;font-size:14px;color:var(--muted)">Giảm giá món này</label>
     <div style="display:flex;gap:6px;margin-top:4px"><input id="ndVal" class="num" inputmode="numeric" placeholder="0" style="flex:1;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:16px"><div class="dtog" id="ndType" style="width:130px"><button type="button" data-t="%" class="on">%</button><button type="button" data-t="đ">đ/món</button></div></div>
-    <div class="mbtns"><button type="button" id="noteCancel">Hủy</button><button type="button" class="ok" id="noteOk">Lưu</button></div>
+    <div class="mbtns"><button type="button" id="noteCancel">Hủy</button><button type="button" id="noteAll" hidden>Cả 2 ly</button><button type="button" class="ok" id="noteOk">Lưu (Enter)</button></div>
   </div>
 </div>
 
@@ -356,6 +372,15 @@
       <div class="row" style="align-items:center"><span class="hint" style="flex:1;margin:0">Mỗi dòng một chương trình: <b>Tên: mức giảm</b> (VD 10% hoặc 20000đ). Thu ngân chọn nhanh khi giảm giá đơn, không cần quản lý duyệt. Tự nhập mức giảm khác thì nhân viên cần quản lý duyệt.</span><button class="sbtn" type="button" id="s_promos_save">Lưu khuyến mãi</button></div>
     </div>
     <div class="set">
+      <h4>Lý do chọn nhanh <small style="font-weight:400;color:var(--muted)">(máy này · tối đa 9 dòng, nhân viên bấm phím số 1–9)</small></h4>
+      <div class="row" style="align-items:flex-start">
+        <label style="flex:1">Giảm giá<textarea class="rs" id="s_rs_disc" rows="6"></textarea></label>
+        <label style="flex:1">Hủy đơn chờ<textarea class="rs" id="s_rs_cancel" rows="6"></textarea></label>
+        <label style="flex:1">Hoàn / hủy đơn đã thu<textarea class="rs" id="s_rs_refund" rows="6"></textarea></label>
+      </div>
+      <span class="hint">Mỗi dòng một lý do. Dòng <b>Khác</b> = nhân viên tự gõ lý do. Lưu bằng nút Lưu &amp; đóng.</span>
+    </div>
+    <div class="set">
       <h4>Sơ đồ bàn / thẻ rung <small style="font-weight:400;color:var(--muted)">(dùng chung mọi máy · nhân viên sửa thì ghi lại cho quản lý xem)</small></h4>
       <textarea id="s_tables" rows="4" placeholder="Thẻ rung: 1-20&#10;Sân vườn: S1-S8, Võng 1, Võng 2"></textarea>
       <div class="row" style="align-items:center"><span class="hint" style="flex:1;margin:0">Mỗi dòng một khu: <b>Tên khu: các bàn</b>, cách nhau dấu phẩy. <b>1-20</b> = từ 1 đến 20, <b>S1-S8</b> = S1 đến S8. Tên bàn chính là số thẻ rung in trên tem / hóa đơn.</span><button class="sbtn" type="button" id="s_tables_save">Lưu sơ đồ bàn</button></div>
@@ -383,7 +408,8 @@
     <div style="font-size:14px;color:var(--muted);margin-top:8px">Hoặc nhập mức giảm</div>
     <div style="display:flex;gap:6px;margin-top:4px"><input id="dVal" class="num" inputmode="numeric" placeholder="0" style="flex:1;padding:11px;border:1px solid var(--line);border-radius:8px;font-size:18px"><div class="dtog" id="dType" style="width:120px"><button type="button" data-t="%" class="on">%</button><button type="button" data-t="đ">đ</button></div></div>
     <div class="quick" id="dQuick"></div>
-    <input id="dReason" maxlength="80" placeholder="Lý do giảm giá (bắt buộc khi tự nhập)" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;margin-top:8px">
+    <input id="dReason" maxlength="80" placeholder="Lý do giảm giá (Tab tới đây, bấm số 1–9 để chọn)" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;margin-top:8px">
+    <div class="rchips" id="dChips"></div>
     <div class="change"><span>Sau giảm</span><b class="num" id="dAfter">0đ</b></div>
     <div class="err" id="dErr" hidden></div>
     <div class="mbtns"><button type="button" id="dClear">Bỏ giảm giá</button><button type="button" id="dCancel">Quay lại</button><button type="button" class="ok" id="dOk">Áp dụng</button></div>
@@ -448,6 +474,7 @@
     <p id="rfWhat" style="margin:0 0 6px;font-weight:700"></p>
     <p id="rfHint" style="margin:0 0 10px;color:var(--muted);font-size:13px"></p>
     <input id="rfWhy" type="text" maxlength="120" placeholder="Lý do (VD: thu nhầm món, khách đổi ý, làm sai món…)" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font-size:16px">
+    <div class="rchips" id="rfChips"></div>
     <div class="err" id="rfErr" hidden></div>
     <div class="mbtns"><button type="button" id="rfCancel">Thôi</button><button type="submit" class="ok">Tiếp tục</button></div>
   </form>
@@ -498,10 +525,29 @@
   /* ================= Cài đặt in ================= */
   var DEF = { bill_on:false, bill_p:'', bill_w:'80', bill_c:'1', bep_on:true, bep_p:'', bep_w:'80', bep_c:'1', tem_on:true, tem_p:'', tem_s:'50x30', tem_ink:'Vừa',
     groups:{ 'Đồ ăn':'bep', 'Lai rai':'bep', 'Mì cay':'bep', 'Đồ chiên':'bep', 'Bia':'none', 'Ăn vặt':'none' },
+    rs_disc:'Khách quen\nBù món lỗi / chờ lâu\nNhân viên quán\nNgười quen quản lý\nKhác',
+    rs_cancel:'Khách đổi ý\nNhập trùng đơn\nBấm nhầm món\nKhách QR không ra quầy\nHết món\nKhác',
+    rs_refund:'Thu nhầm món\nLàm sai món\nHết nguyên liệu\nKhách đổi ý\nKhác',
     lock_min:'0', shop:'CHATA COFFEE', addr:'Bàu Cạn, Gia Lai', foot:'Cảm ơn quý khách – Hẹn gặp lại!' };
   var S = {}; try { S = JSON.parse(ls('chata_pos_set') || '{}'); } catch(e){}
   Object.keys(DEF).forEach(function(k){ if (S[k] === undefined) S[k] = DEF[k]; });
   function saveS(){ ls('chata_pos_set', JSON.stringify(S)); }
+  function rsList(k){ return String(S['rs_' + k] || '').split(/\n/).map(function(x){ return x.trim(); }).filter(Boolean).slice(0, 9); }
+  /* Nút lý do chọn nhanh: bấm hoặc gõ phím số 1–9 trong ô lý do */
+  function rChips(box, input, list){
+    box.innerHTML = (list || []).map(function(x, k){ return '<button type="button" tabindex="-1" data-rc="' + k + '"><b>' + (k + 1) + '</b>' + esc(x) + '</button>'; }).join('');
+    box.hidden = !(list && list.length); box._list = list || []; box._in = input;
+  }
+  function rPick(box, k){
+    var x = box._list[k]; if (x === undefined) return false;
+    var inp = box._in; inp.value = /^khác$/i.test(x) ? '' : x; inp.focus();
+    if (/^khác$/i.test(x)) inp.placeholder = 'Gõ lý do khác…';
+    inp.dispatchEvent(new Event('input')); return true;
+  }
+  function rWire(box){
+    box.addEventListener('click', function(e){ var b = e.target.closest('[data-rc]'); if (b) rPick(box, +b.getAttribute('data-rc')); });
+    box._in.addEventListener('keydown', function(e){ if (/^[1-9]$/.test(e.key) && !e.ctrlKey && !e.altKey && box._list.length && rPick(box, +e.key - 1)) e.preventDefault(); });
+  }
   function where(g){ return S.groups[g] || (/ăn|mì|chiên|lai rai|mẹt/i.test(g) ? 'bep' : 'bar'); }
 
   /* ================= Mẫu in ================= */
@@ -520,7 +566,7 @@
       '<div style="text-align:center;font-weight:800;font-size:' + (fs * 1.25) + 'mm;margin-top:2mm">HÓA ĐƠN THANH TOÁN</div>' +
       '<div style="text-align:center;font-size:' + (fs * 2) + 'mm;font-weight:900">#' + esc(o.code) + '</div>' +
       '<div style="display:flex;justify-content:space-between"><span>' + dmy(o.paidAt || Date.now()) + ' ' + hhmm(o.paidAt || Date.now()) + '</span><span>' + (o.pager ? 'Thẻ rung: ' + esc(o.pager) : '') + '</span></div>' +
-      '<div>Khách: ' + esc(o.name) + (o.phone ? ' · ' + esc(o.phone) : '') + '</div>' +
+      '<div>Khách: ' + esc(o.name) + (o.phone ? ' · ' + esc(o.phone) : '') + (o.togo ? ' · <b>MANG ĐI</b>' : '') + '</div>' +
       (o.cashier || (D && D.me) ? '<div>Thu ngân: ' + esc(String(o.cashier || D.me.name).replace(/ \(.*\)$/, '')) + '</div>' : '') +
       '<div style="border-top:.3mm dashed #000;margin:1.5mm 0"></div>' +
       '<table style="width:100%;border-collapse:collapse;font-size:inherit">' + rows + '</table>' +
@@ -542,6 +588,7 @@
       '<div style="text-align:center;font-size:' + (fs * 2.4) + 'mm;font-weight:900;line-height:1.05">#' + esc(o.code) + '</div>' +
       '<div style="display:flex;justify-content:space-between;font-weight:700"><span>' + esc(o.name) + '</span><span>' + (o.pager ? 'Thẻ rung ' + esc(o.pager) : '') + '</span></div>' +
       '<div style="display:flex;justify-content:space-between"><span>' + hhmm(o.paidAt || o.created || Date.now()) + ' ' + dmy(o.paidAt || o.created || Date.now()).slice(0,5) + '</span><span>' + (o.src === 'QR' ? 'Đơn QR' : 'Tại quầy') + (o.mode === 'Đêm nhạc' ? ' · Đêm nhạc' : '') + '</span></div>' +
+      (o.togo ? '<div style="text-align:center;font-weight:900;font-size:' + (fs * 1.5) + 'mm;background:#000;color:#fff;margin-top:1mm">★ MANG ĐI ★</div>' : '') +
       '<div style="border-top:.4mm dashed #000;margin:1.5mm 0"></div>' +
       items.map(function(i){ return '<div style="display:flex;gap:2mm;font-weight:800;font-size:' + (fs * 1.3) + 'mm;line-height:1.2;margin:1mm 0"><b style="min-width:9mm">' + i.q + ' x</b><span>' + esc(i.n) + (i.t ? '<br><span style="font-weight:700;font-size:' + fs + 'mm">→ ' + esc(i.t) + '</span>' : '') + '</span></div>'; }).join('') +
       '<div style="border-top:.4mm dashed #000;margin:1.5mm 0"></div>' +
@@ -589,7 +636,10 @@
     }
     font(fs, true);
     g.fillText(k + '/' + total + (o.pager ? ' · Thẻ ' + o.pager : ''), px, footY);
-    g.textAlign = 'right'; g.fillText(money(i.p) + 'đ', cw - px, footY); g.textAlign = 'left';
+    if (o.togo) {
+      var tl = 'MANG ĐI', tw2 = g.measureText(tl).width + Math.round(1.6 * D), bx = cw - px - tw2, by = footY - Math.round(.5 * D), bh = fs + Math.round(.9 * D);
+      g.fillRect(bx, by, tw2, bh); g.fillStyle = '#fff'; g.textAlign = 'right'; g.fillText(tl, cw - px - Math.round(.8 * D), footY); g.fillStyle = '#000'; g.textAlign = 'left';
+    } else { g.textAlign = 'right'; g.fillText(money(i.p) + 'đ', cw - px, footY); g.textAlign = 'left'; }
     // Đen–trắng tuyệt đối
     var th = TEM_INK[S.tem_ink] || TEM_INK['Vừa'], img = g.getImageData(0, 0, cw, ch), d = img.data;
     for (var p = 0; p < d.length; p += 4) { var v = (d[p] * 299 + d[p + 1] * 587 + d[p + 2] * 114) / 1000 < 255 - th ? 0 : 255; d[p] = d[p + 1] = d[p + 2] = v; d[p + 3] = 255; }
@@ -745,7 +795,7 @@
     $('orders').innerHTML = list.length ? list.map(function(o){
       var qr = o.src !== 'Quầy';
       return '<div class="oc' + (qr ? ' qr' : '') + (Date.now() - o.created > 30 * 60000 ? ' late' : '') + '" data-open="' + o.id + '">' +
-        '<div class="h"><span class="src">' + (qr ? 'QR' : 'Tại quầy') + '</span><span>⏱ ' + ago(o.created) + '</span></div>' +
+        '<div class="h"><span class="src">' + (qr ? 'QR' : 'Tại quầy') + (o.togo ? ' · 🥡 Mang đi' : '') + '</span><span>⏱ ' + ago(o.created) + '</span></div>' +
         '<div class="c">#' + esc(o.code) + (o.pager ? ' <small style="font-size:13px;color:#0A8F5F">· Bàn ' + esc(o.pager) + '</small>' : '') + '</div><div class="n">' + esc(o.name) + '</div>' +
         '<div class="it">' + o.items.map(function(i){ return i.q + '× ' + esc(i.n); }).join(', ') + '</div>' +
         '<div class="f"><span>' + o.items.reduce(function(s, i){ return s + i.q; }, 0) + ' món</span><b class="num">' + money(o.total) + 'đ</b></div>' +
@@ -754,7 +804,7 @@
   }
   function drawPaid(){
     $('paidView').innerHTML = D.paid.length ? '<table><tr><th>Mã</th><th>Giờ</th><th>Khách</th><th>Món</th><th>Tiền</th><th>TT</th><th>Thu ngân</th><th>In lại</th></tr>' + D.paid.map(function(o){
-      return '<tr><td><b>#' + esc(o.code) + '</b><br><small>' + (o.src === 'Quầy' ? 'Quầy' : 'QR') + '</small></td><td>' + hhmm(o.paidAt) + '</td><td>' + esc(o.name) + (o.pager ? '<br><small>Thẻ ' + esc(o.pager) + '</small>' : '') + '</td>' +
+      return '<tr><td><b>#' + esc(o.code) + '</b><br><small>' + (o.src === 'Quầy' ? 'Quầy' : 'QR') + '</small></td><td>' + hhmm(o.paidAt) + '</td><td>' + esc(o.name) + (o.pager ? '<br><small>Thẻ ' + esc(o.pager) + '</small>' : '') + (o.togo ? '<br><small>🥡 Mang đi</small>' : '') + '</td>' +
         '<td>' + o.items.map(function(i){ return i.q + '× ' + esc(i.n) + (i.t ? ' <i>(' + esc(i.t) + ')</i>' : ''); }).join('<br>') + '</td><td class="num"><b>' + money(o.total) + '</b></td><td>' + esc(o.pay) + '</td><td><small>' + esc(o.cashier || '') + '</small></td>' +
         '<td><button class="sbtn" data-rp="bill" data-id="' + o.id + '">Hóa đơn</button><button class="sbtn" data-rp="bep" data-id="' + o.id + '">Bếp</button><button class="sbtn" data-rp="tem" data-id="' + o.id + '">Tem</button><br><button class="sbtn" data-fx="method" data-id="' + o.id + '">Đổi sang ' + (o.pay === 'Chuyển khoản' ? 'TM' : 'CK') + '</button><button class="sbtn" data-fx="refund" data-id="' + o.id + '" style="color:#C0392B">Hoàn/hủy</button></td></tr>';
     }).join('') + '</table>' : '<div class="empty">Chưa có đơn nào thanh toán hôm nay.</div>';
@@ -782,16 +832,19 @@
   });
   /* Hỏi lý do (hủy đơn, hoàn đơn, đổi TT, không đồng ý...) – việc được ghi lại để quản lý xem sau */
   var rfCb = null, rfNeed = true;
-  function askReason(opt, cb){
-    rfCb = cb; rfNeed = opt.need !== false;
+  var rfBack = null;
+  function askReason(opt, cb, onCancel){
+    rfCb = cb; rfNeed = opt.need !== false; rfBack = onCancel || null;
+    rChips($('rfChips'), $('rfWhy'), opt.list || []);
     $('rfTitle').textContent = opt.title; $('rfWhat').textContent = opt.what || ''; $('rfHint').textContent = opt.hint || '';
     $('rfWhy').placeholder = opt.ph || 'Lý do'; $('rfWhy').value = ''; $('rfErr').hidden = true; $('rfModal').hidden = false; setTimeout(function(){ $('rfWhy').focus(); }, 30);
   }
-  $('rfCancel').addEventListener('click', function(){ $('rfModal').hidden = true; rfCb = null; });
+  $('rfCancel').addEventListener('click', function(){ $('rfModal').hidden = true; rfCb = null; var f = rfBack; rfBack = null; if (f) f(); else back(); });
+  rChips($('rfChips'), $('rfWhy'), []); rWire($('rfChips'));
   $('rfForm').addEventListener('submit', function(e){
     e.preventDefault(); var why = $('rfWhy').value.trim(), cb = rfCb; if (!cb) return;
     if (rfNeed && !why) { $('rfErr').textContent = 'Ghi lý do giúp quản lý nắm.'; $('rfErr').hidden = false; return; }
-    $('rfModal').hidden = true; rfCb = null; cb(why);
+    $('rfModal').hidden = true; rfCb = null; rfBack = null; cb(why);
   });
   /* Sửa đơn đã thanh toán: đổi hình thức TT hoặc hoàn/hủy – nhân viên tự làm, ghi lại cho quản lý xem */
   function fixPaid(o, kind){
@@ -802,7 +855,7 @@
         call('cashierUpdate', [PIN, o.id, 'method', { pay: np, reason: why }]).then(function(r){ if (r.ok) { apply(r.data); toast('Đã đổi đơn #' + o.code + ' sang ' + np); } else toast(r.msg, 4000); }, function(e){ toast('⚠️ ' + e.message, 4000); });
       });
     }
-    askReason({ title: 'Hoàn / hủy đơn đã thanh toán', what: what, ph: 'Lý do (VD: thu nhầm món, khách đổi ý, làm sai món…)',
+    askReason({ title: 'Hoàn / hủy đơn đã thanh toán', what: what, ph: 'Bấm số 1–9 hoặc gõ lý do', list: rsList('refund'),
       hint: 'Đơn bị trừ khỏi doanh thu và được ghi lại cho quản lý xem. Nếu khách trả tiền mặt, nhớ trả lại tiền – ca của bạn sẽ trừ khoản này.' }, function(why){
       call('cashierUpdate', [PIN, o.id, 'refund', { reason: why }]).then(function(r){
         if (r.ok) { apply(r.data); toast('Đã hoàn/hủy đơn #' + o.code + (o.pay === 'Tiền mặt' ? ' · Trả khách ' + money(o.total) + 'đ tiền mặt' : ''), 5000); } else toast(r.msg, 4000);
@@ -837,18 +890,48 @@
   }
   function qtyOf(n){ return O.items.filter(function(i){ return i.n === n; }).reduce(function(s, i){ return s + i.q; }, 0); }
   function drawGrid(){
-    var q = $('search').value.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
+    var q = norm($('search').value.trim()), qs = q.replace(/\s+/g, '');
     var list = curMenu().filter(function(m){
-      if (q) return m.n.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').indexOf(q) >= 0;
+      if (q) return score(m) < 3;
       return CAT === '__all' || m.g === CAT;
     });
-    $('grid').innerHTML = list.map(function(m){
+    function score(m){
+      var n = norm(m.n), ini = n.split(/\s+/).map(function(w){ return w.charAt(0); }).join('');
+      return n.indexOf(q) === 0 ? 0 : (qs && ini.indexOf(qs) === 0) ? 1 : n.indexOf(q) >= 0 ? 2 : 3;
+    }
+    if (q) list = list.map(function(m, k){ return { m: m, s: score(m), k: k }; }).sort(function(a, b){ return a.s - b.s || a.k - b.k; }).map(function(x){ return x.m; });
+    GRID = list; if (HL >= list.length) HL = list.length - 1; if (HL < 0) HL = 0;
+    $('grid').innerHTML = list.map(function(m, idx){
       var c = qtyOf(m.n), ini = m.n.split(' ').slice(0, 2).map(function(w){ return w.charAt(0).toUpperCase(); }).join('');
-      return '<button class="tile" type="button" data-add="' + esc(m.n) + '" style="background:' + color(m.g) + '">' +
+      return '<button class="tile' + (q && idx === HL ? ' hl' : '') + '" type="button" tabindex="-1" data-add="' + esc(m.n) + '" style="background:' + color(m.g) + '">' +
         '<span class="ini">' + esc(ini) + '</span><span class="pr num">' + money(m.p) + '</span>' + (c ? '<span class="qy">' + c + '</span>' : '') +
         '<span class="nm">' + esc(m.n) + '</span></button>';
     }).join('') || '<div class="cempty" style="grid-column:1/-1;color:#C9D3E2">Không tìm thấy món.</div>';
   }
+  function norm(x){ return String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd'); }
+  var GRID = [], HL = 0, SEL = -1;
+  /* Thêm 1 món: cộng vào dòng cùng tên chưa có ghi chú/giảm giá; nếu không có thì tạo dòng mới ngay dưới các dòng cùng tên */
+  function addItem(m){
+    if (!m) return;
+    var k = -1, last = -1;
+    O.items.forEach(function(i, x){ if (i.n === m.n) { last = x; if (!i.t && !i.dv && k < 0) k = x; } });
+    if (k >= 0) { O.items[k].q++; SEL = k; }
+    else { var at = last >= 0 ? last + 1 : O.items.length; O.items.splice(at, 0, { n: m.n, g: m.g, p: m.p, q: 1 }); SEL = at; }
+    drawCart();
+  }
+  function selBy(d){ if (!O.items.length) return; SEL = SEL < 0 ? O.items.length - 1 : Math.max(0, Math.min(O.items.length - 1, SEL + d)); drawCart(); }
+  /* Phím trên giỏ hàng (ô tìm đang trống): ↑↓ chọn dòng, + − đổi số lượng, Delete xóa, Enter ghi chú */
+  function cartKey(e){
+    var k = e.key, has = O.items.length && SEL >= 0 && SEL < O.items.length;
+    if (k === 'ArrowUp' || k === 'ArrowDown') { e.preventDefault(); selBy(k === 'ArrowUp' ? -1 : 1); return true; }
+    if (!has) return false;
+    if (k === '+' || k === '=') { e.preventDefault(); O.items[SEL].q++; drawCart(); return true; }
+    if (k === '-' || k === 'Subtract') { e.preventDefault(); if (--O.items[SEL].q < 1) { O.items.splice(SEL, 1); SEL = Math.min(SEL, O.items.length - 1); } drawCart(); return true; }
+    if (k === 'Delete') { e.preventDefault(); O.items.splice(SEL, 1); SEL = Math.min(SEL, O.items.length - 1); drawCart(); return true; }
+    if (k === 'Enter') { e.preventDefault(); openNote(SEL); return true; }
+    return false;
+  }
+  function back(){ if (O && !$('ordView').hidden) setTimeout(function(){ if (document.querySelector('.mask:not([hidden])')) return; $('search').focus(); }, 30); }
   /* ---- Giảm giá (giống Sapo: giảm từng món hoặc cả đơn, % hoặc số tiền) ---- */
   function lineDisc(i){ var v = +i.dv || 0; if (!i.dt || v <= 0) return 0; var g = i.p * i.q; return Math.min(g, i.dt === '%' ? Math.round(g * Math.min(v, 100) / 100) : Math.round(v) * i.q); }
   function calcO(){
@@ -860,10 +943,10 @@
   }
   function discLabel(d){ return d ? (d.promo || (d.t === '%' ? 'Giảm ' + d.v + '%' : 'Giảm ' + money(d.v) + 'đ')) : ''; }
   function drawCart(){
-    calcO();
+    calcO(); if (SEL >= O.items.length) SEL = O.items.length - 1;
     $('lines').innerHTML = O.items.length ? O.items.map(function(i, k){
       var da = lineDisc(i);
-      return '<div class="ln"><div><div class="t">' + esc(i.n) + '</div><div class="nt' + (i.t ? '' : ' add') + '" data-note="' + k + '">' + (i.t ? '✎ ' + esc(i.t) : '+ ghi chú / giảm giá') + '</div>' +
+      return '<div class="ln' + (k === SEL ? ' sel' : '') + '" data-ln="' + k + '"><div><div class="t">' + esc(i.n) + '</div><div class="nt' + (i.t ? '' : ' add') + '" data-note="' + k + '">' + (i.t ? '✎ ' + esc(i.t) : '+ ghi chú / giảm giá') + '</div>' +
         (da ? '<div class="dl" data-note="' + k + '">🏷 Giảm ' + (i.dt === '%' ? i.dv + '%' : money(i.dv) + 'đ/món') + ' (−' + money(da) + ')</div>' : '') + '</div>' +
         '<div class="q"><button type="button" data-dec="' + k + '">−</button><span>' + i.q + '</span><button type="button" data-inc="' + k + '">+</button></div>' +
         '<div class="s num">' + (da ? '<s>' + money(i.p * i.q) + '</s>' : '') + money(i.p * i.q - da) + '</div></div>';
@@ -872,8 +955,11 @@
     $('discBtn').innerHTML = O.discAmt ? '🏷 −' + money(O.discAmt) + 'đ' + (O.disc ? ' · ' + esc(discLabel(O.disc)) : '') : '🏷 Giảm giá (F6)';
     $('cTotal').textContent = money(O.total) + 'đ';
     $('cCount').textContent = O.cnt ? '(' + O.cnt + ' món)' : '';
-    drawGrid();
+    drawGrid(); drawTogo();
+    var sl = document.querySelector('#lines .ln.sel'); if (sl && sl.scrollIntoView) sl.scrollIntoView({ block: 'nearest' });
   }
+  function drawTogo(){ var b = $('togoBtn'); b.classList.toggle('on', !!O.togo); b.textContent = O.togo ? '🥡 MANG ĐI ✓' : '🥡 Mang đi (F8)'; }
+  $('togoBtn').addEventListener('click', function(){ if (!O) return; O.togo = !O.togo; drawTogo(); toast(O.togo ? 'Đơn mang đi – tem ly sẽ in chữ MANG ĐI' : 'Đã bỏ mang đi'); back(); });
   var dType = '%', dPromo = '';
   function openDisc(){
     if (!O || !O.items.length) return toast('Đơn chưa có món nào.');
@@ -884,7 +970,7 @@
     $('discPromoBox').hidden = !P.length;
     $('discPromos').innerHTML = P.map(function(x, k){ return '<button type="button" data-pr="' + k + '" class="' + (dPromo === x.n ? 'on' : '') + '">' + esc(x.n) + ' · ' + (x.t === '%' ? x.v + '%' : money(x.v) + 'đ') + '</button>'; }).join('');
     $('discInfo').textContent = 'Tạm tính ' + money(O.subAfterItems) + 'đ' + (O.discAmt - O.orderDisc ? ' (đã trừ giảm giá món ' + money(O.discAmt - O.orderDisc) + 'đ)' : '');
-    $('dErr').hidden = true; drawDType(); discCalc();
+    $('dErr').hidden = true; drawDType(); discCalc(); rChips($('dChips'), $('dReason'), rsList('disc')); $('dReason').placeholder = 'Lý do giảm giá (Tab tới đây, bấm số 1–9 để chọn)';
     $('discModal').hidden = false; setTimeout(function(){ $('dVal').focus(); }, 30);
   }
   function drawDType(){
@@ -904,25 +990,28 @@
     $('dAfter').textContent = money(sub - a) + 'đ' + (a ? ' (−' + money(a) + ')' : '');
   }
   $('discBtn').addEventListener('click', openDisc);
+  rChips($('dChips'), $('dReason'), []); rWire($('dChips'));
+  $('dVal').addEventListener('keydown', function(e){ if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); $('dReason').focus(); } });
   $('discPromos').addEventListener('click', function(e){ var b = e.target.closest('[data-pr]'); if (!b) return; var x = D.promos[+b.getAttribute('data-pr')]; dPromo = dPromo === x.n ? '' : x.n; $('dVal').value = ''; Array.prototype.forEach.call(document.querySelectorAll('#discPromos button'), function(y){ y.classList.toggle('on', y === b && !!dPromo); }); discCalc(); });
   $('dType').addEventListener('click', function(e){ var b = e.target.closest('[data-t]'); if (!b) return; dType = b.getAttribute('data-t'); $('dVal').value = ''; drawDType(); discCalc(); });
   $('dQuick').addEventListener('click', function(e){ var b = e.target.closest('[data-dq]'); if (!b) return; dPromo = ''; Array.prototype.forEach.call(document.querySelectorAll('#discPromos button'), function(y){ y.classList.remove('on'); }); $('dVal').value = dType === '%' ? b.getAttribute('data-dq') : money(+b.getAttribute('data-dq')); discCalc(); });
   $('dVal').addEventListener('input', function(){ dPromo = ''; Array.prototype.forEach.call(document.querySelectorAll('#discPromos button'), function(y){ y.classList.remove('on'); }); var v = this.value.replace(/\D/g, ''); if (dType === '%') { if (+v > 100) v = '100'; this.value = v; } else this.value = v ? money(+v) : ''; discCalc(); });
-  $('dCancel').addEventListener('click', function(){ $('discModal').hidden = true; });
-  $('dClear').addEventListener('click', function(){ O.disc = null; $('discModal').hidden = true; drawCart(); toast('Đã bỏ giảm giá đơn'); });
+  $('dCancel').addEventListener('click', function(){ $('discModal').hidden = true; back(); });
+  $('dClear').addEventListener('click', function(){ O.disc = null; $('discModal').hidden = true; drawCart(); toast('Đã bỏ giảm giá đơn'); back(); });
   // Nhân viên tự nhập mức giảm (không theo chương trình): bắt buộc lý do, ghi lại cho quản lý xem
   // Giảm giá tự nhập: không cần quản lý duyệt tại chỗ nữa – được ghi lại để quản lý xem sau
   function withApprove(what, done){ done(D && D.me ? D.me.name : ''); }
   $('dOk').addEventListener('click', function(){
     var d = discDraft();
-    if (!d) { O.disc = null; $('discModal').hidden = true; drawCart(); return; }
-    if (!d.promo && !d.r) { $('dErr').textContent = 'Ghi lý do giảm giá.'; $('dErr').hidden = false; return; }
-    var go = function(by){ d.by = by || ''; O.disc = d; $('discModal').hidden = true; drawCart(); toast('Đã giảm giá: ' + discLabel(d)); };
+    if (!d) { O.disc = null; $('discModal').hidden = true; drawCart(); back(); return; }
+    if (!d.promo && !d.r) { $('dErr').textContent = 'Chọn lý do giảm giá (phím số 1–9) hoặc gõ lý do.'; $('dErr').hidden = false; $('dReason').focus(); return; }
+    var go = function(by){ d.by = by || ''; O.disc = d; $('discModal').hidden = true; drawCart(); toast('Đã giảm giá: ' + discLabel(d)); back(); };
     if (d.promo) go(D.me.name); else withApprove('Giảm giá đơn: ' + discLabel(d) + ' – ' + d.r, go);
   });
   function openOrder(ord){
     if (needShift(function(){ openOrder(ord); })) return;
-    O = ord ? JSON.parse(JSON.stringify(ord)) : { id: null, code: '', src: 'Quầy', items: [], name: '', phone: '', pager: '', note: '', disc: null, created: Date.now() };
+    O = ord ? JSON.parse(JSON.stringify(ord)) : { id: null, code: '', src: 'Quầy', items: [], name: '', phone: '', pager: '', note: '', disc: null, togo: false, created: Date.now() };
+    O.togo = !!O.togo; SEL = O.items.length - 1; HL = 0; ITEM_DR = {};
     $('oTitle').textContent = ord ? ('Đơn #' + ord.code + ' · ' + (ord.src === 'Quầy' ? 'Tại quầy' : 'QR')) : 'Đơn mới · Tại quầy';
     $('oTime').textContent = ord ? 'gửi ' + hhmm(ord.created) : '';
     $('cName').value = O.name === 'Khách lẻ' ? '' : O.name; $('cPhone').value = O.phone || ''; $('cPager').value = O.pager || ''; $('cNote').value = O.note || '';
@@ -930,28 +1019,36 @@
     $('menuPick').options[1].textContent = D && D.mode === 'night' ? 'Menu thường' : 'Menu đêm nhạc';
     $('moreBtn').hidden = !ord; $('cancelBtn').hidden = !ord;
     $('ordView').hidden = false; drawCats(); drawCart(); O0 = snap();
+    setTimeout(function(){ if ($('payModal').hidden) $('search').focus(); }, 30);
   }
   function closeOrder(){ $('ordView').hidden = true; O = null; drawHome(); }
   function readHead(){ O.name = $('cName').value.trim(); O.phone = $('cPhone').value.trim(); O.pager = $('cPager').value.trim(); O.note = $('cNote').value.trim(); }
   var O0 = '';
-  function snap(){ return JSON.stringify([O.items, $('cName').value.trim(), $('cPhone').value.trim(), $('cPager').value.trim(), $('cNote').value.trim(), O.disc || null]); }
+  function snap(){ return JSON.stringify([O.items, $('cName').value.trim(), $('cPhone').value.trim(), $('cPager').value.trim(), $('cNote').value.trim(), O.disc || null, !!O.togo]); }
   function dirty(){ return !!O && snap() !== O0; }
 
   $('cats').addEventListener('click', function(e){ var b = e.target.closest('[data-cat]'); if (!b) return; CAT = b.getAttribute('data-cat'); $('search').value = ''; drawCats(); drawGrid(); });
-  $('search').addEventListener('input', drawGrid);
+  $('search').addEventListener('input', function(){ HL = 0; drawGrid(); });
+  $('search').addEventListener('keydown', function(e){
+    if (document.querySelector('.mask:not([hidden])')) return;
+    var q = this.value.trim();
+    if (!q) { cartKey(e); return; }
+    if (e.key === 'Enter') { e.preventDefault(); if (!GRID.length) return toast('Không tìm thấy món.'); addItem(GRID[HL] || GRID[0]); this.value = ''; HL = 0; drawGrid(); }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); HL = Math.min(GRID.length - 1, HL + 1); drawGrid(); }
+    else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); HL = Math.max(0, HL - 1); drawGrid(); }
+  });
   $('menuPick').addEventListener('change', function(){ drawCats(); drawGrid(); });
   $('grid').addEventListener('click', function(e){
     var b = e.target.closest('[data-add]'); if (!b) return;
     var n = b.getAttribute('data-add'), m = curMenu().find(function(x){ return x.n === n; }); if (!m) return;
-    var ex = O.items.find(function(i){ return i.n === n && !i.t; });
-    if (ex) ex.q++; else O.items.push({ n: m.n, g: m.g, p: m.p, q: 1 });
-    drawCart();
+    addItem(m); back();
   });
   $('lines').addEventListener('click', function(e){
     var t;
-    if ((t = e.target.closest('[data-inc]'))) { O.items[+t.getAttribute('data-inc')].q++; drawCart(); }
-    else if ((t = e.target.closest('[data-dec]'))) { var k = +t.getAttribute('data-dec'); if (--O.items[k].q < 1) O.items.splice(k, 1); drawCart(); }
-    else if ((t = e.target.closest('[data-note]'))) openNote(+t.getAttribute('data-note'));
+    if ((t = e.target.closest('[data-inc]'))) { SEL = +t.getAttribute('data-inc'); O.items[SEL].q++; drawCart(); back(); }
+    else if ((t = e.target.closest('[data-dec]'))) { var k = +t.getAttribute('data-dec'); SEL = k; if (--O.items[k].q < 1) O.items.splice(k, 1); drawCart(); back(); }
+    else if ((t = e.target.closest('[data-note]'))) { SEL = +t.getAttribute('data-note'); openNote(SEL); }
+    else if ((t = e.target.closest('[data-ln]'))) { SEL = +t.getAttribute('data-ln'); drawCart(); back(); }
   });
   $('exitBtn').addEventListener('click', function(){
     if (dirty() && !confirm(O.id ? 'Đơn #' + O.code + ' có thay đổi chưa lưu. Thoát và bỏ thay đổi?' : 'Thoát và bỏ đơn đang tạo?')) return;
@@ -960,39 +1057,54 @@
 
   // Ghi chú món
   var noteK = -1, QUICK_NOTES = ['Ít đá', 'Không đá', 'Ít ngọt', 'Không đường', 'Nhiều đá', 'Ít cay', 'Không cay', 'Cay nhiều', 'Mang về'];
-  $('noteQuick').innerHTML = QUICK_NOTES.map(function(n){ return '<button type="button" data-qn="' + n + '">' + n + '</button>'; }).join('');
+  $('noteQuick').innerHTML = QUICK_NOTES.map(function(n, k){ return '<button type="button" tabindex="-1" data-qn="' + n + '"><b style="color:var(--blue);margin-right:4px">' + (k + 1) + '</b>' + n + '</button>'; }).join('');
   var ndType = '%';
   function drawNdType(){ Array.prototype.forEach.call(document.querySelectorAll('#ndType button'), function(b){ b.classList.toggle('on', b.getAttribute('data-t') === ndType); }); }
   $('ndType').addEventListener('click', function(e){ var b = e.target.closest('[data-t]'); if (!b) return; ndType = b.getAttribute('data-t'); $('ndVal').value = ''; drawNdType(); });
   $('ndVal').addEventListener('input', function(){ var v = this.value.replace(/\D/g, ''); if (ndType === '%') { if (+v > 100) v = '100'; this.value = v; } else this.value = v ? money(+v) : ''; });
-  function openNote(k){ noteK = k; var it = O.items[k]; $('noteTitle').textContent = 'Món: ' + it.n + ' · ' + money(it.p) + 'đ'; $('noteIn').value = it.t || ''; ndType = it.dt || '%'; $('ndVal').value = it.dv ? (ndType === '%' ? it.dv : money(it.dv)) : ''; drawNdType(); $('noteModal').hidden = false; setTimeout(function(){ $('noteIn').focus(); }, 30); }
-  $('noteQuick').addEventListener('click', function(e){ var b = e.target.closest('[data-qn]'); if (!b) return; var v = $('noteIn').value.trim(); $('noteIn').value = v ? v + ', ' + b.getAttribute('data-qn').toLowerCase() : b.getAttribute('data-qn'); });
-  function saveNote(){
+  function openNote(k){ noteK = k; var it = O.items[k]; $('noteTitle').textContent = 'Món: ' + it.n + ' · ' + money(it.p) + 'đ'; $('noteIn').value = it.t || ''; ndType = it.dt || '%'; $('ndVal').value = it.dv ? (ndType === '%' ? it.dv : money(it.dv)) : ''; drawNdType();
+    var many = it.q > 1; $('noteAll').hidden = !many; $('noteAll').textContent = 'Ghi cho cả ' + it.q + ' ly (Ctrl+Enter)';
+    $('noteOk').textContent = many ? 'Chỉ 1 ly – tách dòng (Enter)' : 'Lưu (Enter)';
+    $('noteModal').hidden = false; setTimeout(function(){ $('noteIn').focus(); }, 30); }
+  function addQuick(x){ var v = $('noteIn').value.trim(); $('noteIn').value = v ? v + ', ' + x.toLowerCase() : x; $('noteIn').focus(); }
+  $('noteQuick').addEventListener('click', function(e){ var b = e.target.closest('[data-qn]'); if (b) addQuick(b.getAttribute('data-qn')); });
+  var NOTE_ALL = false, ITEM_DR = {};
+  function saveNote(all){
+    NOTE_ALL = all === true;
     var it = O.items[noteK], t = $('noteIn').value.trim().slice(0, 60);
     var dv = +String($('ndVal').value).replace(/[^\d]/g, '') || 0, oldDv = it ? (+it.dv || 0) : 0;
     if (it && (dv !== oldDv || (dv && ndType !== (it.dt || '%')))) {
       var apply = function(){ if (dv) { it.dt = ndType; it.dv = dv; } else { delete it.dt; delete it.dv; } saveNoteText(it, t); };
       if (!dv) return apply();
-      return withApprove('Giảm giá món ' + it.n + ': ' + (ndType === '%' ? dv + '%' : money(dv) + 'đ/món'), apply);
+      $('noteModal').hidden = true;
+      return askReason({ title: 'Lý do giảm giá món', what: it.n + ' · giảm ' + (ndType === '%' ? dv + '%' : money(dv) + 'đ/món'), list: rsList('disc'),
+        hint: 'Giảm giá được ghi lại cho quản lý xem sau.', ph: 'Bấm số 1–9 hoặc gõ lý do' }, function(why){ ITEM_DR[it.n] = why; apply(); }, function(){ $('noteModal').hidden = false; $('ndVal').focus(); });
     }
     saveNoteText(it, t);
   }
   function saveNoteText(it, t){
     if (it) {
       // tách 1 ly ra nếu có nhiều ly mà chỉ ghi chú 1
-      if (it.q > 1 && t && t !== (it.t || '') && confirm('Ghi chú cho cả ' + it.q + ' món? (Bấm Hủy để chỉ ghi chú 1 món)') === false) {
-        it.q--; var one = { n: it.n, g: it.g, p: it.p, q: 1, t: t }; if (it.dt) { one.dt = it.dt; one.dv = it.dv; } O.items.splice(noteK + 1, 0, one);
-      } else { if (t) it.t = t; else delete it.t; }
+      // nhiều ly cùng món mà ghi chú khác: mặc định chỉ ghi cho 1 ly (tách dòng) để tem in ra phân biệt được
+      if (it.q > 1 && t && t !== (it.t || '') && !NOTE_ALL) {
+        it.q--; var one = { n: it.n, g: it.g, p: it.p, q: 1, t: t }; if (it.dt) { one.dt = it.dt; one.dv = it.dv; } O.items.splice(noteK + 1, 0, one); SEL = noteK + 1;
+      } else { if (t) it.t = t; else delete it.t; SEL = noteK; }
     }
-    $('noteModal').hidden = true; drawCart();
+    $('noteModal').hidden = true; drawCart(); back();
   }
-  $('noteOk').addEventListener('click', saveNote);
-  $('noteCancel').addEventListener('click', function(){ $('noteModal').hidden = true; });
-  $('noteIn').addEventListener('keydown', function(e){ if (e.key === 'Enter') saveNote(); });
+  $('noteOk').addEventListener('click', function(){ saveNote(false); });
+  $('noteAll').addEventListener('click', function(){ saveNote(true); });
+  $('noteCancel').addEventListener('click', function(){ $('noteModal').hidden = true; back(); });
+  $('noteIn').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') { e.preventDefault(); saveNote(e.ctrlKey); }
+    else if (/^[1-9]$/.test(e.key) && !e.ctrlKey && !e.altKey && QUICK_NOTES[+e.key - 1]) { e.preventDefault(); addQuick(QUICK_NOTES[+e.key - 1]); }
+  });
+  $('ndVal').addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); saveNote(e.ctrlKey); } });
 
   function payload(pay){
     readHead();
-    return { name: O.name, phone: O.phone, pager: O.pager, note: O.note, pay: pay || '', disc: O.disc || null,
+    var idr = O.items.filter(function(i){ return i.dv && ITEM_DR[i.n]; }).map(function(i){ return i.n + ': ' + ITEM_DR[i.n]; }).join('; ');
+    return { name: O.name, phone: O.phone, pager: O.pager, note: O.note, pay: pay || '', disc: O.disc || null, togo: !!O.togo, idr: idr,
       items: O.items.map(function(i){ var x = { n: i.n, q: i.q }; if (i.t) x.t = i.t; if (i.dt && i.dv) { x.dt = i.dt; x.dv = i.dv; } return x; }) };
   }
   function save(pay, kitchen){
@@ -1041,6 +1153,7 @@
     $('payTitle').textContent = 'Thanh toán ' + (O.code ? '#' + O.code : 'đơn mới');
     calcO(); $('payTot').textContent = money(O.total) + 'đ';
     $('payDisc').hidden = !O.discAmt; $('payDisc').textContent = O.discAmt ? 'Tạm tính ' + money(O.gross) + 'đ · Giảm ' + money(O.discAmt) + 'đ' + (O.disc ? ' (' + discLabel(O.disc) + ')' : '') : '';
+    $('payList').innerHTML = (O.togo ? '<div style="font-weight:800">🥡 MANG ĐI</div>' : '') + O.items.map(function(i){ return '<div><b>' + i.q + '×</b> ' + esc(i.n) + (i.t ? ' <i>– ' + esc(i.t) + '</i>' : '') + '</div>'; }).join('') + (O.note ? '<div><i>Ghi chú đơn: ' + esc(O.note) + '</i></div>' : '');
     $('given').value = ''; $('change').textContent = '0đ';
     var t = O.total, opts = [t];
     [10000, 20000, 50000, 100000, 200000, 500000].forEach(function(b){ var v = Math.ceil(t / b) * b; if (v > t && opts.indexOf(v) < 0 && opts.length < 5) opts.push(v); });
@@ -1050,20 +1163,21 @@
     $('payModal').hidden = false;
     setTimeout(function(){ $('given').focus(); }, 30);
   }
-  function calcChange(){ var g = +($('given').value.replace(/\D/g, '')) || 0; $('change').textContent = g ? money(g - O.total) + 'đ' : '0đ'; }
+  /* gõ 100 = 100.000đ (số dưới 1.000 tự nhân 1.000) */
+  function givenVal(){ var g = +($('given').value.replace(/\D/g, '')) || 0; return g > 0 && g < 1000 ? g * 1000 : g; }
+  function calcChange(){ var g = givenVal(); $('change').textContent = !g ? '0đ' : g < O.total ? 'chưa đủ (' + money(g) + 'đ)' : money(g - O.total) + 'đ'; }
+  function setMethod(m){ METHOD = m; Array.prototype.forEach.call(document.querySelectorAll('.meth'), function(x){ x.classList.toggle('on', x.getAttribute('data-m') === m); }); $('givenBox').hidden = m !== 'Tiền mặt'; if (m === 'Tiền mặt') $('given').focus(); }
   $('given').addEventListener('input', function(){ var v = this.value.replace(/\D/g, ''); this.value = v ? money(+v) : ''; calcChange(); });
   $('quick').addEventListener('click', function(e){ var b = e.target.closest('[data-g]'); if (!b) return; $('given').value = money(+b.getAttribute('data-g')); calcChange(); });
   document.querySelector('.methods').addEventListener('click', function(e){
-    var b = e.target.closest('[data-m]'); if (!b) return; METHOD = b.getAttribute('data-m');
-    Array.prototype.forEach.call(document.querySelectorAll('.meth'), function(x){ x.classList.toggle('on', x === b); });
-    $('givenBox').hidden = METHOD !== 'Tiền mặt';
+    var b = e.target.closest('[data-m]'); if (!b) return; setMethod(b.getAttribute('data-m'));
   });
   $('payBtn').addEventListener('click', openPay);
-  $('payCancel').addEventListener('click', function(){ $('payModal').hidden = true; });
+  $('payCancel').addEventListener('click', function(){ $('payModal').hidden = true; back(); });
   var paying = false;
   function doPay(){
     if (paying) return;
-    var given = METHOD === 'Tiền mặt' ? (+($('given').value.replace(/\D/g, '')) || 0) : 0;
+    var given = METHOD === 'Tiền mặt' ? givenVal() : 0;
     if (given && given < O.total) { $('payErr').textContent = 'Tiền khách đưa chưa đủ.'; $('payErr').hidden = false; return; }
     paying = true; busy(true, 'Đang thanh toán…');
     var wantBill = $('pBill').checked, wantTem = $('pTem').checked;
@@ -1079,7 +1193,7 @@
   /* Hủy đơn chờ: nút "Hủy đơn" trong màn hình đơn, hoặc chuột phải trên thẻ đơn */
   function cancelPending(o){
     if (!o) return;
-    askReason({ title: 'Hủy đơn #' + o.code, what: o.name + ' · ' + money(o.total) + 'đ · ' + (o.src === 'Quầy' ? 'Tại quầy' : 'Đơn QR'), ph: 'Lý do (VD: khách đổi ý, khách không ra quầy, nhập trùng…)',
+    askReason({ title: 'Hủy đơn #' + o.code, what: o.name + ' · ' + money(o.total) + 'đ · ' + (o.src === 'Quầy' ? 'Tại quầy' : 'Đơn QR'), ph: 'Bấm số 1–9 hoặc gõ lý do', list: rsList('cancel'),
       hint: 'Việc hủy được ghi lại cho quản lý xem sau.' }, function(why){
       call('cashierUpdate', [PIN, o.id, 'cancel', { reason: why }]).then(function(r){ if (r.ok) { if (O && O.id === o.id) { $('ordView').hidden = true; O = null; } apply(r.data); toast('Đã hủy đơn #' + o.code); } else toast(r.msg, 4000); }, function(e){ toast('⚠️ ' + e.message, 4000); });
     });
@@ -1093,9 +1207,14 @@
   /* Phím tắt */
   document.addEventListener('keydown', function(e){
     if (!PIN || LOCK) return;
-    if (!$('payModal').hidden) { if (e.key === 'Enter') { e.preventDefault(); doPay(); } if (e.key === 'Escape') $('payModal').hidden = true; return; }
-    if (!$('noteModal').hidden) { if (e.key === 'Escape') $('noteModal').hidden = true; return; }
-    if (!$('discModal').hidden) { if (e.key === 'Escape') { e.preventDefault(); $('discModal').hidden = true; } else if (e.key === 'Enter') { e.preventDefault(); $('dOk').click(); } return; }
+    if (!$('payModal').hidden) {
+      if (e.key === 'Enter') { e.preventDefault(); doPay(); }
+      else if (e.key === 'Escape') { $('payModal').hidden = true; back(); }
+      else if (!e.ctrlKey && !e.altKey && /^[cCtT]$/.test(e.key)) { e.preventDefault(); setMethod(/[cC]/.test(e.key) ? 'Chuyển khoản' : 'Tiền mặt'); }
+      return;
+    }
+    if (!$('noteModal').hidden) { if (e.key === 'Escape') { $('noteModal').hidden = true; back(); } return; }
+    if (!$('discModal').hidden) { if (e.key === 'Escape') { e.preventDefault(); $('discModal').hidden = true; back(); } else if (e.key === 'Enter') { e.preventDefault(); $('dOk').click(); } return; }
     if (!$('rfModal').hidden) { if (e.key === 'Escape') { e.preventDefault(); $('rfCancel').click(); } return; }
     if (!$('tblModal').hidden) { if (e.key === 'Escape') { e.preventDefault(); $('tblModal').hidden = true; } return; }
     if (!$('setModal').hidden) return;
@@ -1104,11 +1223,28 @@
       else if (e.key === 'F3') { e.preventDefault(); doSave(); }
       else if (e.key === 'F6') { e.preventDefault(); openDisc(); }
       else if (e.key === 'F4') { e.preventDefault(); $('search').focus(); $('search').select(); }
+      else if (e.key === 'F7') { e.preventDefault(); if (!$('moreBtn').hidden) $('moreBtn').click(); else toast('Lưu đơn trước (F3) rồi mới báo bếp riêng.'); }
+      else if (e.key === 'F8') { e.preventDefault(); $('togoBtn').click(); }
       else if (e.key === 'Escape') { e.preventDefault(); $('exitBtn').click(); }
+      else if (!/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && !document.querySelector('.mask:not([hidden])')) {
+        if (!cartKey(e) && e.key.length === 1 && !e.ctrlKey && !e.altKey) $('search').focus();
+      }
     } else if (e.key === 'F2') { e.preventDefault(); openOrder(null); }
     else if (e.key === 'F9') { e.preventDefault(); lockNow(); }
+    else if (!/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && !document.querySelector('.mask:not([hidden])') && $('ordView').hidden && /^[0-9a-zA-Z]$/.test(e.key) && !e.ctrlKey && !e.altKey && TAB !== 'rep' && TAB !== 'paid') $('findOrd').focus();
   });
   $('newBtn').addEventListener('click', function(){ openOrder(null); });
+  /* Mở đơn đang chờ bằng số thẻ rung hoặc mã đơn */
+  $('findOrd').addEventListener('keydown', function(e){
+    if (e.key === 'Escape') { this.value = ''; this.blur(); return; }
+    if (e.key !== 'Enter') return; e.preventDefault();
+    var v = this.value.trim().toLowerCase().replace(/^#/, ''); if (!v || !D) return;
+    var hit = D.pending.filter(function(o){ return String(o.pager || '').toLowerCase() === v || String(o.code) === v || (/^\d+$/.test(v) && String(o.code) === ('00' + v).slice(-3)); });
+    hit.sort(function(a, b){ return (String(a.pager || '').toLowerCase() === v ? 0 : 1) - (String(b.pager || '').toLowerCase() === v ? 0 : 1) || b.created - a.created; });
+    if (!hit.length) return toast('Không có đơn chờ nào gắn thẻ / mã "' + this.value.trim() + '".');
+    if (hit.length > 1 && String(hit[1].pager || '').toLowerCase() === v) toast('Thẻ ' + v + ' có ' + hit.length + ' đơn chờ – đang mở đơn mới nhất #' + hit[0].code, 4000);
+    this.value = ''; openOrder(hit[0]);
+  });
 
   /* ================= Cài đặt máy in ================= */
   var PRINTERS = [];
@@ -1126,6 +1262,7 @@
     $('appVer').textContent = NATIVE ? 'App Chata Thu ngân ' + (NATIVE.version || '') + ' · in thẳng ra máy in.' : 'Đang chạy trên trình duyệt.';
     ['bill_on','bep_on','tem_on'].forEach(function(k){ $('s_' + k).checked = !!S[k]; });
     ['bill_w','bill_c','bep_w','bep_c','tem_s','tem_ink'].forEach(function(k){ $('s_' + k).value = S[k]; });
+    ['disc', 'cancel', 'refund'].forEach(function(k){ $('s_rs_' + k).value = S['rs_' + k] || ''; });
     $('s_shop').value = S.shop; $('s_addr').value = S.addr; $('s_foot').value = S.foot; $('s_lock_min').value = String(S.lock_min || '0');
     $('s_tables').value = tablesText(tablesOf());
     $('s_promos').value = ((D && D.promos) || []).map(function(x){ return x.n + ': ' + (x.t === '%' ? x.v + '%' : x.v + 'đ'); }).join('\n');
@@ -1139,6 +1276,7 @@
   function readSet(){
     ['bill_on','bep_on','tem_on'].forEach(function(k){ S[k] = $('s_' + k).checked; });
     ['bill_w','bill_c','bep_w','bep_c','tem_s','tem_ink','bill_p','bep_p','tem_p'].forEach(function(k){ S[k] = $('s_' + k).value; });
+    ['disc', 'cancel', 'refund'].forEach(function(k){ var v = $('s_rs_' + k).value.split(/\n/).map(function(x){ return x.trim(); }).filter(Boolean).slice(0, 9).join('\n'); S['rs_' + k] = v || DEF['rs_' + k]; });
     S.shop = $('s_shop').value.trim() || DEF.shop; S.addr = $('s_addr').value.trim(); S.foot = $('s_foot').value.trim(); S.lock_min = $('s_lock_min').value;
     Array.prototype.forEach.call(document.querySelectorAll('#s_grp select'), function(s){ S.groups[s.getAttribute('data-g')] = s.value; });
     saveS(); drawPrintState();
@@ -1181,7 +1319,7 @@
     readHead();
     tblNext = next || saveNow;
     $('tblTitle').textContent = next ? 'Thanh toán · chọn bàn / thẻ rung' : 'Lưu đơn · chọn bàn / thẻ rung';
-    $('tblNone').textContent = next ? 'Thanh toán, không gắn bàn' : 'Lưu, không gắn bàn';
+    $('tblNone').textContent = (next ? 'Thanh toán, không gắn bàn' : 'Lưu, không gắn bàn') + (O.pager ? '' : ' (Enter)');
     var used = {};
     pagerBusy().forEach(function(o){ (used[o.pager] = used[o.pager] || []).push('#' + o.code); });
     var cur = O.pager || '', known = false;
@@ -1203,12 +1341,12 @@
   }
   $('tblAreas').addEventListener('click', function(e){ var b = e.target.closest('[data-tb]'); if (b) pickTable(b.getAttribute('data-tb')); });
   $('tblNone').addEventListener('click', function(){ pickTable(''); });
-  $('tblCancel').addEventListener('click', function(){ $('tblModal').hidden = true; });
+  $('tblCancel').addEventListener('click', function(){ $('tblModal').hidden = true; back(); });
   $('tblFind').addEventListener('keydown', function(e){
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); $('tblModal').hidden = true; return; }
     if (e.key !== 'Enter') return;
     e.preventDefault(); e.stopPropagation(); var v = this.value.trim();
-    if (!v) { if (O.pager) pickTable(O.pager); return; }
+    if (!v) { pickTable(O.pager || ''); return; }
     var all = []; tablesOf().forEach(function(z){ all = all.concat(z.t); });
     var hit = all.find(function(t){ return t.toLowerCase() === v.toLowerCase(); });
     if (hit) return pickTable(hit);

@@ -235,7 +235,7 @@
     return { id: o.id, code: o.code, name: o.name, phone: o.phone || '', items: o.items || [], total: o.total || 0, note: o.note || '',
       status: o.status, pay: o.pay || '', pager: o.pager || '', created: o.created || 0, paidAt: o.paidAt || 0, mode: o.mode || '',
       src: o.src || 'QR', cashier: o.cashier || '', by: log.length ? log[0].by : '',
-      gross: o.gross || o.total || 0, discAmt: o.discAmt || 0, disc: o.disc || null };
+      gross: o.gross || o.total || 0, discAmt: o.discAmt || 0, disc: o.disc || null, togo: !!o.togo };
   }
   function save(ref, data, merge) {
     var p = merge ? ref.set(data, { merge: true }) : ref.set(data);
@@ -293,14 +293,14 @@
       });
     });
   }
-  function discReview(u, o, A, L, old) {
+  function discReview(u, o, A, L, old, idr) {
     // giảm giá tự nhập (không theo chương trình) hoặc giảm giá món: ghi lại khi mới áp dụng / thay đổi
     old = old || {};
     if (A.disc && !A.disc.promo && JSON.stringify(A.disc) !== JSON.stringify(old.disc || null))
       logReview(u, 'Giảm giá đơn', o, A.disc.amt, A.disc.r, (A.disc.t === '%' ? A.disc.v + '%' : A.disc.v + 'đ') + ' · tạm tính ' + L.total);
     var ik = function (it) { return (it || []).filter(function (i) { return i.da; }).map(function (i) { return i.n + ':' + i.dt + i.dv + 'x' + i.q; }).join('|'); };
     if (L.idisc > 0 && ik(L.items) !== ik(old.items))
-      logReview(u, 'Giảm giá món', o, L.idisc, '', L.items.filter(function (i) { return i.da; }).map(function (i) { return i.q + '× ' + i.n + ' −' + (i.dt === '%' ? i.dv + '%' : i.dv + 'đ/món'); }).join(', '));
+      logReview(u, 'Giảm giá món', o, L.idisc, idr || '', L.items.filter(function (i) { return i.da; }).map(function (i) { return i.q + '× ' + i.n + ' −' + (i.dt === '%' ? i.dv + '%' : i.dv + 'đ/món'); }).join(', '));
   }
   function byCode(w, code) { return !!w && (w === code || w.indexOf('(' + code + ')') >= 0 || w.split(' (')[0] === code); }
   function sumFor(all, code, from, to) {
@@ -473,12 +473,13 @@
               gross: A.gross, itemDisc: A.itemDisc, disc: A.disc, discAmt: A.discAmt,
               note: clean(d.note, 200), status: pay ? 'Đã thanh toán' : 'Chờ thanh toán', pay: pay, pager: clean(d.pager, 10), paidAt: pay ? now : 0,
               paidDate: pay ? today() : '', mode: mode === 'night' ? 'Đêm nhạc' : 'Thường', token: '', src: 'Quầy', cashier: pay ? who(u) : '', cashierCode: pay ? u.c : '', log: [] };
+            if (d.togo) o.togo = true;
             act(o, u, 'tao'); if (pay) act(o, u, 'thu', pay);
             if (c.temp) o.tempCode = true;
             var K = d.kitchen ? kitchenDelta(L.items, null) : null; if (K) { o.sent = K.sent; act(o, u, 'bep'); }
             C.orders[id] = Object.assign({ id: id }, o);
             save(db.collection('posOrders').doc(id), o);
-            discReview(u, C.orders[id], A, L, null);
+            discReview(u, C.orders[id], A, L, null, clean(d.idr, 160));
             if (pay) dayLater(o.paidDate);
             return { ok: true, order: pub(C.orders[id]), kitchen: K ? K.items : [], data: cashierData(u) };
           });
@@ -522,6 +523,7 @@
               if (d.name !== undefined && clean(d.name, 30)) o.name = clean(d.name, 30);
               if (d.phone !== undefined) { var ph = phoneOf(d.phone); if (ph !== null) o.phone = ph; }
               o.pager = clean(d.pager, 10);
+              if (d.togo !== undefined) o.togo = !!d.togo;
               if (action === 'pay') {
                 var pay = d.pay === 'Chuyển khoản' ? 'Chuyển khoản' : 'Tiền mặt';
                 o.status = 'Đã thanh toán'; o.pay = pay; o.paidAt = Date.now(); o.paidDate = today(); o.cashier = who(u); o.cashierCode = u.c; act(o, u, 'thu', pay);
@@ -531,7 +533,7 @@
             C.orders[id] = C.keep[id] = Object.assign({ id: id }, o);
             save(db.doc('posOrders/' + id), o);
             if (rv) logReview(u, rv[0], C.orders[id], rv[1], rv[2], rv[3]);
-            else if (A) discReview(u, C.orders[id], A, L, old0);
+            else if (A) discReview(u, C.orders[id], A, L, old0, clean(d.idr, 160));
             if (action === 'pay' || action === 'method') dayLater(o.paidDate);
             else if (action === 'refund') { dayLater(o.paidDate); if (o.date !== o.paidDate) dayLater(o.date); }
             else if (action === 'cancel') dayLater(o.date);
