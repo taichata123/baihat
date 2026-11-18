@@ -128,7 +128,7 @@
   .acts{display:flex;height:66px}.acts button{flex:1}.acts .a-pay{flex:1.5}
   .acts button{border:none;color:#fff;font-weight:700;font-size:14.5px;line-height:1.2}
   .acts small{display:block;font-weight:400;opacity:.85;font-size:12px}
-  .a-exit{background:var(--red)}.a-save{background:#4F6487}.a-more{background:#6B7FA0}.a-pay{background:var(--blue);font-size:17px!important}
+  .a-exit{background:var(--red)}.a-save{background:#4F6487}.a-more{background:#6B7FA0}.a-cancel{background:#8E3B3B;flex:.8!important}.a-pay{background:var(--blue);font-size:17px!important}
   .cempty{color:var(--muted);text-align:center;padding:40px 10px}
 
   /* modal */
@@ -189,6 +189,7 @@
   <form id="loginForm" novalidate>
     <h2>Chata Thu ngân</h2>
     <div style="color:var(--muted)">Đăng nhập bằng tài khoản Web vận hành</div>
+    <div id="lockNote" hidden style="margin-top:10px;background:#FFF4E5;border:1px solid #F2C27B;color:#8A5300;border-radius:8px;padding:9px 11px;font-size:14px">🔒 Máy đang khóa<span id="lockWho"></span>. Nhập mã + PIN để mở. Người khác đăng nhập = <b>đổi người</b> (ca của người trước vẫn giữ, nhớ kết ca sau).</div>
     <div class="ltabs"><button type="button" class="on" data-lk="staff">Nhân viên</button><button type="button" data-lk="manager">Quản lý</button></div>
     <input id="lcode" type="text" autocomplete="username" autocapitalize="characters" placeholder="Mã nhân viên (VD: HAU)">
     <input id="pw" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN">
@@ -216,6 +217,7 @@
       <button class="tbtn" id="shiftBtn" type="button" hidden>⏱ Kết ca</button>
       <button class="tbtn" id="updBtn" type="button" hidden style="background:#13C48A;color:#fff;border-color:#13C48A">⬆ Cập nhật app</button>
       <button class="tbtn" id="setBtn" type="button">🖨 Máy in</button>
+      <button class="tbtn" id="lockBtn" type="button" title="Khóa máy / đổi người (F9)">🔒 Khóa</button>
       <button class="tbtn" id="outBtn" type="button">Đăng xuất</button>
     </div>
   </div>
@@ -268,6 +270,7 @@
     <div class="acts">
       <button class="a-exit" id="exitBtn" type="button">Thoát<small>(Esc)</small></button>
       <button class="a-save" id="saveBtn" type="button">Lưu đơn<small>(F3)</small></button>
+      <button class="a-cancel" id="cancelBtn" type="button">Hủy đơn<small>cần QL duyệt</small></button>
       <button class="a-more" id="moreBtn" type="button">Báo bếp<small>in trước</small></button>
       <button class="a-pay" id="payBtn" type="button">Thanh toán<small>(F1)</small></button>
     </div>
@@ -363,6 +366,7 @@
         <label>Tên quán<input id="s_shop" maxlength="40"></label>
         <label>Địa chỉ / SĐT<input id="s_addr" maxlength="80"></label>
         <label>Lời chào cuối bill<input id="s_foot" maxlength="80"></label>
+        <label>Tự khóa máy khi để không<select id="s_lock_min"><option value="0">Không tự khóa</option><option value="5">Sau 5 phút</option><option value="10">Sau 10 phút</option><option value="15">Sau 15 phút</option><option value="30">Sau 30 phút</option></select></label>
       </div>
     </div>
     <p class="hint" id="appVer"></p>
@@ -494,7 +498,7 @@
   /* ================= Cài đặt in ================= */
   var DEF = { bill_on:false, bill_p:'', bill_w:'80', bill_c:'1', bep_on:true, bep_p:'', bep_w:'80', bep_c:'1', tem_on:true, tem_p:'', tem_s:'50x30', tem_ink:'Vừa',
     groups:{ 'Đồ ăn':'bep', 'Lai rai':'bep', 'Mì cay':'bep', 'Đồ chiên':'bep', 'Bia':'none', 'Ăn vặt':'none' },
-    shop:'CHATA COFFEE', addr:'Bàu Cạn, Gia Lai', foot:'Cảm ơn quý khách – Hẹn gặp lại!' };
+    lock_min:'0', shop:'CHATA COFFEE', addr:'Bàu Cạn, Gia Lai', foot:'Cảm ơn quý khách – Hẹn gặp lại!' };
   var S = {}; try { S = JSON.parse(ls('chata_pos_set') || '{}'); } catch(e){}
   Object.keys(DEF).forEach(function(k){ if (S[k] === undefined) S[k] = DEF[k]; });
   function saveS(){ ls('chata_pos_set', JSON.stringify(S)); }
@@ -635,7 +639,24 @@
   }
 
   /* ================= Đăng nhập & dữ liệu ================= */
-  function show(){ $('loginView').hidden = !!PIN; $('app').hidden = !PIN; }
+  var LOCK = ls('chata_lock') === '1';
+  function show(){
+    var locked = !!PIN && LOCK;
+    $('loginView').hidden = !!PIN && !LOCK; $('app').hidden = !PIN || LOCK;
+    $('lockNote').hidden = !locked;
+    if (locked) { var m = null; try { m = JSON.parse(ls('chata_pos_me') || 'null'); } catch(e){} $('lockWho').textContent = m ? ' (' + m.name + ' đang đăng nhập)' : ''; setTimeout(function(){ $('lcode').focus(); }, 30); }
+  }
+  function lockNow(){
+    if (!PIN || LOCK) return;
+    if (!$('ordView').hidden && dirty()) { toast('Đang có đơn chưa lưu – lưu hoặc thoát đơn trước khi khóa.'); return; }
+    if (!$('ordView').hidden) closeOrder();
+    ['payModal','discModal','noteModal','tblModal','setModal','rfModal','apModal','openModal','closeModal'].forEach(function(id){ if ($(id)) $(id).hidden = true; });
+    LOCK = true; ls('chata_lock', '1'); $('pw').value = ''; $('loginErr').hidden = true; show();
+  }
+  /* tự khóa khi để không */
+  var lastAct = Date.now();
+  ['pointerdown','keydown'].forEach(function(ev){ document.addEventListener(ev, function(){ lastAct = Date.now(); }, true); });
+  setInterval(function(){ var m = +S.lock_min || 0; if (m && PIN && !LOCK && !paying && Date.now() - lastAct > m * 60000) lockNow(); }, 15000);
   var LK = 'staff';
   document.querySelector('.ltabs').addEventListener('click', function(e){
     var b = e.target.closest('[data-lk]'); if (!b) return; LK = b.getAttribute('data-lk');
@@ -649,14 +670,17 @@
     if (!p) { $('loginErr').textContent = 'Nhập PIN.'; $('loginErr').hidden = false; return; }
     $('loginBtn').disabled = true; $('loginBtn').textContent = 'Đang kiểm tra…';
     call('posLogin', [LK, c, p]).then(function(r){
-      if (r.ok) { PIN = r.token; ls('chata_cashier', r.token); ls('chata_pos_me', JSON.stringify(r.me)); $('pw').value = ''; $('loginErr').hidden = true; show(); load(); }
+      if (r.ok) { var prev = null; try { prev = JSON.parse(ls('chata_pos_me') || 'null'); } catch(e){}
+        PIN = r.token; LOCK = false; ls('chata_lock', null); ls('chata_cashier', r.token); ls('chata_pos_me', JSON.stringify(r.me)); $('pw').value = ''; $('loginErr').hidden = true; show(); load();
+        if (prev && prev.code !== r.me.code) toast('Đã đổi sang ' + r.me.name + (prev.name ? ' (ca của ' + prev.name + ' vẫn mở, nhớ kết ca)' : ''), 5000); }
       else { $('loginErr').textContent = r.msg; $('loginErr').hidden = false; }
     }, function(e){ $('loginErr').textContent = e.message; $('loginErr').hidden = false; })
     .then(function(){ $('loginBtn').disabled = false; $('loginBtn').textContent = 'Đăng nhập'; });
   });
+  $('lockBtn').addEventListener('click', lockNow);
   $('outBtn').addEventListener('click', function(){
     if (!confirm('Đăng xuất khỏi máy thu ngân?')) return;
-    call('posLogout', [PIN]).catch(function(){}); ls('chata_cashier', null); ls('chata_pos_me', null); PIN = ''; D = null; $('who').textContent = 'Thu ngân'; show();
+    call('posLogout', [PIN]).catch(function(){}); ls('chata_cashier', null); ls('chata_pos_me', null); ls('chata_lock', null); LOCK = false; PIN = ''; D = null; $('who').textContent = 'Thu ngân'; show();
   });
   /* Việc cần quản lý duyệt: nếu máy chủ báo needApprove thì hỏi mã + PIN quản lý rồi gửi lại */
   var apCb = null;
@@ -902,7 +926,7 @@
     $('cName').value = O.name === 'Khách lẻ' ? '' : O.name; $('cPhone').value = O.phone || ''; $('cPager').value = O.pager || ''; $('cNote').value = O.note || '';
     $('search').value = ''; $('menuPick').value = 'cur'; $('menuPick').hidden = !(D && D.other && D.other.length);
     $('menuPick').options[1].textContent = D && D.mode === 'night' ? 'Menu thường' : 'Menu đêm nhạc';
-    $('moreBtn').hidden = !ord;
+    $('moreBtn').hidden = !ord; $('cancelBtn').hidden = !ord;
     $('ordView').hidden = false; drawCats(); drawCart(); O0 = snap();
   }
   function closeOrder(){ $('ordView').hidden = true; O = null; drawHome(); }
@@ -1050,17 +1074,21 @@
   }
   $('payOk').addEventListener('click', doPay);
 
-  /* Hủy đơn chờ (giữ phím chuột phải trên thẻ đơn) */
+  /* Hủy đơn chờ: nút "Hủy đơn" trong màn hình đơn, hoặc chuột phải trên thẻ đơn */
+  function cancelPending(o){
+    if (!o) return;
+    if (!confirm('Hủy đơn #' + o.code + ' (' + o.name + ')?')) return;
+    needAp('Hủy đơn #' + o.code + ' (' + o.name + ')', function(ap){ return call('cashierUpdate', [PIN, o.id, 'cancel', { approve: ap }]).then(function(r){ if (r.needApprove) return r; if (r.ok) { if (O && O.id === o.id) { $('ordView').hidden = true; O = null; } apply(r.data); toast('Đã hủy đơn #' + o.code); } else toast(r.msg); return r; }); });
+  }
+  $('cancelBtn').addEventListener('click', function(){ if (!O || !O.id) return; cancelPending(D.pending.find(function(x){ return x.id === O.id; }) || O); });
   $('orders').addEventListener('contextmenu', function(e){
     var c = e.target.closest('.oc'); if (!c) return; e.preventDefault();
-    var o = D.pending.find(function(x){ return x.id === c.getAttribute('data-open'); }); if (!o) return;
-    if (!confirm('Hủy đơn #' + o.code + ' (' + o.name + ')?')) return;
-    needAp('Hủy đơn #' + o.code + ' (' + o.name + ')', function(ap){ return call('cashierUpdate', [PIN, o.id, 'cancel', { approve: ap }]).then(function(r){ if (r.needApprove) return r; if (r.ok) { apply(r.data); toast('Đã hủy đơn #' + o.code); } else toast(r.msg); return r; }); });
+    cancelPending(D.pending.find(function(x){ return x.id === c.getAttribute('data-open'); }));
   });
 
   /* Phím tắt */
   document.addEventListener('keydown', function(e){
-    if (!PIN) return;
+    if (!PIN || LOCK) return;
     if (!$('payModal').hidden) { if (e.key === 'Enter') { e.preventDefault(); doPay(); } if (e.key === 'Escape') $('payModal').hidden = true; return; }
     if (!$('noteModal').hidden) { if (e.key === 'Escape') $('noteModal').hidden = true; return; }
     if (!$('discModal').hidden) { if (e.key === 'Escape') { e.preventDefault(); $('discModal').hidden = true; } else if (e.key === 'Enter') { e.preventDefault(); $('dOk').click(); } return; }
@@ -1074,6 +1102,7 @@
       else if (e.key === 'F4') { e.preventDefault(); $('search').focus(); $('search').select(); }
       else if (e.key === 'Escape') { e.preventDefault(); $('exitBtn').click(); }
     } else if (e.key === 'F2') { e.preventDefault(); openOrder(null); }
+    else if (e.key === 'F9') { e.preventDefault(); lockNow(); }
   });
   $('newBtn').addEventListener('click', function(){ openOrder(null); });
 
@@ -1093,7 +1122,7 @@
     $('appVer').textContent = NATIVE ? 'App Chata Thu ngân ' + (NATIVE.version || '') + ' · in thẳng ra máy in.' : 'Đang chạy trên trình duyệt.';
     ['bill_on','bep_on','tem_on'].forEach(function(k){ $('s_' + k).checked = !!S[k]; });
     ['bill_w','bill_c','bep_w','bep_c','tem_s','tem_ink'].forEach(function(k){ $('s_' + k).value = S[k]; });
-    $('s_shop').value = S.shop; $('s_addr').value = S.addr; $('s_foot').value = S.foot;
+    $('s_shop').value = S.shop; $('s_addr').value = S.addr; $('s_foot').value = S.foot; $('s_lock_min').value = String(S.lock_min || '0');
     $('s_tables').value = tablesText(tablesOf());
     $('s_promos').value = ((D && D.promos) || []).map(function(x){ return x.n + ': ' + (x.t === '%' ? x.v + '%' : x.v + 'đ'); }).join('\n');
     var gs = []; (D ? D.menu.concat(D.other || []) : []).forEach(function(m){ if (gs.indexOf(m.g) < 0) gs.push(m.g); });
@@ -1106,7 +1135,7 @@
   function readSet(){
     ['bill_on','bep_on','tem_on'].forEach(function(k){ S[k] = $('s_' + k).checked; });
     ['bill_w','bill_c','bep_w','bep_c','tem_s','tem_ink','bill_p','bep_p','tem_p'].forEach(function(k){ S[k] = $('s_' + k).value; });
-    S.shop = $('s_shop').value.trim() || DEF.shop; S.addr = $('s_addr').value.trim(); S.foot = $('s_foot').value.trim();
+    S.shop = $('s_shop').value.trim() || DEF.shop; S.addr = $('s_addr').value.trim(); S.foot = $('s_foot').value.trim(); S.lock_min = $('s_lock_min').value;
     Array.prototype.forEach.call(document.querySelectorAll('#s_grp select'), function(s){ S.groups[s.getAttribute('data-g')] = s.value; });
     saveS(); drawPrintState();
   }
@@ -1134,6 +1163,14 @@
   window.addEventListener('beforeunload', function(e){ if (dirty()) { e.preventDefault(); e.returnValue = ''; } });
 
   /* ================= Sơ đồ bàn / thẻ rung ================= */
+  /* thẻ rung đang dùng: đơn chờ thu + đơn vừa thu trong 30 phút (khách còn cầm thẻ chờ món) */
+  var PAGER_HOLD = 30 * 60000;
+  function pagerBusy(){
+    var now = Date.now(), out = [];
+    (D && D.pending || []).forEach(function(o){ if (o.pager && (!O || o.id !== O.id)) out.push(o); });
+    (D && D.paid || []).forEach(function(o){ if (o.pager && o.paidAt && now - o.paidAt < PAGER_HOLD && (!O || o.id !== O.id)) out.push(o); });
+    return out;
+  }
   function tablesOf(){ return (D && D.tables && D.tables.length) ? D.tables : [{ a: 'Thẻ rung', t: ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20'] }]; }
   var tblNext = null;
   function openTables(next){
@@ -1142,7 +1179,7 @@
     $('tblTitle').textContent = next ? 'Thanh toán · chọn bàn / thẻ rung' : 'Lưu đơn · chọn bàn / thẻ rung';
     $('tblNone').textContent = next ? 'Thanh toán, không gắn bàn' : 'Lưu, không gắn bàn';
     var used = {};
-    (D && D.pending || []).forEach(function(o){ if (o.pager && o.id !== O.id) (used[o.pager] = used[o.pager] || []).push('#' + o.code); });
+    pagerBusy().forEach(function(o){ (used[o.pager] = used[o.pager] || []).push('#' + o.code); });
     var cur = O.pager || '', known = false;
     $('tblAreas').innerHTML = tablesOf().map(function(z){
       return '<div class="tarea"><h4>' + esc(z.a) + '</h4><div class="tgrid">' + z.t.map(function(t){
@@ -1156,7 +1193,7 @@
   }
   function pickTable(t){
     t = String(t || '').trim();
-    var other = (D && D.pending || []).filter(function(o){ return t && o.pager === t && o.id !== O.id; });
+    var other = pagerBusy().filter(function(o){ return t && o.pager === t; });
     if (other.length && !confirm('Bàn ' + t + ' đang có đơn ' + other.map(function(o){ return '#' + o.code; }).join(', ') + '. Vẫn gắn đơn này vào bàn ' + t + '?')) return;
     O.pager = t; $('cPager').value = t; $('tblModal').hidden = true; (tblNext || saveNow)();
   }

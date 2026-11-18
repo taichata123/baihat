@@ -217,15 +217,18 @@
   }
 
   /* ---------- số đơn trong ngày ---------- */
+  function tempCode(date) {
+    // mất mạng: số tạm theo giờ phút giây (Thhmmss, không trùng trong ngày), đồng bộ khi có mạng
+    var d = new Date(), p = function (n) { return ('0' + n).slice(-2); };
+    return { date: date, code: 'T' + p(vnParts(d.getTime()).hour) + p(d.getMinutes()) + p(d.getSeconds()), temp: true };
+  }
   function newCode() {
     var date = today(), ref = db.doc('posCounters/' + date);
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return Promise.resolve(tempCode(date));
     var tx = db.runTransaction(function (t) {
       return t.get(ref).then(function (s) { var n = (s.exists ? s.data().n : 0) + 1; t.set(ref, { n: n, at: Date.now() }, { merge: true }); return n; });
     });
-    return withTimeout(tx, 6000, 'slow').then(function (n) { return { date: date, code: ('00' + n).slice(-3) }; }, function () {
-      // mất mạng: số tạm theo giờ phút giây (sẽ đồng bộ khi có mạng)
-      var d = new Date(); return { date: date, code: 'T' + ('0' + d.getMinutes()).slice(-2) + ('0' + d.getSeconds()).slice(-2), temp: true };
-    });
+    return withTimeout(tx, 3500, 'slow').then(function (n) { return { date: date, code: ('00' + n).slice(-3) }; }, function () { return tempCode(date); });
   }
   function pub(o) {
     var log = Array.isArray(o.log) ? o.log : [];
@@ -540,6 +543,8 @@
               cancels: t.cancels, refunds: t.refunds, refundAmt: t.refundAmt, note: clean(note, 200), status: 'Đã kết' };
             C.shifts = (C.shifts || []).filter(function (x) { return x.id !== s.id; });
             save(db.doc('posShifts/' + s.id), up, true);
+            // tính lại doanh thu ngày cho báo cáo Web vận hành (phòng đơn cuối chưa kịp tính)
+            rebuildDay(today()); if (ymdOf(s.openAt) !== today()) rebuildDay(ymdOf(s.openAt));
             return { ok: true, report: Object.assign({ id: s.id, code: u.c, name: u.n, openAt: s.openAt, openCash: s.openCash }, up) };
           });
         });
