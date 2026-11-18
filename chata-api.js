@@ -74,7 +74,7 @@
   // Đổi người đăng nhập (quyền khác nhau) → bỏ các kết nối cũ, lần sau tự nối lại
   function resetSubs() {
     Object.keys(unsubs).forEach(function (k) { try { unsubs[k](); } catch (e) {} });
-    subs = {}; unsubs = {}; C.orders = C.pend = C.paid = C.shifts = null; C.keep = {}; C.songs = C.fb = C.bk = null;
+    subs = {}; unsubs = {}; C.orders = C.pend = C.paid = C.shifts = null; C.keep = {}; C.songs = C.fb = C.bk = null; C.rev = null;
   }
   function wantCfg() {
     return ready.then(function () {
@@ -277,14 +277,30 @@
       return s.me;
     });
   }
-  function approve(u, ap) {
-    if (u.r === 'manager') return Promise.resolve({ ok: true, by: who(u) });
-    if (!ap || !ap.pin) return Promise.resolve({ ok: false, needApprove: true, msg: 'Việc này cần quản lý duyệt.' });
-    var code = String(ap.code || '').trim().toUpperCase();
-    return fnCall('dangNhap', code ? { role: 'manager', pin: String(ap.pin), code: code } : { role: 'manager', pin: String(ap.pin) }).then(function (r) {
-      if (!r.ok) return { ok: false, needApprove: true, msg: 'Mã/PIN quản lý chưa đúng.' };
-      return { ok: true, by: who({ c: r.r.code || code || 'QL', n: r.r.name || 'Quản lý' }) };
+  // Từ 18/11/2026: không duyệt tại chỗ nữa – nhân viên tự làm, việc nhạy cảm được ghi vào posReviews để quản lý xem lại sau
+  function approve(u) { return Promise.resolve({ ok: true, by: who(u) }); }
+  function logReview(u, kind, o, amount, why, x) {
+    if (!u || u.r === 'manager') return;   // quản lý tự làm thì không cần xem lại
+    var id = uid('RV'), r = { at: Date.now(), date: today(), kind: kind, orderId: (o && o.id) || '', code: (o && o.code) || '', name: (o && o.name) || '',
+      amount: Math.round(Number(amount) || 0), why: clean(why, 160), x: clean(x, 200), by: who(u), byCode: u.c, status: 'Chờ duyệt' };
+    C.rev = C.rev || {}; C.rev[id] = Object.assign({ id: id }, r);
+    save(db.doc('posReviews/' + id), r);
+  }
+  function wantReviews() {
+    return ready.then(function () {
+      return watch('rev', db.collection('posReviews').where('status', '==', 'Chờ duyệt'), function (s) {
+        var m = {}; s.forEach(function (d) { m[d.id] = Object.assign({ id: d.id }, d.data()); }); C.rev = m;
+      });
     });
+  }
+  function discReview(u, o, A, L, old) {
+    // giảm giá tự nhập (không theo chương trình) hoặc giảm giá món: ghi lại khi mới áp dụng / thay đổi
+    old = old || {};
+    if (A.disc && !A.disc.promo && JSON.stringify(A.disc) !== JSON.stringify(old.disc || null))
+      logReview(u, 'Giảm giá đơn', o, A.disc.amt, A.disc.r, (A.disc.t === '%' ? A.disc.v + '%' : A.disc.v + 'đ') + ' · tạm tính ' + L.total);
+    var ik = function (it) { return (it || []).filter(function (i) { return i.da; }).map(function (i) { return i.n + ':' + i.dt + i.dv + 'x' + i.q; }).join('|'); };
+    if (L.idisc > 0 && ik(L.items) !== ik(old.items))
+      logReview(u, 'Giảm giá món', o, L.idisc, '', L.items.filter(function (i) { return i.da; }).map(function (i) { return i.q + '× ' + i.n + ' −' + (i.dt === '%' ? i.dv + '%' : i.dv + 'đ/món'); }).join(', '));
   }
   function byCode(w, code) { return !!w && (w === code || w.indexOf('(' + code + ')') >= 0 || w.split(' (')[0] === code); }
   function sumFor(all, code, from, to) {
@@ -322,7 +338,7 @@
     var paid = all.filter(function (o) { return o.status === 'Đã thanh toán' && (o.paidDate || o.date) === d; });
     var sum = function (a) { return a.reduce(function (s, o) { return s + o.total; }, 0); };
     return {
-      me: { code: u.c, name: u.n, role: u.r }, shift: shiftLive(u),
+      me: { code: u.c, name: u.n, role: u.r }, shift: shiftLive(u), revPending: u.r === 'manager' ? Object.keys(C.rev || {}).filter(function (k) { return C.rev[k].status === 'Chờ duyệt'; }).length : 0,
       mode: mode, modeSetting: modeSetting(), open: orderOpen(), tables: cleanTables(cfg().tables), promos: cleanPromos(cfg().promos),
       menu: menuFor(mode), night: mode === 'night' ? null : menuFor('night'), other: menuFor(mode === 'night' ? 'normal' : 'night'),
       pending: pending,
@@ -420,7 +436,28 @@
       });
     },
     posLogout: function () { setSes(null); return ready.then(function () { resetSubs(); return auth.signOut(); }).then(function () { return auth.signInAnonymously(); }).then(function () { return { ok: true }; }, function () { return { ok: true }; }); },
-    getCashier: function () { return me().then(function (u) { return posReady().then(function () { return cashierData(u); }); }); },
+    getCashier: function () { return me().then(function (u) { return Promise.all([posReady(), u.r === 'manager' ? wantReviews() : null]).then(function () { return cashierData(u); }); }); },
+    /* Việc chờ quản lý xem lại */
+    reviewList: function () {
+      return me().then(function (u) {
+        var mgr = u.r === 'manager', since = ymdOf(Date.now() - 14 * 86400000);
+        var q = mgr ? db.collection('posReviews').where('date', '>=', since) : db.collection('posReviews').where('byCode', '==', u.c);
+        return q.get().then(function (s) {
+          var a = []; s.forEach(function (d) { var r = Object.assign({ id: d.id }, d.data()); if (r.date >= since) a.push(r); });
+          a.sort(function (x, y) { return (x.status === 'Chờ duyệt' ? 0 : 1) - (y.status === 'Chờ duyệt' ? 0 : 1) || y.at - x.at; });
+          return { ok: true, mgr: mgr, list: a.slice(0, 150) };
+        });
+      });
+    },
+    reviewSet: function (tok, id, agree, note) {
+      return me().then(function (u) {
+        if (u.r !== 'manager') return { ok: false, msg: 'Chỉ quản lý xác nhận được.' };
+        var up = { status: agree ? 'Đồng ý' : 'Không đồng ý', reviewBy: who(u), reviewAt: Date.now(), reviewNote: clean(note, 160) };
+        if (C.rev && C.rev[id]) Object.assign(C.rev[id], up);
+        save(db.doc('posReviews/' + String(id)), up, true);
+        return { ok: true };
+      });
+    },
     cashierCreate: function (tok, d) {
       d = d || {};
       return me().then(function (u) {
@@ -441,6 +478,7 @@
             var K = d.kitchen ? kitchenDelta(L.items, null) : null; if (K) { o.sent = K.sent; act(o, u, 'bep'); }
             C.orders[id] = Object.assign({ id: id }, o);
             save(db.collection('posOrders').doc(id), o);
+            discReview(u, C.orders[id], A, L, null);
             if (pay) dayLater(o.paidDate);
             return { ok: true, order: pub(C.orders[id]), kitchen: K ? K.items : [], data: cashierData(u) };
           });
@@ -450,34 +488,34 @@
     cashierUpdate: function (tok, id, action, d) {
       d = d || {};
       return me().then(function (u) {
-        var needOk = action === 'cancel' || action === 'refund' || action === 'method';
-        return posReady().then(function () { return needOk ? approve(u, d.approve) : { ok: true }; }).then(function (ok) {
+        return posReady().then(function () { return approve(u); }).then(function (ok) {
           if (!ok.ok) return ok;
           var cur = C.orders[id] || (C.paid || {})[id] || (C.pend || {})[id] || C.keep[id], K = null;
           var get = cur ? Promise.resolve(cur) : db.doc('posOrders/' + id).get().then(function (s) { return s.exists ? Object.assign({ id: s.id }, s.data()) : null; });
           return get.then(function (o0) {
             if (!o0) return { ok: false, msg: 'Không tìm thấy đơn.' };
             var o = JSON.parse(JSON.stringify(o0)); delete o.id;
-            var apx = ok.by && ok.by !== who(u) ? 'duyệt: ' + ok.by : '';
+            var apx = '', why0 = clean(d.reason, 120), rv = null;
             if (action === 'method') {
               if (o.status !== 'Đã thanh toán') return { ok: false, msg: 'Chỉ đổi được hình thức của đơn đã thanh toán.' };
               var np = d.pay === 'Chuyển khoản' ? 'Chuyển khoản' : 'Tiền mặt';
               if (np === o.pay) return { ok: false, msg: 'Đơn này đã là ' + np + '.' };
-              act(o, u, 'doitt', o.pay + ' → ' + np + (apx ? ' · ' + apx : '')); o.pay = np;
+              act(o, u, 'doitt', o.pay + ' → ' + np + (why0 ? ' · ' + why0 : '')); rv = ['Đổi hình thức TT', o.total, why0, o.pay + ' → ' + np]; o.pay = np;
             } else if (action === 'refund') {
               if (o.status !== 'Đã thanh toán') return { ok: false, msg: 'Đơn này chưa thanh toán, dùng Hủy đơn.' };
               var why = clean(d.reason, 120); if (!why) return { ok: false, msg: 'Ghi lý do hoàn/hủy đơn.' };
               o.status = 'Đã hủy'; o.refundAt = Date.now(); o.refundCode = u.c; o.refundBy = who(u); o.refundWhy = why;
-              act(o, u, 'hoan', why + (apx ? ' · ' + apx : ''));
+              act(o, u, 'hoan', why); rv = ['Hoàn/hủy đơn đã thu', o.total, why, o.pay + ' · thu lúc ' + new Date(o.paidAt).toLocaleTimeString('vi-VN', { timeZone: TZ, hour: '2-digit', minute: '2-digit' })];
             } else if (action === 'cancel') {
               if (o.status === 'Đã thanh toán') return { ok: false, msg: 'Đơn đã thanh toán, không hủy ở đây được.' };
-              o.status = 'Đã hủy'; act(o, u, 'huy', apx);
+              if (!why0) return { ok: false, msg: 'Ghi lý do hủy đơn.' };
+              o.status = 'Đã hủy'; act(o, u, 'huy', why0); rv = ['Hủy đơn chờ', o.total, why0, o.src === 'QR' ? 'Đơn QR' : 'Tại quầy'];
             } else {
               if (o.status === 'Đã hủy') return { ok: false, msg: 'Đơn này đã bị hủy.' };
               if (o.status === 'Đã thanh toán' && action === 'pay') return { ok: false, msg: 'Đơn đã thanh toán rồi.' };
               var menu = qrMenu(o), L = lines(d.items, menu, priceExtra(o, menu));
               if (!L.items.length) return { ok: false, msg: 'Đơn chưa có món nào.' };
-              var note = clean(d.note, 200), A = applyDisc(L, d.disc);
+              var note = clean(d.note, 200), A = applyDisc(L, d.disc), old0 = { disc: o.disc, items: o.items };
               if (JSON.stringify(L.items) !== JSON.stringify(o.items) || note !== (o.note || '')) { o.edited = true; act(o, u, 'sua'); }
               if (JSON.stringify(A.disc) !== JSON.stringify(o.disc || null) && (A.disc || o.disc)) act(o, u, 'giam', A.disc ? (A.disc.promo || A.disc.r || '') + ' -' + A.disc.amt : 'bỏ giảm giá');
               o.items = L.items; o.total = A.total; o.note = note; o.gross = A.gross; o.itemDisc = A.itemDisc; o.disc = A.disc; o.discAmt = A.discAmt;
@@ -492,6 +530,8 @@
             }
             C.orders[id] = C.keep[id] = Object.assign({ id: id }, o);
             save(db.doc('posOrders/' + id), o);
+            if (rv) logReview(u, rv[0], C.orders[id], rv[1], rv[2], rv[3]);
+            else if (A) discReview(u, C.orders[id], A, L, old0);
             if (action === 'pay' || action === 'method') dayLater(o.paidDate);
             else if (action === 'refund') { dayLater(o.paidDate); if (o.date !== o.paidDate) dayLater(o.date); }
             else if (action === 'cancel') dayLater(o.date);
@@ -511,6 +551,9 @@
           if (key === 'tables') up.tables = cleanTables(val);
           if (key === 'promos') up.promos = cleanPromos(val);
           up.updatedBy = ok.by; up.updatedAt = Date.now();
+          var desc = key === 'mode' ? 'Menu: ' + val : key === 'open' ? (val ? 'Bật' : 'Tắt') + ' nhận đơn QR' : key === 'tables' ? 'Sơ đồ bàn: ' + (up.tables || []).map(function (z) { return z.a + ' (' + z.t.length + ')'; }).join(', ')
+            : key === 'promos' ? 'Khuyến mãi: ' + (up.promos || []).map(function (x) { return x.n + ' ' + (x.t === '%' ? x.v + '%' : x.v + 'đ'); }).join(', ') : key;
+          logReview(u, 'Đổi cài đặt', null, 0, '', desc);
           C.cfg = Object.assign({}, cfg(), up);
           save(db.doc('config/pos'), up, true);
           return posReady().then(function () { return cashierData(u); });
