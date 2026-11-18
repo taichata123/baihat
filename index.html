@@ -236,10 +236,12 @@
     <div class="card login-card">
       <div class="eyebrow">Dành cho ban nhạc</div>
       <h2>Đăng nhập quầy nhạc</h2>
-      <p class="lead">Nhập mã đăng nhập để quản lý danh sách bài hát khách gửi.</p>
+      <p class="lead">Đăng nhập bằng mã nhân viên + PIN (tài khoản Web vận hành) để quản lý danh sách bài hát khách gửi.</p>
       <form id="loginForm" novalidate>
-        <label for="pw">Mã đăng nhập</label>
-        <input id="pw" type="password" autocomplete="current-password" maxlength="60">
+        <label for="bcode">Mã nhân viên</label>
+        <input id="bcode" type="text" autocomplete="username" autocapitalize="characters" maxlength="20" placeholder="VD: HAU – để trống nếu dùng PIN quản lý">
+        <label for="pw">PIN</label>
+        <input id="pw" type="password" inputmode="numeric" autocomplete="current-password" maxlength="8">
         <label class="remember"><input type="checkbox" id="remember" checked> Ghi nhớ đăng nhập trên máy này</label>
         <button class="send" id="loginSubmit" type="submit">Đăng nhập</button>
         <div class="msg" id="loginMsg" role="status" aria-live="polite"></div>
@@ -584,7 +586,7 @@
 
   function renderAdmin(d){
     // Mã đã bị đổi trên máy chủ → đăng xuất, mời đăng nhập lại
-    if (d.doneToday === undefined) { logout(); openLogin('Mã đăng nhập đã thay đổi, bạn đăng nhập lại nhé.'); return; }
+    if (d.doneToday === undefined) { PIN = ''; clearSaved(); openLogin('Phiên đăng nhập quầy nhạc đã hết, bạn đăng nhập lại bằng mã nhân viên + PIN nhé.'); return; }
     var p = d.playing && d.playing[0], w = d.waiting || [];
     $('nowA').classList.toggle('idle', !p);
     $('nowSongA').textContent = p ? plain(p.song) : 'Chưa phát bài nào';
@@ -670,25 +672,25 @@
   function getSaved(){ try { return localStorage.getItem(KEY) || ''; } catch(e){ return ''; } }
   function save(pin){ try { localStorage.setItem(KEY, pin); } catch(e){} }
   function clearSaved(){ try { localStorage.removeItem(KEY); } catch(e){} }
-  function logout(){ PIN = ''; clearSaved(); setMode('guest'); }
+  function logout(){ PIN = ''; clearSaved(); call('bandLogout', [], function(){}, function(){}); setMode('guest'); }
   function loginMsg(t){ var m=$('loginMsg'); m.className = t ? 'msg err' : 'msg'; m.textContent = t || ''; }
-  function openLogin(msg){ setMode('login'); loginMsg(msg || ''); $('pw').value=''; setTimeout(function(){ $('pw').focus(); }, 50); }
+  function openLogin(msg){ setMode('login'); loginMsg(msg || ''); $('pw').value=''; setTimeout(function(){ ($('bcode').value ? $('pw') : $('bcode')).focus(); }, 50); }
 
   $('loginBtn').addEventListener('click', function(){ openLogin(); });
   $('backBtn').addEventListener('click', function(){ setMode('guest'); });
   $('logoutBtn').addEventListener('click', logout);
   $('loginForm').addEventListener('submit', function(e){
     e.preventDefault();
-    var pw = $('pw').value.trim();
-    if (!pw) { loginMsg('Bạn nhập mã đăng nhập nhé.'); return; }
+    var pw = $('pw').value.trim(), code = $('bcode').value.trim();
+    if (!pw) { loginMsg('Bạn nhập PIN nhé.'); return; }
     var btn = $('loginSubmit'); btn.disabled = true; btn.textContent = 'Đang kiểm tra…';
-    call('adminLogin', [pw], function(res){
+    call('bandLogin', [code, pw], function(res){
       btn.disabled = false; btn.textContent = 'Đăng nhập';
       if (res && res.ok) {
-        PIN = pw;
-        if ($('remember').checked) save(pw); else clearSaved();
+        PIN = '1'; $('pw').value = '';
+        if ($('remember').checked) save('1'); else clearSaved();
         setMode('admin');
-      } else loginMsg((res && res.msg) || 'Mã đăng nhập chưa đúng.');
+      } else loginMsg((res && res.msg) || 'Mã hoặc PIN chưa đúng.');
     }, function(){ btn.disabled = false; btn.textContent = 'Đăng nhập'; loginMsg('Mạng đang chập chờn, bạn thử lại nhé.'); });
   });
 
@@ -857,9 +859,9 @@
     }, function(){ btn.disabled = false; btn.textContent = 'Gửi đặt bàn'; bkMsg('Mạng đang chập chờn, bạn thử gửi lại nhé.', false); });
   });
   $('fbTop').href = FB; $('fbBottom').href = FB;
-  // Link cũ ?admin=mã vẫn dùng được; máy đã ghi nhớ thì vào thẳng trang quản lý
-  if (IS_ADMIN && PIN) { save(PIN); setMode('admin'); }
-  else if (getSaved()) { PIN = getSaved(); setMode('admin'); }
+  // Link ?admin=… cũ: mở màn đăng nhập. Máy đã ghi nhớ thì vào thẳng trang quản lý (phiên hết hạn thì tự về màn đăng nhập)
+  if (IS_ADMIN) { PIN = ''; openLogin('Quầy nhạc giờ đăng nhập bằng mã nhân viên + PIN.'); }
+  else if (getSaved()) { PIN = '1'; setMode('admin'); }
   else setMode('guest');
   (function tick(){
     setTimeout(function(){ if (!document.hidden && mode !== 'login') load(); tick(); }, mode === 'admin' ? 10000 : 20000);

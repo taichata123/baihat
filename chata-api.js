@@ -74,7 +74,7 @@
   // Đổi người đăng nhập (quyền khác nhau) → bỏ các kết nối cũ, lần sau tự nối lại
   function resetSubs() {
     Object.keys(unsubs).forEach(function (k) { try { unsubs[k](); } catch (e) {} });
-    subs = {}; unsubs = {}; C.orders = C.pend = C.paid = C.shifts = null; C.keep = {};
+    subs = {}; unsubs = {}; C.orders = C.pend = C.paid = C.shifts = null; C.keep = {}; C.songs = C.fb = C.bk = null;
   }
   function wantCfg() {
     return ready.then(function () {
@@ -673,7 +673,31 @@
       return ready.then(function () { return db.collection('songFb').doc(uid('F')).set({ time: Date.now(), star: star, text: text, name: clean(d.name, 40), phone: phone, done: '' }); })
         .then(function () { return { ok: true }; });
     },
-    adminLogin: function (pin) { return wantCfg().then(function () { return isAdmin(pin); }).then(function (ok) { return ok ? { ok: true } : { ok: false, msg: 'Mã đăng nhập chưa đúng.' }; }); },
+    adminLogin: function () { return Promise.resolve({ ok: false, msg: 'Quầy nhạc giờ đăng nhập bằng mã nhân viên + PIN (như Web vận hành).' }); },
+    bandLogin: function (code, pin) {
+      code = String(code || '').trim().toUpperCase(); pin = String(pin || '').trim();
+      if (!pin) return Promise.resolve({ ok: false, msg: 'Nhập PIN của bạn.' });
+      return ready.then(function () {
+        return fnCall('dangNhap', code ? { code: code, pin: pin } : { role: 'manager', pin: pin });
+      }).then(function (r) {
+        if (!r.ok) return r;
+        if (code && r.r.noPin) return { ok: false, msg: 'Bạn chưa có PIN. Nhờ quản lý cấp PIN trong Web vận hành.' };
+        return auth.signInWithCustomToken(r.r.token).then(function () {
+          resetSubs();
+          if (!code) return { c: r.r.code || 'QL', n: r.r.name || 'Quản lý' };
+          return staffDoc(r.r.code || code).then(function (st) { return st && st.active ? { c: st.code, n: st.name } : null; });
+        }).then(function (u) {
+          if (!u) return auth.signOut().then(function () { return auth.signInAnonymously(); }).then(function () { return { ok: false, msg: 'Tài khoản này đã nghỉ hoặc bị tắt.' }; });
+          try { localStorage.setItem(BAND_KEY, JSON.stringify({ c: u.c, n: u.n, uid: auth.currentUser.uid })); } catch (e) {}
+          return { ok: true, me: { code: u.c, name: u.n } };
+        });
+      });
+    },
+    bandLogout: function () {
+      try { localStorage.removeItem(BAND_KEY); } catch (e) {}
+      return ready.then(function () { resetSubs(); return auth.signOut(); }).then(function () { return auth.signInAnonymously(); }).then(function () { return { ok: true }; }, function () { return { ok: true }; });
+    },
+    bandMe: function () { return isAdmin().then(function (ok) { var b = ok && getBand(); return b ? { ok: true, me: { code: b.c, name: b.n } } : { ok: false }; }); },
     adminSetStatus: function (pin, id, status) {
       return needAdmin(pin).then(function () {
         if (STATUSES.indexOf(status) < 0) throw new Error('Trạng thái không hợp lệ');
@@ -719,31 +743,40 @@
           var m = by[String(it && it.n || '')], q = Math.round(Number(it && it.q) || 0);
           if (!m || q < 1 || q > 30) return; items.push(q + '× ' + m.n + ' (' + (m.p / 1000) + 'k)'); total += q * m.p;
         });
-        return db.collection('posBookings').where('phoneDigits', '==', digits).get().then(function (q) {
-          var dup = false; q.forEach(function (x) { var b = x.data(); if (b.date === date && (b.status === 'Chờ xác nhận' || b.status === 'Đã xác nhận')) dup = true; });
-          if (dup) return { ok: false, msg: 'Số điện thoại này đã có đơn đặt bàn cho ngày đó rồi. Cần đổi gì bạn nhắn Fanpage Chata nhé.' };
-          var id = uid('B');
-          return db.doc('posBookings/' + id).set({ created: Date.now(), name: name, phone: phone, phoneDigits: digits, date: date, time: time, people: people, area: area,
-            items: items.join('\n'), total: total, note: clean(d.note, 200), status: 'Chờ xác nhận', doneAt: '' }).then(function () { return { ok: true, id: id, total: total }; });
-        });
+        // Chống đặt trùng: mỗi SĐT + ngày một khóa (posBookingKeys), khách không cần đọc danh sách đặt bàn của người khác
+        var key = db.doc('posBookingKeys/' + digits + '_' + date), id = uid('B');
+        return key.get().then(function (k) {
+          if (k.exists && k.data().active !== false) return { ok: false, msg: 'Số điện thoại này đã có đơn đặt bàn cho ngày đó rồi. Cần đổi gì bạn nhắn Fanpage Chata nhé.' };
+          var b = db.batch();
+          b.set(key, { id: id, date: date, at: Date.now(), active: true });
+          b.set(db.doc('posBookings/' + id), { created: Date.now(), name: name, phone: phone, phoneDigits: digits, date: date, time: time, people: people, area: area,
+            items: items.join('\n'), total: total, note: clean(d.note, 200), status: 'Chờ xác nhận', doneAt: '' });
+          return b.commit().then(function () { return { ok: true, id: id, total: total }; });
+        }, function () { return { ok: false, msg: 'Mạng đang chập chờn, bạn thử gửi lại nhé.' }; });
       });
     },
     adminSetBooking: function (pin, id, status) {
       return needAdmin(pin).then(function () {
         if (BK_STATUSES.indexOf(status) < 0) throw new Error('Trạng thái không hợp lệ');
         var t = new Intl.DateTimeFormat('vi-VN', { timeZone: TZ, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date());
-        (C.bk || []).forEach(function (b) { if (b.id === id) b.status = status; });
+        var bk = null; (C.bk || []).forEach(function (b) { if (b.id === id) { b.status = status; bk = b; } });
         save(db.doc('posBookings/' + id), { status: status, doneAt: t }, true);
+        if (bk && bk.phoneDigits && bk.date) save(db.doc('posBookingKeys/' + bk.phoneDigits + '_' + bk.date), { active: status !== 'Đã hủy' }, true);
         return API.getQueue(pin);
       });
     }
   };
   function nextTuesdays(n) { var out = []; for (var i = 0; out.length < n && i < 70; i++) { var s = ymdOf(Date.now() + i * 86400000); if (new Date(s + 'T12:00:00Z').getUTCDay() === 2) out.push(s); } return out; }
-  function isAdmin(pin) {
-    if (!pin) return Promise.resolve(false);
-    return wantCfg().then(function () { var h = cfg().songPinHash; if (!h) return false; return sha256('chata:' + String(pin)).then(function (x) { return x === h; }); });
+  // Quầy nhạc (từ 18/11/2026): đăng nhập bằng mã nhân viên + PIN (hoặc PIN quản lý), không còn mã quầy chung
+  function isAdmin(flag) {
+    if (arguments.length && !flag) return Promise.resolve(false);   // trang khách gọi getQueue('') → không phải quầy nhạc
+    return ready.then(function () { var u = auth.currentUser; return !!(u && !u.isAnonymous && getBand()); });
   }
-  function needAdmin(pin) { return isAdmin(pin).then(function (ok) { if (!ok) throw new Error('Sai mã quầy nhạc'); }); }
+  function needAdmin() { return isAdmin().then(function (ok) { if (!ok) throw new Error('Phiên quầy nhạc đã hết, đăng nhập lại'); }); }
+  var BAND_KEY = 'chata_band_ses';
+  function getBand() {
+    try { var b = JSON.parse(localStorage.getItem(BAND_KEY) || 'null'); var u = auth && auth.currentUser; return b && u && b.uid === u.uid ? b : null; } catch (e) { return null; }
+  }
 
   window.ChataAPI = {
     ready: ready,
