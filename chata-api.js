@@ -16,7 +16,7 @@
   var MAX_QUEUE = 30;
   var SES_KEY = 'chata_fb_pos';
 
-  var db = null, auth = null, listeners = [], subs = {};
+  var db = null, auth = null, listeners = [], subs = {}, unsubs = {};
   var C = { cfg: null, menu: { normal: null, night: null }, orders: null, pend: null, paid: null, keep: {}, shifts: null, songs: null, fb: null, bk: null };
 
   function loadJs(src) {
@@ -66,10 +66,15 @@
     if (subs[key]) return subs[key];
     subs[key] = new Promise(function (res) {
       var first = true;
-      ref.onSnapshot({ includeMetadataChanges: false }, function (s) { onData(s); if (first) { first = false; res(); } emit(); },
-        function (e) { console.error(key, e); if (first) { first = false; res(); } });
+      unsubs[key] = ref.onSnapshot({ includeMetadataChanges: false }, function (s) { onData(s); if (first) { first = false; res(); } emit(); },
+        function (e) { console.error(key, e); delete subs[key]; delete unsubs[key]; if (first) { first = false; res(); } });
     });
     return subs[key];
+  }
+  // Đổi người đăng nhập (quyền khác nhau) → bỏ các kết nối cũ, lần sau tự nối lại
+  function resetSubs() {
+    Object.keys(unsubs).forEach(function (k) { try { unsubs[k](); } catch (e) {} });
+    subs = {}; unsubs = {}; C.orders = C.pend = C.paid = C.shifts = null; C.keep = {};
   }
   function wantCfg() {
     return ready.then(function () {
@@ -359,7 +364,8 @@
         return newCode().then(function (c) {
           var id = uid('D'), token = rand(16), now = Date.now();
           var o = { code: c.code, date: c.date, created: now, name: name, phone: phone, items: L.items, total: L.total, note: clean(d.note, 200),
-            status: 'Chờ thanh toán', pay: '', pager: '', paidAt: 0, paidDate: '', mode: mode === 'night' ? 'Đêm nhạc' : 'Thường', token: token, src: 'QR', cashier: '', log: [] };
+            status: 'Chờ thanh toán', pay: '', pager: '', paidAt: 0, paidDate: '', mode: mode === 'night' ? 'Đêm nhạc' : 'Thường', token: token, src: 'QR', cashier: '', log: [],
+            uid: auth.currentUser ? auth.currentUser.uid : '' };
           return db.collection('posOrders').doc(id).set(o).then(function () { return { ok: true, id: id, token: token, code: c.code, total: L.total }; });
         });
       });
@@ -396,20 +402,21 @@
         if (!r.ok) return r;
         if (kind !== 'manager' && r.r.noPin) return { ok: false, msg: 'Bạn chưa có PIN. Nhờ quản lý cấp PIN trong Web vận hành (Nhân viên → Cấp PIN).' };
         return auth.signInWithCustomToken(r.r.token).then(function (cred) {
+          resetSubs();
           if (kind === 'manager') return { c: r.r.code || code || 'QL', n: r.r.name || 'Quản lý', r: 'manager' };
           return staffDoc(r.r.code || code).then(function (st) {
             if (!posAllowed(st)) return null;
             return { c: st.code, n: st.name, r: 'staff' };
           });
         }).then(function (u) {
-          if (!u) { setSes(null); return auth.signOut().then(function () { return { ok: false, msg: 'Tài khoản này chưa được dùng app thu ngân. Nhờ quản lý bật quyền trong Web vận hành (Nhân viên → App thu ngân).' }; }); }
+          if (!u) { setSes(null); resetSubs(); return auth.signOut().then(function () { return auth.signInAnonymously(); }).then(function () { return { ok: false, msg: 'Tài khoản này chưa được dùng app thu ngân. Nhờ quản lý bật quyền trong Web vận hành (Nhân viên → App thu ngân).' }; }); }
           setSes({ me: u, uid: auth.currentUser.uid, chk: Date.now() });
           posReady();
           return { ok: true, token: 'FB' + auth.currentUser.uid, me: { code: u.c, name: u.n, role: u.r } };
         });
       });
     },
-    posLogout: function () { setSes(null); return ready.then(function () { return auth.signOut(); }).then(function () { return { ok: true }; }, function () { return { ok: true }; }); },
+    posLogout: function () { setSes(null); return ready.then(function () { resetSubs(); return auth.signOut(); }).then(function () { return auth.signInAnonymously(); }).then(function () { return { ok: true }; }, function () { return { ok: true }; }); },
     getCashier: function () { return me().then(function (u) { return posReady().then(function () { return cashierData(u); }); }); },
     cashierCreate: function (tok, d) {
       d = d || {};
