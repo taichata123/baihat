@@ -60,6 +60,22 @@
 
   /* paid table */
   .paid{flex:1;overflow:auto;padding:12px}
+  .shiftbox{background:#E9FBF3;border-radius:6px;padding:10px 12px}
+  .shiftbox h4{margin:0 0 4px;font-size:13px;color:#0D6C68}
+  .shiftbox div{display:flex;justify-content:space-between;padding:2px 0;font-size:14px}
+  .rep{flex:1;overflow:auto;padding:12px;color:#fff}
+  .rep .bar2{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+  .rep .bar2 input{padding:7px 9px;border-radius:6px;border:none}
+  .rep .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:10px}
+  .rep .cards div{background:#fff;color:var(--ink);border-radius:6px;padding:10px 12px}
+  .rep .cards b{display:block;font-size:20px}
+  .rep .cards span{font-size:12.5px;color:var(--muted)}
+  .rep h3{margin:14px 0 6px;font-size:15px;color:#E5ECF6}
+  .rep table{width:100%;border-collapse:collapse;background:#fff;color:var(--ink);border-radius:6px;overflow:hidden;font-size:14px}
+  .rep th,.rep td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:left}
+  .rep th{background:#F4F6F9;color:var(--muted);font-size:12.5px}
+  .rep td.r,.rep th.r{text-align:right}
+  .neg{color:var(--red);font-weight:700}.pos{color:#0A8F5F;font-weight:700}
   .paid table{width:100%;border-collapse:collapse;background:#fff;border-radius:6px;overflow:hidden;font-size:14px}
   .paid th,.paid td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
   .paid th{background:#F4F6F9;color:var(--muted);font-size:13px}
@@ -173,6 +189,7 @@
       <button class="tab on" data-tab="all" type="button">Tất cả đơn<span class="b z" id="bAll">0</span></button>
       <button class="tab" data-tab="qr" type="button">QR Order<span class="b z" id="bQr">0</span></button>
       <button class="tab" data-tab="paid" type="button">Đã thanh toán<span class="b z" id="bPaid">0</span></button>
+      <button class="tab" data-tab="rep" type="button">Báo cáo</button>
     </div>
     <div class="tright">
       <span class="net" id="net" title="Kết nối"></span>
@@ -180,6 +197,8 @@
         <option value="Tự động">Menu: Tự động</option><option value="Đêm nhạc">Menu: Đêm nhạc</option><option value="Thường">Menu: Thường</option>
       </select>
       <button class="tbtn" id="qrBtn" type="button">QR: Đang nhận</button>
+      <button class="tbtn" id="shiftBtn" type="button" hidden>⏱ Kết ca</button>
+      <button class="tbtn" id="updBtn" type="button" hidden style="background:#13C48A;color:#fff;border-color:#13C48A">⬆ Cập nhật app</button>
       <button class="tbtn" id="setBtn" type="button">🖨 Máy in</button>
       <button class="tbtn" id="outBtn" type="button">Đăng xuất</button>
     </div>
@@ -187,6 +206,7 @@
   <div class="home" id="homeView">
     <div class="orders" id="orders"></div>
     <div class="paid" id="paidView" hidden></div>
+    <div class="rep" id="repView" hidden></div>
     <div class="side">
       <button class="new" id="newBtn" type="button">＋ Tạo đơn mới <small style="font-weight:400">(F2)</small></button>
       <div class="stat">
@@ -201,6 +221,7 @@
         <div><span>Đơn tại quầy</span><b class="num" id="sWaitQ">0</b></div>
         <div><span>Đơn QR</span><b class="num" id="sWaitR">0</b></div>
       </div>
+      <div class="shiftbox" id="shiftBox" hidden></div>
       <div class="stat" id="printState" style="font-size:13px;color:var(--muted)"></div>
     </div>
   </div>
@@ -318,6 +339,35 @@
   </div>
 </div>
 
+<!-- Mở ca -->
+<div class="mask" id="openModal" hidden>
+  <form class="modal" id="openForm" style="width:min(440px,94vw)" novalidate>
+    <h3>Mở ca thu ngân</h3>
+    <p style="margin:0 0 8px;color:var(--muted)" id="openWho"></p>
+    <label style="font-size:14px;color:var(--muted)">Tiền mặt đầu ca (đếm trong két)</label>
+    <div class="given" style="margin-top:4px"><input id="openCash" class="num" inputmode="numeric" placeholder="0"></div>
+    <div class="quick" id="openQuick"><button type="button" data-oc="0">0</button><button type="button" data-oc="500000">500.000</button><button type="button" data-oc="1000000">1.000.000</button><button type="button" data-oc="2000000">2.000.000</button></div>
+    <div class="err" id="openErr" hidden></div>
+    <div class="mbtns"><button type="button" id="openSkip">Để sau</button><button type="submit" class="ok">Bắt đầu thu tiền và mở ca</button></div>
+  </form>
+</div>
+
+<!-- Kết ca -->
+<div class="mask" id="closeModal" hidden>
+  <form class="modal" id="closeForm" style="width:min(520px,94vw)" novalidate>
+    <h3>Kết ca</h3>
+    <div id="closeSum"></div>
+    <label style="font-size:14px;color:var(--muted);display:block;margin-top:10px">Tiền mặt đếm được trong két</label>
+    <div class="given" style="margin-top:4px"><input id="closeCash" class="num" inputmode="numeric" placeholder="Nhập số tiền đếm được"></div>
+    <div class="change"><span>Chênh lệch</span><b class="num" id="closeDiff">–</b></div>
+    <input id="closeNote" maxlength="200" placeholder="Ghi chú (nếu lệch tiền, ghi lý do)" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;margin-top:10px">
+    <label class="chk"><input type="checkbox" id="closePrint" checked> In phiếu kết ca</label>
+    <label class="chk"><input type="checkbox" id="closeOut" checked> Đăng xuất sau khi kết ca</label>
+    <div class="err" id="closeErr" hidden></div>
+    <div class="mbtns"><button type="button" id="closeCancel">Quay lại</button><button type="submit" class="ok">Kết ca</button></div>
+  </form>
+</div>
+
 <!-- Quản lý duyệt -->
 <div class="mask" id="apModal" hidden>
   <form class="modal" id="apForm" style="width:min(400px,94vw)" novalidate>
@@ -338,6 +388,18 @@
 (function(){
   var API = 'https://script.google.com/macros/s/AKfycbxvRhb0Jjbrokyew1RBqWwBTCiqSIsvciWx_Vns9LeOs9LLCvTJcxOk71-7CMKuI1I/exec';
   var NATIVE = window.chataNative || null;
+  /* Vỏ app có bản mới: hiện nút để thu ngân bấm khởi động lại lúc rảnh */
+  if (NATIVE && NATIVE.onUpdate) {
+    var showUpd = function(v){ var b = document.getElementById('updBtn'); if (!b) return; b.hidden = false; b.textContent = '⬆ Cập nhật app ' + (v || ''); };
+    try { var uv = NATIVE.updateReady && NATIVE.updateReady(); if (uv) setTimeout(function(){ showUpd(uv); }, 0); } catch (e) {}
+    NATIVE.onUpdate(showUpd);
+    document.addEventListener('click', function(e){
+      if (!e.target || e.target.id !== 'updBtn') return;
+      var ov = document.getElementById('ordView');
+      if (ov && !ov.hidden) { toast('Xong đơn đang làm rồi hãy cập nhật.'); return; }
+      if (confirm('Khởi động lại app để cập nhật? (mất khoảng 5 giây)')) NATIVE.restart();
+    });
+  }
   var $ = function(id){ return document.getElementById(id); };
   function call(fn, args){
     return fetch(API, { method:'POST', redirect:'follow', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ fn: fn, args: args || [] }) })
@@ -517,6 +579,7 @@
     $('sCash').textContent = money(d.stats.cash); $('sTr').textContent = money(d.stats.transfer);
     $('sWaitQ').textContent = d.pending.length - qr.length; $('sWaitR').textContent = qr.length;
     $('modeSel').value = d.modeSetting;
+    drawShift();
     if (d.me) { ls('chata_pos_me', JSON.stringify(d.me)); $('who').textContent = '👤 ' + d.me.name + (d.me.role === 'manager' ? ' · Quản lý' : ' · Thu ngân'); }
     $('qrBtn').textContent = d.open ? 'QR: Đang nhận' : 'QR: Đã tắt'; $('qrBtn').classList.toggle('off', !d.open);
     drawHome();
@@ -530,8 +593,9 @@
 
   function drawHome(){
     if (!D) return;
-    $('orders').hidden = TAB === 'paid'; $('paidView').hidden = TAB !== 'paid';
+    $('orders').hidden = TAB === 'paid' || TAB === 'rep'; $('paidView').hidden = TAB !== 'paid'; $('repView').hidden = TAB !== 'rep';
     if (TAB === 'paid') return drawPaid();
+    if (TAB === 'rep') return;
     var list = D.pending.filter(function(o){ return TAB === 'all' || o.src !== 'Quầy'; });
     $('orders').innerHTML = list.length ? list.map(function(o){
       var qr = o.src !== 'Quầy';
@@ -623,6 +687,7 @@
     drawGrid();
   }
   function openOrder(ord){
+    if (needShift(function(){ openOrder(ord); })) return;
     O = ord ? JSON.parse(JSON.stringify(ord)) : { id: null, code: '', src: 'Quầy', items: [], name: '', phone: '', pager: '', note: '', created: Date.now() };
     $('oTitle').textContent = ord ? ('Đơn #' + ord.code + ' · ' + (ord.src === 'Quầy' ? 'Tại quầy' : 'QR')) : 'Đơn mới · Tại quầy';
     $('oTime').textContent = ord ? 'gửi ' + hhmm(ord.created) : '';
@@ -707,6 +772,7 @@
   /* Thanh toán */
   var METHOD = 'Tiền mặt';
   function openPay(){
+    if (needShift(openPay)) return;
     if (!O.items.length) return toast('Đơn chưa có món nào.');
     METHOD = 'Tiền mặt';
     Array.prototype.forEach.call(document.querySelectorAll('.meth'), function(b){ b.classList.toggle('on', b.getAttribute('data-m') === METHOD); });
@@ -823,6 +889,120 @@
   function tick(){ var d = new Date(); $('clock').textContent = hhmm(d) + ' · ' + dmy(d); }
   setInterval(tick, 15000); tick();
   window.addEventListener('beforeunload', function(e){ if (dirty()) { e.preventDefault(); e.returnValue = ''; } });
+
+  /* ================= Ca thu ngân ================= */
+  var openSkipped = false, afterOpen = null;
+  function needShift(next){
+    if (!D || !D.me || D.shift) return false;
+    if (D.me.role === 'manager' && openSkipped) return false;
+    afterOpen = next || null; showOpen(); return true;
+  }
+  function showOpen(){
+    $('openWho').textContent = D && D.me ? 'Thu ngân: ' + D.me.name + ' · ' + dmy(Date.now()) + ' ' + hhmm(Date.now()) : '';
+    $('openCash').value = ''; $('openErr').hidden = true; $('openSkip').hidden = !(D && D.me && D.me.role === 'manager');
+    $('openModal').hidden = false; setTimeout(function(){ $('openCash').focus(); }, 30);
+  }
+  function drawShift(){
+    var s = D && D.shift;
+    $('shiftBtn').hidden = !s; $('shiftBox').hidden = !s;
+    if (!s) { if (D && D.me && D.me.role !== 'manager' && $('openModal').hidden && $('ordView').hidden) showOpen(); return; }
+    $('shiftBtn').textContent = '⏱ Kết ca (mở ' + hhmm(s.openAt) + ')';
+    $('shiftBox').innerHTML = '<h4>Ca của bạn · từ ' + hhmm(s.openAt) + '</h4><div><span>Đơn đã thu</span><b>' + s.orders + '</b></div><div><span>Doanh thu</span><b class="num">' + money(s.revenue) + '</b></div>' +
+      '<div><span>Tiền mặt phải có</span><b class="num">' + money(s.expect) + '</b></div>';
+  }
+  $('openQuick').addEventListener('click', function(e){ var b = e.target.closest('[data-oc]'); if (!b) return; $('openCash').value = money(+b.getAttribute('data-oc')); });
+  $('openCash').addEventListener('input', function(){ var v = this.value.replace(/\D/g, ''); this.value = v ? money(+v) : ''; });
+  $('openSkip').addEventListener('click', function(){ openSkipped = true; $('openModal').hidden = true; var f = afterOpen; afterOpen = null; if (f) f(); });
+  $('openForm').addEventListener('submit', function(e){
+    e.preventDefault(); var v = +($('openCash').value.replace(/\D/g, '')) || 0;
+    if ($('openCash').value === '' && !confirm('Tiền mặt đầu ca là 0đ?')) return;
+    busy(true, 'Đang mở ca…');
+    call('shiftOpen', [PIN, v]).then(function(r){ busy(false); if (r.ok) { $('openModal').hidden = true; apply(r.data); toast('Đã mở ca'); var f = afterOpen; afterOpen = null; if (f) f(); } else { $('openErr').textContent = r.msg; $('openErr').hidden = false; } },
+      function(e){ busy(false); $('openErr').textContent = e.message; $('openErr').hidden = false; });
+  });
+  function closeCalc(){
+    var s = D && D.shift; if (!s) return; var raw = $('closeCash').value.replace(/\D/g, '');
+    if (!raw) { $('closeDiff').textContent = '–'; $('closeDiff').className = 'num'; return; }
+    var d = +raw - s.expect; $('closeDiff').textContent = (d > 0 ? '+' : '') + money(d) + 'đ'; $('closeDiff').className = 'num ' + (d < 0 ? 'neg' : d > 0 ? 'pos' : '');
+  }
+  $('shiftBtn').addEventListener('click', function(){
+    var s = D && D.shift; if (!s) return;
+    $('closeSum').innerHTML = '<table style="width:100%;font-size:14.5px;border-collapse:collapse">' + [
+      ['Mở ca lúc', hhmm(s.openAt) + ' ' + dmy(s.openAt)], ['Số đơn đã thu', s.orders], ['Doanh thu', money(s.revenue) + 'đ'], ['Chuyển khoản', money(s.transfer) + 'đ'],
+      ['Tiền mặt thu', money(s.cash) + 'đ'], ['Tiền mặt đầu ca', money(s.openCash) + 'đ'], ['Đơn hủy', s.cancels], ['<b>Tiền mặt phải có</b>', '<b>' + money(s.expect) + 'đ</b>']
+    ].map(function(r){ return '<tr><td style="padding:4px 0">' + r[0] + '</td><td style="text-align:right">' + r[1] + '</td></tr>'; }).join('') + '</table>';
+    $('closeCash').value = ''; $('closeNote').value = ''; $('closeErr').hidden = true; closeCalc();
+    $('closeModal').hidden = false; setTimeout(function(){ $('closeCash').focus(); }, 30);
+  });
+  $('closeCash').addEventListener('input', function(){ var v = this.value.replace(/\D/g, ''); this.value = v ? money(+v) : ''; closeCalc(); });
+  $('closeCancel').addEventListener('click', function(){ $('closeModal').hidden = true; });
+  $('closeForm').addEventListener('submit', function(e){
+    e.preventDefault(); var raw = $('closeCash').value.replace(/\D/g, '');
+    if (!raw) { $('closeErr').textContent = 'Nhập số tiền mặt đếm được trong két.'; $('closeErr').hidden = false; return; }
+    var s = D.shift, d = +raw - s.expect;
+    if (d !== 0 && !$('closeNote').value.trim() && !confirm('Tiền lệch ' + money(d) + 'đ mà chưa ghi lý do. Vẫn kết ca?')) return;
+    busy(true, 'Đang kết ca…');
+    call('shiftClose', [PIN, +raw, $('closeNote').value.trim()]).then(function(r){
+      busy(false); if (!r.ok) { $('closeErr').textContent = r.msg; $('closeErr').hidden = false; return; }
+      $('closeModal').hidden = true;
+      if ($('closePrint').checked) sendPrint('bill', shiftHtml(r.report));
+      toast('✓ Đã kết ca' + (r.report.diff ? ' · lệch ' + money(r.report.diff) + 'đ' : ' · khớp tiền'), 5000);
+      if ($('closeOut').checked) { call('posLogout', [PIN]).catch(function(){}); ls('chata_cashier', null); ls('chata_pos_me', null); PIN = ''; D = null; $('who').textContent = 'Thu ngân'; show(); }
+      else load();
+    }, function(e){ busy(false); $('closeErr').textContent = e.message; $('closeErr').hidden = false; });
+  });
+  function shiftHtml(r){
+    var w = +S.bill_w, fs = w === 80 ? 3.4 : 3;
+    var row = function(a, b, bold){ return '<div style="display:flex;justify-content:space-between;' + (bold ? 'font-weight:800' : '') + '"><span>' + a + '</span><span>' + b + '</span></div>'; };
+    var h = '<div style="width:' + w + 'mm;padding:3mm 3mm 6mm;font-size:' + fs + 'mm">' +
+      '<div style="text-align:center;font-weight:800;font-size:' + (fs * 1.4) + 'mm">' + esc(S.shop) + '</div>' +
+      '<div style="text-align:center;font-weight:800;margin:1mm 0 2mm">PHIẾU KẾT CA</div>' +
+      row('Thu ngân', esc(r.name) + ' (' + esc(r.code) + ')') + row('Mở ca', hhmm(r.openAt) + ' ' + dmy(r.openAt)) + row('Kết ca', hhmm(r.closeAt) + ' ' + dmy(r.closeAt)) +
+      '<div style="border-top:.3mm dashed #000;margin:1.5mm 0"></div>' +
+      row('Số đơn đã thu', r.orders) + row('Doanh thu', money(r.revenue) + 'đ', true) + row('Chuyển khoản', money(r.transfer) + 'đ') + row('Tiền mặt thu', money(r.cash) + 'đ') + row('Đơn hủy', r.cancels) +
+      '<div style="border-top:.3mm dashed #000;margin:1.5mm 0"></div>' +
+      row('Tiền mặt đầu ca', money(r.openCash) + 'đ') + row('Tiền mặt phải có', money(r.expect) + 'đ', true) + row('Tiền mặt đếm được', money(r.counted) + 'đ', true) +
+      row('Chênh lệch', (r.diff > 0 ? '+' : '') + money(r.diff) + 'đ', true) + (r.note ? '<div style="margin-top:1.5mm">Ghi chú: ' + esc(r.note) + '</div>' : '') +
+      '<div style="margin-top:6mm;display:flex;justify-content:space-between;text-align:center"><span style="width:45%">Thu ngân<br><br><br>&nbsp;</span><span style="width:45%">Quản lý<br><br><br>&nbsp;</span></div></div>';
+    return { html: h, w: w, h: null, copies: 1 };
+  }
+
+  /* ================= Báo cáo ================= */
+  var repDate = '';
+  function ymd(t){ var d = new Date(t); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function loadRep(){
+    if (!repDate) repDate = ymd(Date.now());
+    $('repView').innerHTML = '<p>Đang tải báo cáo…</p>';
+    call('posReport', [PIN, repDate]).then(drawRep, function(e){ $('repView').innerHTML = '<p>⚠️ ' + esc(e.message) + '</p>'; });
+  }
+  function drawRep(r){
+    var t = r.total, mgr = r.scope === 'all';
+    var tbl = function(head, rows){ return rows.length ? '<table><tr>' + head.map(function(h){ return '<th' + (h[1] ? ' class="r"' : '') + '>' + h[0] + '</th>'; }).join('') + '</tr>' + rows.join('') + '</table>' : '<p style="color:#C9D3E2;margin:4px 0">Không có dữ liệu.</p>'; };
+    var td = function(v, r){ return '<td' + (r ? ' class="r num"' : '') + '>' + v + '</td>'; };
+    $('repView').innerHTML =
+      '<div class="bar2"><b style="font-size:17px">' + (mgr ? 'Báo cáo bán hàng' : 'Báo cáo ca của bạn') + '</b><input type="date" id="repDate" value="' + r.date + '"><button class="sbtn" type="button" id="repReload">Tải lại</button>' +
+      (mgr ? '' : '<span style="color:#C9D3E2;font-size:13px">Chỉ hiện đơn do bạn thu. Quản lý xem được toàn quán.</span>') + '</div>' +
+      '<div class="cards"><div><span>Doanh thu</span><b class="num">' + money(t.revenue) + '</b></div><div><span>Số đơn</span><b>' + t.orders + '</b></div>' +
+      '<div><span>TB / đơn</span><b class="num">' + money(t.orders ? Math.round(t.revenue / t.orders) : 0) + '</b></div><div><span>Tiền mặt</span><b class="num">' + money(t.cash) + '</b></div>' +
+      '<div><span>Chuyển khoản</span><b class="num">' + money(t.transfer) + '</b></div><div><span>Đơn QR</span><b>' + t.qr + '</b></div>' +
+      (mgr ? '<div><span>Đơn đang chờ</span><b>' + t.pending + '</b></div>' : '') + '<div><span>Đơn hủy</span><b>' + r.cancels.length + '</b></div></div>' +
+      '<h3>Ca thu ngân</h3>' + tbl([['Thu ngân'], ['Mở'], ['Kết'], ['Đơn', 1], ['Doanh thu', 1], ['Tiền mặt', 1], ['CK', 1], ['Đầu ca', 1], ['Phải có', 1], ['Đếm được', 1], ['Lệch', 1], ['Ghi chú']],
+        r.shifts.map(function(s){ var open = s.status === 'Đang mở';
+          return '<tr>' + td(esc(s.name) + (s.role === 'Quản lý' ? ' <small>(QL)</small>' : '')) + td(hhmm(s.openAt)) + td(open ? '<b>Đang mở</b>' : hhmm(s.closeAt)) + td(s.orders, 1) + td(money(s.revenue), 1) + td(money(s.cash), 1) + td(money(s.transfer), 1) +
+            td(money(s.openCash), 1) + td(money(s.expect), 1) + td(open || s.counted == null ? '–' : money(s.counted), 1) +
+            '<td class="r num ' + (s.diff < 0 ? 'neg' : s.diff > 0 ? 'pos' : '') + '">' + (open || s.diff == null ? '–' : (s.diff > 0 ? '+' : '') + money(s.diff)) + '</td>' + td(esc(s.note)) + '</tr>'; })) +
+      (mgr ? '<h3>Theo thu ngân</h3>' + tbl([['Thu ngân'], ['Đơn', 1], ['Doanh thu', 1], ['Tiền mặt', 1], ['Chuyển khoản', 1]],
+        r.cashiers.map(function(c){ return '<tr>' + td(esc(c.name)) + td(c.orders, 1) + td(money(c.revenue), 1) + td(money(c.cash), 1) + td(money(c.transfer), 1) + '</tr>'; })) : '') +
+      '<h3>Đơn hủy</h3>' + tbl([['Mã'], ['Khách'], ['Nguồn'], ['Tiền', 1], ['Người hủy'], ['Duyệt'], ['Lúc']],
+        r.cancels.map(function(c){ return '<tr>' + td('#' + esc(c.code)) + td(esc(c.name)) + td(esc(c.src)) + td(money(c.total), 1) + td(esc(c.by)) + td(esc(String(c.x || '').replace(/^duyệt: /, ''))) + td(c.at ? hhmm(c.at) : '') + '</tr>'; })) +
+      '<h3>Món bán chạy</h3>' + tbl([['Món'], ['Nhóm'], ['SL', 1], ['Doanh thu', 1]],
+        r.items.map(function(i){ return '<tr>' + td(esc(i.n)) + td(esc(i.g)) + td(i.q, 1) + td(money(i.a), 1) + '</tr>'; })) +
+      '<h3>Theo giờ</h3>' + tbl([['Giờ'], ['Đơn', 1], ['Doanh thu', 1]],
+        r.hours.map(function(h){ return '<tr>' + td(h.h + ':00') + td(h.orders, 1) + td(money(h.revenue), 1) + '</tr>'; }));
+    $('repDate').addEventListener('change', function(){ repDate = this.value; loadRep(); });
+    $('repReload').addEventListener('click', loadRep);
+  }
+  document.querySelector('.tabs').addEventListener('click', function(e){ var b = e.target.closest('[data-tab="rep"]'); if (b) loadRep(); });
 
   show(); drawPrintState(); load();
   setInterval(function(){ if (PIN && !paying) load(); }, 5000);
