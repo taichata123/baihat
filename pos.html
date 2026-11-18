@@ -1126,7 +1126,12 @@
   }
   function saveNow(){
     busy(true, 'Đang lưu đơn…');
-    save('').then(function(o){ busy(false); toast('Đã lưu đơn #' + (o ? o.code : '')); closeOrder(); },
+    /* Lưu đơn = báo bếp luôn: in phiếu bếp + tem ly cho các món chưa in (gọi thêm thì chỉ in món thêm) */
+    save('', true).then(function(o){
+      busy(false); var k = (o && o._k) || [], p = split({ items: k });
+      if (o && (p.bep.length || p.bar.length)) printOrder(o, { bep: true, tem: true }, null, k);
+      toast('Đã lưu đơn #' + (o ? o.code : '') + (p.bep.length || p.bar.length ? ' · đã in ' + k.reduce(function(s, i){ return s + i.q; }, 0) + ' món' : ''));
+      closeOrder(); },
       function(e){ busy(false); if (e.message !== 'empty') toast('⚠️ ' + e.message, 4000); });
   }
   /* Báo bếp: lưu đơn rồi chỉ in những món chưa báo (gọi thêm món thì chỉ in món thêm) */
