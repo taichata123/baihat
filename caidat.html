@@ -5,86 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Cài app Chata Thu ngân</title>
-<style>
-  :root{--nav:#14213A;--green:#13C48A;--ink:#1B2433;--muted:#5E6B7D;--line:#DCE2EA;--bg:#F3F5F8}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;font-size:16px;line-height:1.55}
-  header{background:var(--nav);color:#fff;padding:22px 18px}
-  header .in{max-width:820px;margin:0 auto}
-  header b{color:#36E0A6;font-size:24px}
-  header p{margin:4px 0 0;color:#C9D3E2}
-  main{max-width:820px;margin:0 auto;padding:18px}
-  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:14px}
-  h2{font-size:19px;margin:0 0 10px}
-  .dl{display:inline-flex;align-items:center;gap:10px;background:var(--green);color:#fff;text-decoration:none;font-weight:700;font-size:18px;padding:14px 22px;border-radius:10px}
-  .dl small{font-weight:400;opacity:.9;font-size:13px}
-  ol{padding-left:22px;margin:8px 0}
-  li{margin:6px 0}
-  code{background:#EEF1F5;padding:2px 6px;border-radius:5px;font-size:14px}
-  pre{background:#14213A;color:#E5ECF6;padding:12px 14px;border-radius:9px;overflow:auto;font-size:13.5px;white-space:pre-wrap;word-break:break-all;margin:8px 0}
-  .copy{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 12px;font-weight:600;cursor:pointer}
-  .note{background:#FFF4D6;border-radius:9px;padding:10px 12px;font-size:15px}
-  .muted{color:var(--muted);font-size:14.5px}
-  a{color:#1E7BE6}
-</style>
+<meta http-equiv="refresh" content="0; url=https://chata-checklist.web.app/#caiapp">
 </head>
-<body>
-<header><div class="in"><b>Chata Thu ngân</b><p>Cài app bán hàng cho máy quầy (Windows 10 / 11)</p></div></header>
-<main>
-  <div class="card">
-    <h2>Cách 1 · Tải file cài đặt (khuyên dùng)</h2>
-    <p><a class="dl" href="app/CaiDatChataThuNgan.cmd" download="CaiDatChataThuNgan.cmd">⬇ Tải file cài đặt <small>(CaiDatChataThuNgan.cmd · 1 KB)</small></a></p>
-    <ol>
-      <li>Mở trang này <b>trên máy cần cài</b>, máy phải có mạng Internet.</li>
-      <li>Bấm <b>Tải file cài đặt</b>. Nếu Chrome hỏi giữ lại hay bỏ, chọn <b>Giữ lại</b>.</li>
-      <li>Mở file vừa tải (bấm vào file ở góc tải xuống của Chrome, hoặc vào thư mục <b>Downloads</b> bấm đúp <code>CaiDatChataThuNgan.cmd</code>).</li>
-      <li>Nếu Windows hiện <b>"Windows protected your PC"</b>: bấm <b>More info</b> → <b>Run anyway</b>.</li>
-      <li>Cửa sổ đen tự tải và cài (khoảng 130MB, mất 1–5 phút tùy mạng). Đợi đến khi hiện <b>"DA CAI XONG"</b>, app tự mở. Bấm phím bất kỳ để đóng cửa sổ đen.</li>
-      <li>Trên màn hình Desktop có biểu tượng <b>Chata Thu ngan</b>. App tự mở mỗi khi bật máy.</li>
-    </ol>
-  </div>
-
-  <div class="card">
-    <h2>Sau khi cài: chọn máy in</h2>
-    <ol>
-      <li>Đăng nhập bằng <b>mã thu ngân</b> (hỏi quản lý).</li>
-      <li>Bấm <b>🖨 Máy in</b> ở góc trên bên phải.</li>
-      <li><b>Hóa đơn</b>: chọn máy in bill ở quầy (K80). Bật "Tự in khi thanh toán" nếu muốn in bill cho khách.</li>
-      <li><b>Phiếu bếp</b>: chọn máy in ở bếp.</li>
-      <li><b>Tem ly</b>: chọn máy in tem (ví dụ HPRT N41) và đúng khổ tem.</li>
-      <li>Bấm <b>In thử</b> từng loại để kiểm tra, rồi bấm <b>Lưu &amp; đóng</b>.</li>
-    </ol>
-    <p class="muted">Máy in phải được cài driver trong Windows trước (thấy trong Cài đặt → Máy in). Nếu tem in lệch, chỉnh khổ giấy trong driver máy in cho giống khổ tem.</p>
-  </div>
-
-  <div class="card">
-    <h2>Cách 2 · Dán lệnh (khi không tải được file)</h2>
-    <ol>
-      <li>Bấm nút <b>Start</b>, gõ <b>PowerShell</b>, mở <b>Windows PowerShell</b>.</li>
-      <li>Bấm <b>Chép lệnh</b> dưới đây, dán vào cửa sổ PowerShell (chuột phải để dán) rồi bấm <b>Enter</b>.</li>
-    </ol>
-    <pre id="cmd">powershell -NoProfile -ExecutionPolicy Bypass -Command "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; iex ((New-Object Net.WebClient).DownloadString('https://taichata123.github.io/baihat/app/install.ps1'))"</pre>
-    <button class="copy" id="copyBtn" type="button">📋 Chép lệnh</button>
-  </div>
-
-  <div class="card">
-    <h2>Cập nhật & gỡ app</h2>
-    <ul>
-      <li><b>Màn hình bán hàng tự cập nhật</b> mỗi khi mở app (hoặc bấm <b>F5</b>), không cần cài lại.</li>
-      <li>Khi Chata báo có bản app mới, chỉ cần chạy lại file cài đặt ở trên.</li>
-      <li>Gỡ app: xóa thư mục <code>%LOCALAPPDATA%\ChataThuNgan</code> và biểu tượng <b>Chata Thu ngan</b> trên Desktop.</li>
-    </ul>
-    <p class="note">Phím tắt trong app: <b>F2</b> tạo đơn · <b>F1</b> thanh toán · <b>F3</b> lưu đơn · <b>F4</b> tìm món · <b>Esc</b> thoát · <b>F5</b> tải lại · <b>F11</b> toàn màn hình.</p>
-  </div>
-  <p class="muted">Không cài được? Dùng tạm bản web: <a href="pos.html">taichata123.github.io/baihat/pos.html</a> (in qua hộp thoại của trình duyệt).</p>
-</main>
-<script>
-document.getElementById('copyBtn').addEventListener('click', function(){
-  var t = document.getElementById('cmd').textContent, b = this;
-  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){ b.textContent = '✓ Đã chép'; }, function(){
-    var r = document.createRange(); r.selectNodeContents(document.getElementById('cmd')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = 'Bấm Ctrl+C để chép';
-  });
-});
-</script>
+<body style="font-family:Segoe UI,system-ui,sans-serif;padding:24px">
+<p>Hướng dẫn và file cài app Chata Thu ngân đã chuyển sang <b>Web vận hành</b> (Quản lý → Cài đặt).</p>
+<p><a href="https://chata-checklist.web.app/#caiapp">Mở Web vận hành</a></p>
 </body>
 </html>
