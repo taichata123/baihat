@@ -141,6 +141,9 @@
   .login h2{margin:0 0 4px}
   .login input{width:100%;padding:12px;border:1px solid var(--line);border-radius:8px;font-size:17px;margin-top:12px}
   .login button{width:100%;margin-top:12px;padding:13px;border:none;border-radius:8px;background:var(--green);color:#fff;font-weight:700;font-size:16px}
+  .login .ltabs{display:flex;gap:6px;margin-top:14px}
+  .login .ltabs button{margin:0;padding:9px;background:#EEF1F5;color:var(--ink);font-size:14.5px}
+  .login .ltabs button.on{background:var(--nav);color:#fff}
 
   .toast{position:fixed;left:50%;bottom:50px;transform:translateX(-50%);background:#14213A;color:#fff;padding:11px 18px;border-radius:9px;z-index:90;font-size:14.5px;box-shadow:0 6px 20px rgba(0,0,0,.3)}
   .busy{position:fixed;inset:0;background:rgba(10,18,32,.25);z-index:80;display:flex;align-items:center;justify-content:center}
@@ -153,9 +156,11 @@
 <div class="login" id="loginView" hidden>
   <form id="loginForm" novalidate>
     <h2>Chata Thu ngân</h2>
-    <div style="color:var(--muted)">Nhập mã thu ngân để bắt đầu</div>
-    <input id="pw" type="password" autocomplete="current-password" placeholder="Mã thu ngân">
-    <button type="submit">Đăng nhập</button>
+    <div style="color:var(--muted)">Đăng nhập bằng tài khoản Web vận hành</div>
+    <div class="ltabs"><button type="button" class="on" data-lk="staff">Nhân viên</button><button type="button" data-lk="manager">Quản lý</button></div>
+    <input id="lcode" type="text" autocomplete="username" autocapitalize="characters" placeholder="Mã nhân viên (VD: HAU)">
+    <input id="pw" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN">
+    <button type="submit" id="loginBtn">Đăng nhập</button>
     <div class="err" id="loginErr" hidden></div>
     <p style="text-align:center;margin:14px 0 0;font-size:14px"><a href="https://chata-checklist.web.app/#caiapp" target="_blank" style="color:#1E7BE6">⬇ Cài app cho máy quầy (Web vận hành)</a></p>
   </form>
@@ -313,6 +318,18 @@
   </div>
 </div>
 
+<!-- Quản lý duyệt -->
+<div class="mask" id="apModal" hidden>
+  <form class="modal" id="apForm" style="width:min(400px,94vw)" novalidate>
+    <h3>Cần quản lý duyệt</h3>
+    <p id="apWhat" style="margin:0 0 10px;color:var(--muted)"></p>
+    <input id="apCode" type="text" autocapitalize="characters" placeholder="Mã quản lý (nếu có)" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font-size:16px;margin-bottom:8px">
+    <input id="apPin" type="password" inputmode="numeric" placeholder="PIN quản lý" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font-size:16px">
+    <div class="err" id="apErr" hidden></div>
+    <div class="mbtns"><button type="button" id="apCancel">Hủy</button><button type="submit" class="ok">Duyệt</button></div>
+  </form>
+</div>
+
 <div class="busy" id="busy" hidden><div id="busyTxt">Đang lưu…</div></div>
 <div class="toast" id="toast" hidden></div>
 <iframe id="printFrame" title="in"></iframe>
@@ -364,6 +381,7 @@
       '<div style="text-align:center;font-size:' + (fs * 2) + 'mm;font-weight:900">#' + esc(o.code) + '</div>' +
       '<div style="display:flex;justify-content:space-between"><span>' + dmy(o.paidAt || Date.now()) + ' ' + hhmm(o.paidAt || Date.now()) + '</span><span>' + (o.pager ? 'Thẻ rung: ' + esc(o.pager) : '') + '</span></div>' +
       '<div>Khách: ' + esc(o.name) + (o.phone ? ' · ' + esc(o.phone) : '') + '</div>' +
+      (o.cashier || (D && D.me) ? '<div>Thu ngân: ' + esc(String(o.cashier || D.me.name).replace(/ \(.*\)$/, '')) + '</div>' : '') +
       '<div style="border-top:.3mm dashed #000;margin:1.5mm 0"></div>' +
       '<table style="width:100%;border-collapse:collapse;font-size:inherit">' + rows + '</table>' +
       '<div style="border-top:.3mm dashed #000;margin:1.5mm 0"></div>' +
@@ -436,14 +454,50 @@
 
   /* ================= Đăng nhập & dữ liệu ================= */
   function show(){ $('loginView').hidden = !!PIN; $('app').hidden = !PIN; }
-  $('loginForm').addEventListener('submit', function(e){
-    e.preventDefault(); var p = $('pw').value.trim(); if (!p) return;
-    call('cashierLogin', [p]).then(function(r){
-      if (r.ok) { PIN = p; ls('chata_cashier', p); show(); load(); }
-      else { $('loginErr').textContent = r.msg; $('loginErr').hidden = false; }
-    }, function(e){ $('loginErr').textContent = e.message; $('loginErr').hidden = false; });
+  var LK = 'staff';
+  document.querySelector('.ltabs').addEventListener('click', function(e){
+    var b = e.target.closest('[data-lk]'); if (!b) return; LK = b.getAttribute('data-lk');
+    Array.prototype.forEach.call(document.querySelectorAll('.ltabs button'), function(x){ x.classList.toggle('on', x === b); });
+    $('lcode').placeholder = LK === 'manager' ? 'Mã quản lý (nếu có)' : 'Mã nhân viên (VD: HAU)';
+    $('pw').placeholder = LK === 'manager' ? 'PIN quản lý' : 'PIN'; $('loginErr').hidden = true; $('lcode').value = ''; $('pw').value = '';
   });
-  $('outBtn').addEventListener('click', function(){ if (confirm('Đăng xuất khỏi máy thu ngân?')) { ls('chata_cashier', null); PIN = ''; show(); } });
+  $('loginForm').addEventListener('submit', function(e){
+    e.preventDefault(); var c = $('lcode').value.trim(), p = $('pw').value.trim();
+    if (LK === 'staff' && !c) { $('loginErr').textContent = 'Nhập mã nhân viên.'; $('loginErr').hidden = false; return; }
+    if (!p) { $('loginErr').textContent = 'Nhập PIN.'; $('loginErr').hidden = false; return; }
+    $('loginBtn').disabled = true; $('loginBtn').textContent = 'Đang kiểm tra…';
+    call('posLogin', [LK, c, p]).then(function(r){
+      if (r.ok) { PIN = r.token; ls('chata_cashier', r.token); ls('chata_pos_me', JSON.stringify(r.me)); $('pw').value = ''; $('loginErr').hidden = true; show(); load(); }
+      else { $('loginErr').textContent = r.msg; $('loginErr').hidden = false; }
+    }, function(e){ $('loginErr').textContent = e.message; $('loginErr').hidden = false; })
+    .then(function(){ $('loginBtn').disabled = false; $('loginBtn').textContent = 'Đăng nhập'; });
+  });
+  $('outBtn').addEventListener('click', function(){
+    if (!confirm('Đăng xuất khỏi máy thu ngân?')) return;
+    call('posLogout', [PIN]).catch(function(){}); ls('chata_cashier', null); ls('chata_pos_me', null); PIN = ''; D = null; $('who').textContent = 'Thu ngân'; show();
+  });
+  /* Việc cần quản lý duyệt: nếu máy chủ báo needApprove thì hỏi mã + PIN quản lý rồi gửi lại */
+  var apCb = null;
+  function needAp(what, run){
+    run(null).then(function(r){
+      if (r && r.needApprove) {
+        apCb = run; $('apWhat').textContent = what; $('apPin').value = ''; $('apErr').hidden = true; $('apModal').hidden = false;
+        setTimeout(function(){ ($('apCode').value ? $('apPin') : $('apCode')).focus(); }, 30);
+      }
+    }, function(e){ toast('⚠️ ' + e.message, 4000); });
+  }
+  $('apForm').addEventListener('submit', function(e){
+    e.preventDefault(); if (!apCb) return;
+    var ap = { code: $('apCode').value.trim(), pin: $('apPin').value.trim() };
+    if (!ap.pin) { $('apErr').textContent = 'Nhập PIN quản lý.'; $('apErr').hidden = false; return; }
+    busy(true, 'Đang kiểm tra…');
+    apCb(ap).then(function(r){
+      busy(false);
+      if (r && r.needApprove) { $('apErr').textContent = r.msg; $('apErr').hidden = false; return; }
+      $('apModal').hidden = true; apCb = null;
+    }, function(e){ busy(false); $('apErr').textContent = e.message; $('apErr').hidden = false; });
+  });
+  $('apCancel').addEventListener('click', function(){ $('apModal').hidden = true; apCb = null; if (D) $('modeSel').value = D.modeSetting; });
 
   var seenQr = null;
   function ting(){
@@ -463,13 +517,14 @@
     $('sCash').textContent = money(d.stats.cash); $('sTr').textContent = money(d.stats.transfer);
     $('sWaitQ').textContent = d.pending.length - qr.length; $('sWaitR').textContent = qr.length;
     $('modeSel').value = d.modeSetting;
+    if (d.me) { ls('chata_pos_me', JSON.stringify(d.me)); $('who').textContent = '👤 ' + d.me.name + (d.me.role === 'manager' ? ' · Quản lý' : ' · Thu ngân'); }
     $('qrBtn').textContent = d.open ? 'QR: Đang nhận' : 'QR: Đã tắt'; $('qrBtn').classList.toggle('off', !d.open);
     drawHome();
   }
   function load(){
     if (!PIN) return Promise.resolve();
     return call('getCashier', [PIN]).then(apply).catch(function(e){
-      if (/Sai mã/.test(e.message)) { ls('chata_cashier', null); PIN = ''; show(); }
+      if (/Sai mã/.test(e.message)) { ls('chata_cashier', null); ls('chata_pos_me', null); PIN = ''; show(); $('loginErr').textContent = 'Phiên đăng nhập đã hết hoặc tài khoản đã bị tắt quyền. Đăng nhập lại nhé.'; $('loginErr').hidden = false; }
     });
   }
 
@@ -489,9 +544,9 @@
     }).join('') : '<div class="empty">' + (TAB === 'qr' ? 'Chưa có đơn QR nào đang chờ.' : 'Chưa có đơn nào đang chờ. Bấm <b>＋ Tạo đơn mới</b> để bán hàng.') + '</div>';
   }
   function drawPaid(){
-    $('paidView').innerHTML = D.paid.length ? '<table><tr><th>Mã</th><th>Giờ</th><th>Khách</th><th>Món</th><th>Tiền</th><th>TT</th><th>In lại</th></tr>' + D.paid.map(function(o){
+    $('paidView').innerHTML = D.paid.length ? '<table><tr><th>Mã</th><th>Giờ</th><th>Khách</th><th>Món</th><th>Tiền</th><th>TT</th><th>Thu ngân</th><th>In lại</th></tr>' + D.paid.map(function(o){
       return '<tr><td><b>#' + esc(o.code) + '</b><br><small>' + (o.src === 'Quầy' ? 'Quầy' : 'QR') + '</small></td><td>' + hhmm(o.paidAt) + '</td><td>' + esc(o.name) + (o.pager ? '<br><small>Thẻ ' + esc(o.pager) + '</small>' : '') + '</td>' +
-        '<td>' + o.items.map(function(i){ return i.q + '× ' + esc(i.n) + (i.t ? ' <i>(' + esc(i.t) + ')</i>' : ''); }).join('<br>') + '</td><td class="num"><b>' + money(o.total) + '</b></td><td>' + esc(o.pay) + '</td>' +
+        '<td>' + o.items.map(function(i){ return i.q + '× ' + esc(i.n) + (i.t ? ' <i>(' + esc(i.t) + ')</i>' : ''); }).join('<br>') + '</td><td class="num"><b>' + money(o.total) + '</b></td><td>' + esc(o.pay) + '</td><td><small>' + esc(o.cashier || '') + '</small></td>' +
         '<td><button class="sbtn" data-rp="bill" data-id="' + o.id + '">Hóa đơn</button><button class="sbtn" data-rp="bep" data-id="' + o.id + '">Bếp</button><button class="sbtn" data-rp="tem" data-id="' + o.id + '">Tem</button></td></tr>';
     }).join('') + '</table>' : '<div class="empty">Chưa có đơn nào thanh toán hôm nay.</div>';
   }
@@ -514,11 +569,14 @@
     if (k !== 'bill' && !split(o)[k === 'bep' ? 'bep' : 'bar'].length) return toast('Đơn này không có món cần in ' + (k === 'bep' ? 'phiếu bếp' : 'tem ly') + '.');
     printOrder(o, w); toast('Đã gửi lệnh in');
   });
-  $('modeSel').addEventListener('change', function(){ call('cashierSetting', [PIN, 'mode', $('modeSel').value]).then(apply); });
+  $('modeSel').addEventListener('change', function(){
+    var v = $('modeSel').value;
+    needAp('Đổi menu sang: ' + v, function(ap){ return call('cashierSetting', [PIN, 'mode', v, ap]).then(function(r){ if (r && r.needApprove) return r; apply(r); toast('Đã đổi menu: ' + v); return r; }); });
+  });
   $('qrBtn').addEventListener('click', function(){
     if (!D) return; var on = !D.open;
     if (!on && !confirm('Tắt nhận đơn QR? Khách quét mã sẽ được báo ra quầy gọi trực tiếp.')) return;
-    call('cashierSetting', [PIN, 'open', on]).then(apply);
+    needAp(on ? 'Bật nhận đơn QR' : 'Tắt nhận đơn QR', function(ap){ return call('cashierSetting', [PIN, 'open', on, ap]).then(function(r){ if (r && r.needApprove) return r; apply(r); return r; }); });
   });
 
   /* ================= Màn hình đơn ================= */
@@ -694,7 +752,7 @@
     var c = e.target.closest('.oc'); if (!c) return; e.preventDefault();
     var o = D.pending.find(function(x){ return x.id === c.getAttribute('data-open'); }); if (!o) return;
     if (!confirm('Hủy đơn #' + o.code + ' (' + o.name + ')?')) return;
-    call('cashierUpdate', [PIN, o.id, 'cancel', {}]).then(function(r){ if (r.ok) { apply(r.data); toast('Đã hủy đơn #' + o.code); } else toast(r.msg); });
+    needAp('Hủy đơn #' + o.code + ' (' + o.name + ')', function(ap){ return call('cashierUpdate', [PIN, o.id, 'cancel', { approve: ap }]).then(function(r){ if (r.needApprove) return r; if (r.ok) { apply(r.data); toast('Đã hủy đơn #' + o.code); } else toast(r.msg); return r; }); });
   });
 
   /* Phím tắt */
