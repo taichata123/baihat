@@ -319,6 +319,7 @@
       <div class="row">
         <label>Máy in<select id="s_tem_p"></select></label>
         <label>Khổ tem<select id="s_tem_s"><option>50x30</option><option>40x30</option><option>50x40</option><option>40x25</option><option>35x22</option><option>50x75</option><option>70x50</option></select></label>
+        <label>Nét chữ<select id="s_tem_ink"><option>Mảnh</option><option>Vừa</option><option>Đậm</option></select></label>
         <button class="sbtn" type="button" data-test="tem">In thử</button>
       </div>
     </div>
@@ -419,7 +420,7 @@
   var PIN = ls('chata_cashier') || '', D = null, TAB = 'all';
 
   /* ================= Cài đặt in ================= */
-  var DEF = { bill_on:false, bill_p:'', bill_w:'80', bill_c:'1', bep_on:true, bep_p:'', bep_w:'80', bep_c:'1', tem_on:true, tem_p:'', tem_s:'50x30',
+  var DEF = { bill_on:false, bill_p:'', bill_w:'80', bill_c:'1', bep_on:true, bep_p:'', bep_w:'80', bep_c:'1', tem_on:true, tem_p:'', tem_s:'50x30', tem_ink:'Vừa',
     groups:{ 'Đồ ăn':'bep', 'Lai rai':'bep', 'Mì cay':'bep', 'Đồ chiên':'bep', 'Bia':'none', 'Ăn vặt':'none' },
     shop:'CHATA COFFEE', addr:'Bàu Cạn, Gia Lai', foot:'Cảm ơn quý khách – Hẹn gặp lại!' };
   var S = {}; try { S = JSON.parse(ls('chata_pos_set') || '{}'); } catch(e){}
@@ -468,18 +469,61 @@
       '<div style="text-align:center;margin-top:2mm">' + items.reduce(function(s, i){ return s + i.q; }, 0) + ' món · in lúc ' + hhmm(Date.now()) + '</div></div>';
     return { html: h, w: w, h: null, copies: +S.bep_c };
   }
+  /* Tem ly: vẽ bằng canvas đúng 8 điểm/mm (máy in nhiệt 203dpi) rồi đổi sang đen–trắng tuyệt đối,
+     tránh viền xám bị máy in chấm lốm đốm làm chữ lem / mất nét. */
+  var TEM_INK = { 'Mảnh': 95, 'Vừa': 125, 'Đậm': 160 };
+  function temCanvas(o, i, k, total, W, H){
+    var D = 8, cw = Math.round(W * D), ch = Math.round(H * D);
+    var c = document.createElement('canvas'); c.width = cw; c.height = ch;
+    var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cw, ch); g.fillStyle = '#000'; g.textBaseline = 'top';
+    var FONT = 'Arial, "Segoe UI", sans-serif';
+    var px = Math.round(1.8 * D), py = Math.round(1.2 * D), iw = cw - 2 * px;
+    var fs = Math.round(Math.max(2.3, Math.min(3.4, H / 9)) * D);
+    var nfs = Math.round(Math.max(3, Math.min(5, H / 6.4)) * D);
+    function font(sz, b){ g.font = (b ? 'bold ' : '') + sz + 'px ' + FONT; }
+    function fit(t, w){ if (g.measureText(t).width <= w) return t; while (t.length > 1 && g.measureText(t + '…').width > w) t = t.slice(0, -1); return t + '…'; }
+    function wrap(t, w){
+      var words = String(t || '').split(/\s+/), lines = [], cur = '';
+      words.forEach(function(wd){ var tr = cur ? cur + ' ' + wd : wd; if (g.measureText(tr).width <= w || !cur) cur = tr; else { lines.push(cur); cur = wd; } });
+      if (cur) lines.push(cur); return lines;
+    }
+    // Dòng trên: mã đơn + tên khách | giờ
+    font(fs, true); var tm = hhmm(o.paidAt || Date.now()); var tw = g.measureText(tm).width;
+    g.fillText(fit('#' + o.code + ' ' + (o.name || ''), iw - tw - D), px, py);
+    g.textAlign = 'right'; g.fillText(tm, cw - px, py); g.textAlign = 'left';
+    var y = py + Math.round(fs * 1.15); g.fillRect(px, y, iw, Math.max(2, Math.round(.3 * D))); y += Math.round(.9 * D);
+    // Dòng dưới (đặt trước để biết chỗ còn lại)
+    var footY = ch - py - fs;
+    // Tên món: tự thu nhỏ để vừa tối đa 2 dòng
+    var nl, sz = nfs;
+    for (; sz > fs; sz -= 2) { font(sz, true); nl = wrap(i.n, iw); if (nl.length <= 2 && nl.every(function(l){ return g.measureText(l).width <= iw; })) break; }
+    font(sz, true); nl = wrap(i.n, iw).slice(0, 2);
+    nl.forEach(function(l){ g.fillText(fit(l, iw), px, y); y += Math.round(sz * 1.12); });
+    // Ghi chú món / đơn
+    var note = (i.t || '') + (o.note ? (i.t ? ' · ' : '') + o.note : '');
+    if (note) {
+      y += Math.round(.4 * D); font(fs, false);
+      var lh = Math.round(fs * 1.15), max = Math.max(0, Math.floor((footY - Math.round(.5 * D) - y) / lh));
+      var ln = wrap(note, iw); if (ln.length > max) { ln = ln.slice(0, max); if (max) ln[max - 1] = fit(ln[max - 1] + '…', iw); }
+      ln.forEach(function(l){ g.fillText(fit(l, iw), px, y); y += lh; });
+    }
+    font(fs, true);
+    g.fillText(k + '/' + total + (o.pager ? ' · Thẻ ' + o.pager : ''), px, footY);
+    g.textAlign = 'right'; g.fillText(money(i.p) + 'đ', cw - px, footY); g.textAlign = 'left';
+    // Đen–trắng tuyệt đối
+    var th = TEM_INK[S.tem_ink] || TEM_INK['Vừa'], img = g.getImageData(0, 0, cw, ch), d = img.data;
+    for (var p = 0; p < d.length; p += 4) { var v = (d[p] * 299 + d[p + 1] * 587 + d[p + 2] * 114) / 1000 < 255 - th ? 0 : 255; d[p] = d[p + 1] = d[p + 2] = v; d[p + 3] = 255; }
+    g.putImageData(img, 0, 0);
+    return c.toDataURL('image/png');
+  }
   function temHtml(o, items){
     var sz = S.tem_s.split('x'), W = +sz[0], H = +sz[1];
-    var fs = Math.max(2.2, Math.min(3.6, H / 9)), nfs = Math.max(3, Math.min(5.2, H / 6.2));
     var total = items.reduce(function(s, i){ return s + i.q; }, 0), k = 0, out = '';
     items.forEach(function(i){
       for (var q = 0; q < i.q; q++) {
         k++;
-        out += '<div style="width:' + W + 'mm;height:' + H + 'mm;padding:1.2mm 1.8mm;font-size:' + fs + 'mm;overflow:hidden;display:flex;flex-direction:column;page-break-after:always;break-after:page">' +
-          '<div style="display:flex;justify-content:space-between;font-weight:700;border-bottom:.25mm solid #000;padding-bottom:.5mm"><span>#' + esc(o.code) + ' ' + esc(o.name) + '</span><span>' + hhmm(o.paidAt || Date.now()) + '</span></div>' +
-          '<div style="font-weight:800;line-height:1.1;margin-top:.8mm;font-size:' + nfs + 'mm">' + esc(i.n) + '</div>' +
-          '<div style="flex:1;line-height:1.15">' + (i.t ? esc(i.t) : '') + (o.note ? (i.t ? ' · ' : '') + esc(o.note) : '') + '</div>' +
-          '<div style="display:flex;justify-content:space-between;font-weight:700"><span>' + k + '/' + total + (o.pager ? ' · Thẻ ' + esc(o.pager) : '') + '</span><span>' + money(i.p) + 'đ</span></div></div>';
+        out += '<div style="width:' + W + 'mm;height:' + H + 'mm;overflow:hidden;page-break-after:always;break-after:page">' +
+          '<img src="' + temCanvas(o, i, k, total, W, H) + '" style="display:block;width:' + W + 'mm;height:' + H + 'mm;image-rendering:pixelated"></div>';
       }
     });
     return { html: out, w: W, h: H, copies: 1 };
@@ -851,7 +895,7 @@
     $('nativeWarn').hidden = !!NATIVE;
     $('appVer').textContent = NATIVE ? 'App Chata Thu ngân ' + (NATIVE.version || '') + ' · in thẳng ra máy in.' : 'Đang chạy trên trình duyệt.';
     ['bill_on','bep_on','tem_on'].forEach(function(k){ $('s_' + k).checked = !!S[k]; });
-    ['bill_w','bill_c','bep_w','bep_c','tem_s'].forEach(function(k){ $('s_' + k).value = S[k]; });
+    ['bill_w','bill_c','bep_w','bep_c','tem_s','tem_ink'].forEach(function(k){ $('s_' + k).value = S[k]; });
     $('s_shop').value = S.shop; $('s_addr').value = S.addr; $('s_foot').value = S.foot;
     var gs = []; (D ? D.menu.concat(D.other || []) : []).forEach(function(m){ if (gs.indexOf(m.g) < 0) gs.push(m.g); });
     $('s_grp').innerHTML = gs.map(function(g){ var w = where(g);
@@ -862,7 +906,7 @@
   }
   function readSet(){
     ['bill_on','bep_on','tem_on'].forEach(function(k){ S[k] = $('s_' + k).checked; });
-    ['bill_w','bill_c','bep_w','bep_c','tem_s','bill_p','bep_p','tem_p'].forEach(function(k){ S[k] = $('s_' + k).value; });
+    ['bill_w','bill_c','bep_w','bep_c','tem_s','tem_ink','bill_p','bep_p','tem_p'].forEach(function(k){ S[k] = $('s_' + k).value; });
     S.shop = $('s_shop').value.trim() || DEF.shop; S.addr = $('s_addr').value.trim(); S.foot = $('s_foot').value.trim();
     Array.prototype.forEach.call(document.querySelectorAll('#s_grp select'), function(s){ S.groups[s.getAttribute('data-g')] = s.value; });
     saveS(); drawPrintState();
