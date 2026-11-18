@@ -172,6 +172,32 @@
   .tag{display:inline-block;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;margin-right:6px}
   .note{margin-top:5px;font-size:13px;background:var(--sun-soft);border-radius:8px;padding:6px 9px;color:var(--ink)}
 
+  /* ---------- Đặt bàn ---------- */
+  select{width:100%;font-size:16px;padding:12px 13px;border:1px solid var(--line);border-radius:10px;background:#FBFCFA;font:inherit;color:inherit}
+  .bk-sec{margin:18px 0 6px;font-weight:700;font-size:15px}
+  .bk-sec small{font-weight:400;color:var(--muted)}
+  .cats{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:6px;scrollbar-width:none}
+  .cats .chip{white-space:nowrap}
+  .cats .chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .mi{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+  .mi:first-child{border-top:none}
+  .mi .mn{flex:1;min-width:0;font-size:14.5px}
+  .mi .mp{display:block;color:var(--muted);font-size:13px}
+  .step-q{display:flex;align-items:center;gap:6px}
+  .step-q button{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--line);background:#fff;font-size:18px;line-height:1;cursor:pointer;color:var(--accent);font-weight:700}
+  .step-q button:disabled{opacity:.35;cursor:default}
+  .step-q b{min-width:18px;text-align:center}
+  .mi.sel{background:var(--accent-soft);margin:0 -10px;padding:9px 10px;border-radius:10px}
+  .mlist{max-height:340px;overflow:auto}
+  .sum{position:sticky;bottom:-20px;background:var(--surface);margin:14px -20px -20px;padding:12px 20px 20px;border-top:1px solid var(--line);box-shadow:0 -6px 14px rgba(0,0,0,.05)}
+  .sum-l{display:flex;justify-content:space-between;font-size:14px;color:var(--muted)}
+  .sum-l b{color:var(--ink);font-size:16px}
+  .sum .send{margin-top:10px}
+  .bk-pend{border-left:4px solid var(--sun);padding-left:10px!important}
+  .bk-items{white-space:pre-line;font-size:13px;margin-top:5px;background:var(--sunk);border-radius:8px;padding:6px 9px}
+  .bk-st{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px;margin-right:6px;background:var(--sun-soft);color:#7a5200}
+  .bk-st.ok{background:var(--leaf-soft);color:#2f5220}
+  .bk-day{font-weight:700;color:var(--accent);margin:14px 0 2px;font-size:14px}
   @media (max-width:760px){
     .steps{grid-template-columns:1fr}
     .grid{grid-template-columns:1fr}
@@ -233,7 +259,7 @@
       <div class="eyebrow" style="color:var(--band-ink);opacity:.8">Cà phê · Hồ bơi · Khu vui chơi</div>
       <h1 style="margin-top:10px">Hôm nay bạn muốn nghe <em>bài gì?</em></h1>
       <p>Lên hát cùng ban nhạc Chata, hoặc gửi bài để ban nhạc hát tặng bạn. Tặng người thương, tặng bé, hay chỉ để chill bên ly cà phê.</p>
-      <div class="ctas"><a class="cta" href="#dang-ky">♪ Đăng ký bài hát</a><a class="cta2" href="#gop-y">💛 Ủng hộ đêm nhạc</a></div>
+      <div class="ctas"><a class="cta" href="#dang-ky">♪ Đăng ký bài hát</a><a class="cta2" href="#dat-ban-form">🍽 Đặt bàn &amp; món</a><a class="cta2" href="#gop-y">💛 Ủng hộ đêm nhạc</a></div>
     </div>
     <svg class="wave" viewBox="0 0 1440 56" preserveAspectRatio="none" aria-hidden="true">
       <path fill="currentColor" d="M0 32c120-18 240-26 360-14s240 30 360 26 240-28 360-30 240 14 360 22V56H0z"/>
@@ -284,6 +310,53 @@
           <h3>Quầy nhạc đang nghỉ một chút</h3>
           <p class="lead">Chata tạm ngưng nhận bài. Bạn quay lại sau ít phút nhé!</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="dat-ban">
+    <div class="wrap">
+      <div class="card">
+        <div class="gg-in">
+          <div class="gg-ic" aria-hidden="true">🍽</div>
+          <div class="gg-txt">
+            <h3>Đặt bàn &amp; đặt món cho đêm nhạc</h3>
+            <p class="lead">Giữ chỗ đẹp cho nhóm của bạn và đặt món trước, tới nơi là có ngay. Chata sẽ gọi hoặc nhắn xác nhận lại với bạn.</p>
+          </div>
+          <a class="gg-btn jump" href="#dat-ban-form">Đặt bàn ngay →</a>
+        </div>
+      </div>
+      <div class="modal" id="bkModal" hidden role="dialog" aria-modal="true" aria-label="Đặt bàn đêm nhạc">
+      <div class="card modal-box" id="dat-ban-form">
+        <button type="button" class="modal-x" id="bkClose" aria-label="Đóng">✕</button>
+        <div class="eyebrow">Đặt bàn đêm nhạc</div>
+        <h3 style="margin-top:6px">Giữ chỗ &amp; đặt món trước</h3>
+        <p class="lead">Điền vài thông tin, Chata sẽ gọi hoặc nhắn xác nhận bàn cho bạn sớm nhất.</p>
+        <form id="bkForm" autocomplete="on" novalidate>
+          <div class="row2">
+            <div><label for="bkName">Tên bạn *</label><input id="bkName" maxlength="40" autocomplete="name" placeholder="VD: Minh"></div>
+            <div><label for="bkPhone">Số điện thoại *</label><input id="bkPhone" type="tel" inputmode="tel" maxlength="15" autocomplete="tel" placeholder="VD: 0912 345 678"></div>
+          </div>
+          <div class="row2">
+            <div><label for="bkDate">Ngày đến *</label><input id="bkDate" type="date"></div>
+            <div><label for="bkTime">Giờ đến *</label><input id="bkTime" type="time" value="19:00" step="900"></div>
+          </div>
+          <div class="row2">
+            <div><label for="bkPeople">Số người *</label><input id="bkPeople" type="number" inputmode="numeric" min="1" max="50" value="2"></div>
+            <div><label for="bkArea">Khu vực mong muốn</label><select id="bkArea"></select></div>
+          </div>
+          <div class="bk-sec">Đặt món trước <small>(tuỳ chọn – tới nơi gọi thêm vẫn được)</small></div>
+          <div class="cats" id="bkCats"></div>
+          <div class="mlist" id="bkMenu"><div class="empty">Đang tải menu…</div></div>
+          <label for="bkNote">Ghi chú <span class="opt">(tuỳ chọn)</span></label>
+          <textarea id="bkNote" maxlength="200" placeholder="VD: Có 2 bé nhỏ, cần ghế em bé · Tổ chức sinh nhật nhỏ…"></textarea>
+          <div class="sum">
+            <div class="sum-l"><span id="bkCount">Chưa chọn món</span><span>Tạm tính <b id="bkTotal">0đ</b></span></div>
+            <button class="send" id="bkBtn" type="submit">Gửi đặt bàn</button>
+            <div class="msg" id="bkMsg" role="status" aria-live="polite"></div>
+          </div>
+        </form>
+      </div>
       </div>
     </div>
   </section>
@@ -360,6 +433,11 @@
       <p class="lead" style="margin:4px 0 0">Khách vừa gửi góp ý. Quản lý đọc và ra hỏi han khách sớm nhé, xử lý xong bấm "Đã xử lý".</p>
       <ol class="q" id="alertList"></ol>
     </div>
+    <div class="card" id="bkCard" style="margin-top:14px">
+      <h3 id="bkTitleA">🍽 Đặt bàn sắp tới</h3>
+      <p class="lead" style="margin:2px 0 0">Đơn mới có viền vàng. Gọi/nhắn khách xác nhận xong bấm "Xác nhận".</p>
+      <div id="bkListA"><div class="empty">Chưa có đơn đặt bàn nào.</div></div>
+    </div>
     <div class="now idle" id="nowA" style="margin-top:14px">
       <div class="disc" aria-hidden="true"></div>
       <div class="info">
@@ -402,9 +480,10 @@
     {id:'R3',kind:'yeucau',name:'',place:'Khu vui chơi',song:'Baby Shark',artist:'',note:'Cho bé Bin 4 tuổi',status:'Chờ'},
     {id:'R4',kind:'hat',name:'Hà',place:'Bàn 8',song:'Hạ Trắng',artist:'Trịnh Công Sơn',note:'',status:'Chờ'}
   ]};
+  mock.bookings = [{id:'B1',name:'Hùng',phone:'0912345678',date:new Date().toISOString().slice(0,10),time:'19:30',people:6,area:'Gần sân khấu',items:'2× Mẹt Lai Rai (49k)\n6× Trà đào (29k)',total:272000,note:'Có 2 bé nhỏ',status:'Chờ xác nhận'}];
   mock.alerts = [{row:5, time:Date.now()-600000, star:2, text:'Âm thanh to quá, bàn gần loa nói chuyện không nghe được.', name:'Hoa'}];
   function mockQueue(){
-    return {open:mock.open, doneToday:mock.done, fbToday:3, alerts:mock.alerts,
+    return {open:mock.open, doneToday:mock.done, fbToday:3, alerts:mock.alerts, bookings:mock.bookings,
       playing:mock.rows.filter(function(r){return r.status==='Đang phát';}),
       waiting:mock.rows.filter(function(r){return r.status==='Chờ';})};
   }
@@ -441,6 +520,13 @@
       if (fn==='submitFeedback' && String(args[0].text||'').trim()) mock.alerts.push({row:Date.now(), time:Date.now(), star:args[0].star, text:args[0].text, name:args[0].name});
       if (fn==='submitFeedback') return ok(String(args[0].text||'').trim() ? {ok:true} : {ok:false,msg:'Bạn viết vài dòng góp ý giúp Chata nhé.'});
       if (fn==='adminLogin') return ok(args[0] ? {ok:true} : {ok:false,msg:'Bạn nhập mã đăng nhập nhé.'});
+      if (fn==='getMenu') return ok({areas:['Không yêu cầu','Gần sân khấu','Xa loa, yên tĩnh','Ngoài trời'], menu:[
+        {g:'Đồ ăn',n:'Mì cay xúc xích cá viên',p:35000},{g:'Đồ ăn',n:'Mì cay thập cẩm',p:49000},{g:'Lai rai',n:'Mẹt Lai Rai',p:49000},
+        {g:'Lai rai',n:'Hạt dưa',p:15000},{g:'Trà & trà sữa',n:'Trà đào',p:29000},{g:'Trà & trà sữa',n:'Trà sữa kem trứng (M)',p:35000},{g:'Bia',n:'Bia Tiger cao',p:23000}]});
+      if (fn==='submitBooking') { var b=args[0]; mock.bookings.push({id:'B'+Date.now(),name:b.name,phone:b.phone,date:b.date,time:b.time,people:b.people,area:b.area,
+        items:b.items.map(function(i){return i.q+'× '+i.n;}).join('\n'),total:0,note:b.note,status:'Chờ xác nhận'}); return ok({ok:true,id:'B123'}); }
+      if (fn==='adminSetBooking') { mock.bookings.forEach(function(b){ if(b.id===args[1]) b.status=args[2]; });
+        mock.bookings = mock.bookings.filter(function(b){ return b.status==='Chờ xác nhận'||b.status==='Đã xác nhận'; }); return ok(mockQueue()); }
     }, 250);
   }
 
@@ -522,9 +608,50 @@
     $('tog').classList.toggle('on', !!d.open);
     $('tog').setAttribute('aria-checked', d.open ? 'true' : 'false');
     $('togLbl').textContent = d.open ? 'Đang nhận bài' : 'Đã tạm ngưng nhận bài';
-    $('stat').textContent = 'Hôm nay đã phát: ' + (d.doneToday || 0) + ' bài · Góp ý: ' + (d.fbToday || 0);
+    $('stat').textContent = 'Hôm nay đã phát: ' + (d.doneToday || 0) + ' bài · Góp ý: ' + (d.fbToday || 0) + ' · Đặt bàn sắp tới: ' + (d.bookings || []).length;
     renderAlerts(d.alerts || []);
+    renderBookings(d.bookings || []);
   }
+
+  /* ---- Đặt bàn: trang quản lý ---- */
+  var seenBk = [], bkInit = false;
+  function money(v){ return (Number(v)||0).toLocaleString('vi-VN') + 'đ'; }
+  function dayLbl(s){
+    var p = String(s).split('-'); if (p.length < 3) return s;
+    var d = new Date(+p[0], +p[1]-1, +p[2]), t = new Date(); t.setHours(0,0,0,0);
+    var diff = Math.round((d - t) / 86400000);
+    var w = ['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'][d.getDay()];
+    return (diff === 0 ? 'Hôm nay · ' : diff === 1 ? 'Ngày mai · ' : '') + w + ' ' + p[2] + '/' + p[1];
+  }
+  function renderBookings(bk){
+    var pend = bk.filter(function(b){ return b.status === 'Chờ xác nhận'; });
+    $('bkTitleA').textContent = '🍽 Đặt bàn sắp tới' + (bk.length ? ' (' + bk.length + (pend.length ? ', ' + pend.length + ' chờ xác nhận' : '') + ')' : '');
+    var last = '', html = '';
+    bk.forEach(function(b){
+      if (b.date !== last) { html += '<div class="bk-day">' + esc(dayLbl(b.date)) + '</div>'; last = b.date; }
+      var p = b.status === 'Chờ xác nhận';
+      html += '<ol class="q"><li class="' + (p ? 'bk-pend' : '') + '"><div class="qi"><b>' + esc(b.time) + ' · ' + esc(b.name) + ' · ' + b.people + ' người</b>' +
+        '<small><span class="bk-st' + (p ? '' : ' ok') + '">' + esc(b.status) + '</span>' + (b.area && b.area !== 'Không yêu cầu' ? '<span class="tag">' + esc(b.area) + '</span>' : '') +
+        '<a href="tel:' + esc(b.phone) + '">📞 ' + esc(b.phone) + '</a></small>' +
+        (b.items ? '<div class="bk-items">' + esc(b.items) + (b.total ? '\nTạm tính: ' + money(b.total) : '') + '</div>' : '') +
+        (b.note ? '<div class="note">💬 ' + esc(b.note) + '</div>' : '') +
+        '<div class="acts">' + (p ? '<button class="play" data-bk="' + esc(b.id) + '" data-bs="Đã xác nhận">✓ Xác nhận</button>'
+                                  : '<button class="play" data-bk="' + esc(b.id) + '" data-bs="Đã đến">✓ Khách đã đến</button>') +
+        '<button class="skip" data-bk="' + esc(b.id) + '" data-bs="Đã hủy">✕ Hủy đơn</button></div></div></li></ol>';
+    });
+    $('bkListA').innerHTML = html || '<div class="empty">Chưa có đơn đặt bàn nào.</div>';
+    var ids = pend.map(function(b){ return b.id; });
+    if (bkInit && ids.some(function(id){ return seenBk.indexOf(id) < 0; })) ting();
+    seenBk = ids; bkInit = true;
+  }
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('button[data-bk]');
+    if (!b || mode !== 'admin') return;
+    var st = b.getAttribute('data-bs');
+    if (st === 'Đã hủy' && !confirm('Hủy đơn đặt bàn này?')) return;
+    b.disabled = true;
+    call('adminSetBooking', [PIN, b.getAttribute('data-bk'), st], render, function(){ b.disabled = false; });
+  });
 
   /* ---- Chuyển màn hình: khách / đăng nhập / quầy nhạc ---- */
   var mode = 'guest';
@@ -629,6 +756,7 @@
     a.addEventListener('click', function(e){
       e.preventDefault(); var id = a.getAttribute('href').slice(1);
       if (id === 'gop-y-form') { openFb(); return; }
+      if (id === 'dat-ban-form') { openBk(); return; }
       var t = $(id); if (t) t.scrollIntoView({behavior:'smooth', block:'start'});
     });
   });
@@ -663,6 +791,74 @@
         $('fbGg').hidden = false;
       } else fbMsg((res && res.msg) || 'Có lỗi, bạn thử lại nhé.', false);
     }, function(){ btn.disabled = false; btn.textContent = 'Gửi góp ý'; fbMsg('Mạng đang chập chờn, bạn thử gửi lại nhé.', false); });
+  });
+  /* ---- Đặt bàn & đặt món (cửa sổ bật lên) ---- */
+  var MENU = null, cart = {}, curCat = '';
+  function ymd(d){ return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2); }
+  function openBk(){
+    $('bkModal').hidden = false; document.body.classList.add('noscroll');
+    var t = new Date(), mx = new Date(Date.now() + 60*86400000);
+    $('bkDate').min = ymd(t); $('bkDate').max = ymd(mx);
+    if (!$('bkDate').value) $('bkDate').value = ymd(t);
+    try { var sv = JSON.parse(localStorage.getItem('chata_bk_me') || '{}'); if (sv.n && !$('bkName').value) $('bkName').value = sv.n; if (sv.p && !$('bkPhone').value) $('bkPhone').value = sv.p; } catch(e){}
+    if (!MENU) call('getMenu', [], function(r){
+      MENU = (r && r.menu) || [];
+      $('bkArea').innerHTML = ((r && r.areas) || ['Không yêu cầu']).map(function(a){ return '<option>' + esc(a) + '</option>'; }).join('');
+      var cats = []; MENU.forEach(function(m){ if (cats.indexOf(m.g) < 0) cats.push(m.g); });
+      curCat = cats[0] || '';
+      $('bkCats').innerHTML = cats.map(function(c){ return '<button type="button" class="chip" data-cat="' + esc(c) + '">' + esc(c) + '</button>'; }).join('');
+      drawMenu();
+    }, function(){ $('bkMenu').innerHTML = '<div class="empty">Chưa tải được menu, bạn vẫn gửi đặt bàn được nhé.</div>'; });
+    setTimeout(function(){ try { (!$('bkName').value ? $('bkName') : $('bkPeople')).focus(); } catch(e){} }, 150);
+  }
+  function closeBk(){ $('bkModal').hidden = true; document.body.classList.remove('noscroll'); }
+  function drawMenu(){
+    Array.prototype.forEach.call($('bkCats').children, function(c){ c.classList.toggle('on', c.getAttribute('data-cat') === curCat); });
+    $('bkMenu').innerHTML = MENU.filter(function(m){ return m.g === curCat; }).map(function(m){
+      var q = cart[m.n] || 0;
+      return '<div class="mi' + (q ? ' sel' : '') + '"><div class="mn">' + esc(m.n) + '<span class="mp">' + money(m.p) + '</span></div>' +
+        '<div class="step-q"><button type="button" data-q="-1" data-n="' + esc(m.n) + '" aria-label="Bớt"' + (q ? '' : ' disabled') + '>−</button><b>' + (q || '') + '</b>' +
+        '<button type="button" data-q="1" data-n="' + esc(m.n) + '" aria-label="Thêm">+</button></div></div>';
+    }).join('') || '<div class="empty">Chưa có món.</div>';
+    var cnt = 0, tot = 0;
+    MENU.forEach(function(m){ var q = cart[m.n] || 0; cnt += q; tot += q * m.p; });
+    $('bkCount').textContent = cnt ? 'Đã chọn ' + cnt + ' món' : 'Chưa chọn món';
+    $('bkTotal').textContent = money(tot);
+  }
+  $('bkCats').addEventListener('click', function(e){ var c = e.target.closest('[data-cat]'); if (!c) return; curCat = c.getAttribute('data-cat'); drawMenu(); });
+  $('bkMenu').addEventListener('click', function(e){
+    var b = e.target.closest('button[data-q]'); if (!b) return;
+    var n = b.getAttribute('data-n'), q = Math.max(0, Math.min(30, (cart[n] || 0) + Number(b.getAttribute('data-q'))));
+    if (q) cart[n] = q; else delete cart[n];
+    drawMenu();
+  });
+  $('bkClose').addEventListener('click', closeBk);
+  $('bkModal').addEventListener('click', function(e){ if (e.target === $('bkModal')) closeBk(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !$('bkModal').hidden) closeBk(); });
+  function bkMsg(t, ok){ var m=$('bkMsg'); m.className='msg '+(ok?'ok':'err'); m.textContent=t; }
+  $('bkForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var name = $('bkName').value.trim(), phone = $('bkPhone').value.trim(), digits = phone.replace(/\D/g, '');
+    var people = Math.round(Number($('bkPeople').value) || 0);
+    if (!name) { bkMsg('Bạn cho Chata xin tên để giữ bàn nhé.', false); $('bkName').focus(); return; }
+    if (digits.length < 9 || digits.length > 12) { bkMsg('Bạn nhập số điện thoại để Chata gọi xác nhận nhé.', false); $('bkPhone').focus(); return; }
+    if (!$('bkDate').value) { bkMsg('Bạn chọn ngày đến giúp Chata nhé.', false); $('bkDate').focus(); return; }
+    if (!$('bkTime').value) { bkMsg('Bạn chọn giờ đến giúp Chata nhé.', false); $('bkTime').focus(); return; }
+    if (people < 1 || people > 50) { bkMsg('Số người từ 1 đến 50 nhé. Đoàn đông hơn bạn nhắn Fanpage giúp Chata.', false); $('bkPeople').focus(); return; }
+    var last = 0; try { last = +localStorage.getItem('chata_bk_last') || 0; } catch(err){}
+    if (!PREVIEW && Date.now() - last < 60000) { bkMsg('Bạn vừa gửi đặt bàn rồi, Chata sẽ liên hệ sớm nhé! 💛', true); return; }
+    var items = Object.keys(cart).map(function(n){ return { n: n, q: cart[n] }; });
+    var btn = $('bkBtn'); btn.disabled = true; btn.textContent = 'Đang gửi…';
+    call('submitBooking', [{ name: name, phone: phone, date: $('bkDate').value, time: $('bkTime').value, people: people,
+      area: $('bkArea').value, note: $('bkNote').value, items: items }], function(res){
+      btn.disabled = false; btn.textContent = 'Gửi đặt bàn';
+      if (res && res.ok) {
+        try { localStorage.setItem('chata_bk_last', String(Date.now())); localStorage.setItem('chata_bk_me', JSON.stringify({ n: name, p: phone })); } catch(err){}
+        bkMsg('🎉 Chata đã nhận đặt bàn (mã ' + res.id + ')' + (items.length ? ' kèm ' + items.length + ' món đặt trước' : '') +
+          '. Nhân viên sẽ gọi hoặc nhắn xác nhận cho bạn sớm nhất nhé!', true);
+        cart = {}; $('bkNote').value = ''; if (MENU) drawMenu();
+      } else bkMsg((res && res.msg) || 'Có lỗi, bạn thử lại nhé.', false);
+    }, function(){ btn.disabled = false; btn.textContent = 'Gửi đặt bàn'; bkMsg('Mạng đang chập chờn, bạn thử gửi lại nhé.', false); });
   });
   $('fbTop').href = FB; $('fbBottom').href = FB;
   // Link cũ ?admin=mã vẫn dùng được; máy đã ghi nhớ thì vào thẳng trang quản lý
