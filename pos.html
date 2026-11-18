@@ -356,7 +356,7 @@
 <!-- Chọn bàn khi lưu đơn -->
 <div class="mask" id="tblModal" hidden>
   <div class="modal" style="width:min(900px,96vw)">
-    <h3 style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:0"><span>Lưu đơn · chọn bàn / thẻ rung</span>
+    <h3 style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:0"><span id="tblTitle">Lưu đơn · chọn bàn / thẻ rung</span>
       <input id="tblFind" placeholder="Gõ số bàn + Enter" maxlength="10" style="width:170px;font-size:15px;padding:8px 10px;border:1px solid var(--line);border-radius:6px"></h3>
     <p class="hint" id="tblInfo" style="margin:4px 0 0"></p>
     <div id="tblAreas"></div>
@@ -842,9 +842,10 @@
 
   /* Thanh toán */
   var METHOD = 'Tiền mặt';
-  function openPay(){
+  function openPay(skipTbl){
     if (needShift(openPay)) return;
     if (!O.items.length) return toast('Đơn chưa có món nào.');
+    if (skipTbl !== true) { readHead(); if (!O.pager) return openTables(function(){ openPay(true); }); }
     METHOD = 'Tiền mặt';
     Array.prototype.forEach.call(document.querySelectorAll('.meth'), function(b){ b.classList.toggle('on', b.getAttribute('data-m') === METHOD); });
     $('payTitle').textContent = 'Thanh toán ' + (O.code ? '#' + O.code : 'đơn mới');
@@ -965,8 +966,12 @@
 
   /* ================= Sơ đồ bàn / thẻ rung ================= */
   function tablesOf(){ return (D && D.tables && D.tables.length) ? D.tables : [{ a: 'Thẻ rung', t: ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20'] }]; }
-  function openTables(){
+  var tblNext = null;
+  function openTables(next){
     readHead();
+    tblNext = next || saveNow;
+    $('tblTitle').textContent = next ? 'Thanh toán · chọn bàn / thẻ rung' : 'Lưu đơn · chọn bàn / thẻ rung';
+    $('tblNone').textContent = next ? 'Thanh toán, không gắn bàn' : 'Lưu, không gắn bàn';
     var used = {};
     (D && D.pending || []).forEach(function(o){ if (o.pager && o.id !== O.id) (used[o.pager] = used[o.pager] || []).push('#' + o.code); });
     var cur = O.pager || '', known = false;
@@ -984,7 +989,7 @@
     t = String(t || '').trim();
     var other = (D && D.pending || []).filter(function(o){ return t && o.pager === t && o.id !== O.id; });
     if (other.length && !confirm('Bàn ' + t + ' đang có đơn ' + other.map(function(o){ return '#' + o.code; }).join(', ') + '. Vẫn gắn đơn này vào bàn ' + t + '?')) return;
-    O.pager = t; $('cPager').value = t; $('tblModal').hidden = true; saveNow();
+    O.pager = t; $('cPager').value = t; $('tblModal').hidden = true; (tblNext || saveNow)();
   }
   $('tblAreas').addEventListener('click', function(e){ var b = e.target.closest('[data-tb]'); if (b) pickTable(b.getAttribute('data-tb')); });
   $('tblNone').addEventListener('click', function(){ pickTable(''); });
