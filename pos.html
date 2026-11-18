@@ -117,6 +117,14 @@
   .cnote input{width:100%;border:1px solid var(--line);border-radius:6px;padding:7px 9px}
   .tot{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-top:1px solid var(--line);font-size:16px}
   .tot b{font-size:22px;color:var(--red)}
+  .disc{display:flex;justify-content:space-between;align-items:center;padding:6px 12px 0;font-size:14px;color:var(--muted)}
+  .disc button{border:1px dashed #E8A13A;background:#FFF8EC;color:#B36B00;border-radius:6px;padding:5px 10px;font-weight:700;cursor:pointer}
+  .disc .v{color:#B36B00;font-weight:700}
+  .ln .dl{grid-column:1/2;font-size:12px;color:#B36B00}
+  .ln .s s{display:block;color:var(--muted);font-weight:400;font-size:12px}
+  .dtog{display:flex;gap:6px}.dtog button{flex:1;border:1px solid var(--line);background:#F4F6F9;border-radius:6px;padding:9px;font-weight:700}.dtog button.on{background:#FFF1DB;border-color:#E8A13A;color:#B36B00}
+  .promo{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.promo button{border:1px solid #E8A13A;background:#FFF8EC;color:#B36B00;border-radius:16px;padding:7px 12px;font-weight:700}.promo button.on{background:#E8A13A;color:#fff}
+  #s_promos{width:100%;font:inherit;font-size:14px;padding:8px;border:1px solid var(--line);border-radius:6px;resize:vertical}
   .acts{display:flex;height:66px}.acts button{flex:1}.acts .a-pay{flex:1.5}
   .acts button{border:none;color:#fff;font-weight:700;font-size:14.5px;line-height:1.2}
   .acts small{display:block;font-weight:400;opacity:.85;font-size:12px}
@@ -255,6 +263,7 @@
     </div>
     <div class="lines" id="lines"></div>
     <div class="cnote"><input id="cNote" placeholder="Ghi chú đơn" maxlength="200"></div>
+    <div class="disc"><span id="discTxt">Tạm tính <b class="num" id="cGross">0đ</b></span><button type="button" id="discBtn">🏷 Giảm giá (F6)</button></div>
     <div class="tot"><span>Tổng tiền <small id="cCount" style="color:var(--muted)"></small></span><b class="num" id="cTotal">0đ</b></div>
     <div class="acts">
       <button class="a-exit" id="exitBtn" type="button">Thoát<small>(Esc)</small></button>
@@ -270,6 +279,7 @@
   <div class="modal">
     <h3 id="payTitle">Thanh toán</h3>
     <div class="paytot num" id="payTot">0đ</div>
+    <div id="payDisc" style="text-align:center;color:#B36B00;font-weight:600;margin:-4px 0 8px" hidden></div>
     <div class="methods">
       <button class="meth on" data-m="Tiền mặt" type="button">💵 Tiền mặt</button>
       <button class="meth" data-m="Chuyển khoản" type="button">🏦 Chuyển khoản</button>
@@ -295,6 +305,8 @@
     <h3 id="noteTitle">Ghi chú món</h3>
     <input id="noteIn" maxlength="60" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font-size:16px" placeholder="VD: ít đá, ít ngọt, không cay">
     <div class="quick" id="noteQuick"></div>
+    <label style="display:block;margin-top:12px;font-size:14px;color:var(--muted)">Giảm giá món này</label>
+    <div style="display:flex;gap:6px;margin-top:4px"><input id="ndVal" class="num" inputmode="numeric" placeholder="0" style="flex:1;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:16px"><div class="dtog" id="ndType" style="width:130px"><button type="button" data-t="%" class="on">%</button><button type="button" data-t="đ">đ/món</button></div></div>
     <div class="mbtns"><button type="button" id="noteCancel">Hủy</button><button type="button" class="ok" id="noteOk">Lưu</button></div>
   </div>
 </div>
@@ -336,6 +348,11 @@
       <div class="grp" id="s_grp"></div>
     </div>
     <div class="set">
+      <h4>Chương trình khuyến mãi <small style="font-weight:400;color:var(--muted)">(dùng chung mọi máy · nhân viên cần quản lý duyệt khi sửa)</small></h4>
+      <textarea id="s_promos" rows="3" placeholder="Khách quen: 10%&#10;Nhân viên: 20%&#10;Sinh nhật: 30000đ"></textarea>
+      <div class="row" style="align-items:center"><span class="hint" style="flex:1;margin:0">Mỗi dòng một chương trình: <b>Tên: mức giảm</b> (VD 10% hoặc 20000đ). Thu ngân chọn nhanh khi giảm giá đơn, không cần quản lý duyệt. Tự nhập mức giảm khác thì nhân viên cần quản lý duyệt.</span><button class="sbtn" type="button" id="s_promos_save">Lưu khuyến mãi</button></div>
+    </div>
+    <div class="set">
       <h4>Sơ đồ bàn / thẻ rung <small style="font-weight:400;color:var(--muted)">(dùng chung mọi máy · nhân viên cần quản lý duyệt)</small></h4>
       <textarea id="s_tables" rows="4" placeholder="Thẻ rung: 1-20&#10;Sân vườn: S1-S8, Võng 1, Võng 2"></textarea>
       <div class="row" style="align-items:center"><span class="hint" style="flex:1;margin:0">Mỗi dòng một khu: <b>Tên khu: các bàn</b>, cách nhau dấu phẩy. <b>1-20</b> = từ 1 đến 20, <b>S1-S8</b> = S1 đến S8. Tên bàn chính là số thẻ rung in trên tem / hóa đơn.</span><button class="sbtn" type="button" id="s_tables_save">Lưu sơ đồ bàn</button></div>
@@ -350,6 +367,22 @@
     </div>
     <p class="hint" id="appVer"></p>
     <div class="mbtns"><button type="button" class="ok" id="setClose">Lưu & đóng</button></div>
+  </div>
+</div>
+
+<!-- Giảm giá đơn -->
+<div class="mask" id="discModal" hidden>
+  <div class="modal" style="width:min(480px,94vw)">
+    <h3>Giảm giá đơn hàng</h3>
+    <p class="hint" id="discInfo" style="margin:0 0 6px"></p>
+    <div id="discPromoBox"><div style="font-size:14px;color:var(--muted)">Chương trình khuyến mãi</div><div class="promo" id="discPromos"></div></div>
+    <div style="font-size:14px;color:var(--muted);margin-top:8px">Hoặc nhập mức giảm</div>
+    <div style="display:flex;gap:6px;margin-top:4px"><input id="dVal" class="num" inputmode="numeric" placeholder="0" style="flex:1;padding:11px;border:1px solid var(--line);border-radius:8px;font-size:18px"><div class="dtog" id="dType" style="width:120px"><button type="button" data-t="%" class="on">%</button><button type="button" data-t="đ">đ</button></div></div>
+    <div class="quick" id="dQuick"></div>
+    <input id="dReason" maxlength="80" placeholder="Lý do giảm giá (bắt buộc khi tự nhập)" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;margin-top:8px">
+    <div class="change"><span>Sau giảm</span><b class="num" id="dAfter">0đ</b></div>
+    <div class="err" id="dErr" hidden></div>
+    <div class="mbtns"><button type="button" id="dClear">Bỏ giảm giá</button><button type="button" id="dCancel">Quay lại</button><button type="button" class="ok" id="dOk">Áp dụng</button></div>
   </div>
 </div>
 
@@ -463,7 +496,8 @@
     var w = +S.bill_w, pad = w === 80 ? 3 : 2, fs = w === 80 ? 3.3 : 2.9;
     var rows = o.items.map(function(i){
       return '<tr><td colspan="3" style="padding-top:1.2mm;font-weight:700">' + esc(i.n) + (i.t ? ' <i style="font-weight:400">(' + esc(i.t) + ')</i>' : '') + '</td></tr>' +
-        '<tr><td>' + i.q + ' x ' + money(i.p) + '</td><td></td><td style="text-align:right">' + money(i.p * i.q) + '</td></tr>';
+        '<tr><td>' + i.q + ' x ' + money(i.p) + '</td><td></td><td style="text-align:right">' + money(i.p * i.q) + '</td></tr>' +
+        (i.da ? '<tr><td colspan="2">&nbsp; Giảm ' + (i.dt === '%' ? i.dv + '%' : money(i.dv) + 'đ/món') + '</td><td style="text-align:right">-' + money(i.da) + '</td></tr>' : '');
     }).join('');
     var h = '<div style="width:' + w + 'mm;padding:' + pad + 'mm ' + pad + 'mm 5mm;font-size:' + fs + 'mm">' +
       '<div style="text-align:center;font-weight:800;font-size:' + (fs * 1.5) + 'mm">' + esc(S.shop) + '</div>' +
@@ -476,6 +510,9 @@
       '<div style="border-top:.3mm dashed #000;margin:1.5mm 0"></div>' +
       '<table style="width:100%;border-collapse:collapse;font-size:inherit">' + rows + '</table>' +
       '<div style="border-top:.3mm dashed #000;margin:1.5mm 0"></div>' +
+      (o.discAmt ? '<div style="display:flex;justify-content:space-between"><span>Tạm tính</span><span>' + money(o.gross) + 'đ</span></div>' +
+        (o.discAmt - (o.disc ? o.disc.amt : 0) ? '<div style="display:flex;justify-content:space-between"><span>Giảm giá món</span><span>-' + money(o.discAmt - (o.disc ? o.disc.amt : 0)) + 'đ</span></div>' : '') +
+        (o.disc ? '<div style="display:flex;justify-content:space-between"><span>' + esc(o.disc.promo ? 'KM: ' + o.disc.promo : 'Giảm giá' + (o.disc.t === '%' ? ' ' + o.disc.v + '%' : '')) + '</span><span>-' + money(o.disc.amt) + 'đ</span></div>' : '') : '') +
       '<div style="display:flex;justify-content:space-between;font-weight:800;font-size:' + (fs * 1.3) + 'mm"><span>TỔNG CỘNG</span><span>' + money(o.total) + 'đ</span></div>' +
       '<div style="display:flex;justify-content:space-between"><span>Thanh toán</span><span>' + esc(o.pay || '') + '</span></div>' +
       (extra.given ? '<div style="display:flex;justify-content:space-between"><span>Khách đưa</span><span>' + money(extra.given) + 'đ</span></div><div style="display:flex;justify-content:space-between"><span>Tiền thừa</span><span>' + money(extra.given - o.total) + 'đ</span></div>' : '') +
@@ -745,22 +782,82 @@
         '<span class="nm">' + esc(m.n) + '</span></button>';
     }).join('') || '<div class="cempty" style="grid-column:1/-1;color:#C9D3E2">Không tìm thấy món.</div>';
   }
+  /* ---- Giảm giá (giống Sapo: giảm từng món hoặc cả đơn, % hoặc số tiền) ---- */
+  function lineDisc(i){ var v = +i.dv || 0; if (!i.dt || v <= 0) return 0; var g = i.p * i.q; return Math.min(g, i.dt === '%' ? Math.round(g * Math.min(v, 100) / 100) : Math.round(v) * i.q); }
+  function calcO(){
+    var gross = 0, idisc = 0, cnt = 0;
+    O.items.forEach(function(i){ gross += i.p * i.q; idisc += lineDisc(i); cnt += i.q; });
+    var sub = gross - idisc, d = O.disc, od = 0;
+    if (d && +d.v > 0) od = Math.min(sub, d.t === '%' ? Math.round(sub * Math.min(+d.v, 100) / 100) : Math.round(+d.v));
+    O.gross = gross; O.discAmt = idisc + od; O.total = sub - od; O.cnt = cnt; O.subAfterItems = sub; O.orderDisc = od;
+  }
+  function discLabel(d){ return d ? (d.promo || (d.t === '%' ? 'Giảm ' + d.v + '%' : 'Giảm ' + money(d.v) + 'đ')) : ''; }
   function drawCart(){
-    var tot = 0, cnt = 0;
+    calcO();
     $('lines').innerHTML = O.items.length ? O.items.map(function(i, k){
-      tot += i.p * i.q; cnt += i.q;
-      return '<div class="ln"><div><div class="t">' + esc(i.n) + '</div><div class="nt' + (i.t ? '' : ' add') + '" data-note="' + k + '">' + (i.t ? '✎ ' + esc(i.t) : '+ ghi chú') + '</div></div>' +
+      var da = lineDisc(i);
+      return '<div class="ln"><div><div class="t">' + esc(i.n) + '</div><div class="nt' + (i.t ? '' : ' add') + '" data-note="' + k + '">' + (i.t ? '✎ ' + esc(i.t) : '+ ghi chú / giảm giá') + '</div>' +
+        (da ? '<div class="dl" data-note="' + k + '">🏷 Giảm ' + (i.dt === '%' ? i.dv + '%' : money(i.dv) + 'đ/món') + ' (−' + money(da) + ')</div>' : '') + '</div>' +
         '<div class="q"><button type="button" data-dec="' + k + '">−</button><span>' + i.q + '</span><button type="button" data-inc="' + k + '">+</button></div>' +
-        '<div class="s num">' + money(i.p * i.q) + '</div></div>';
+        '<div class="s num">' + (da ? '<s>' + money(i.p * i.q) + '</s>' : '') + money(i.p * i.q - da) + '</div></div>';
     }).join('') : '<div class="cempty">Chọn món ở bên trái để thêm vào đơn.</div>';
-    $('cTotal').textContent = money(tot) + 'đ';
-    $('cCount').textContent = cnt ? '(' + cnt + ' món)' : '';
-    O.total = tot;
+    $('cGross').textContent = money(O.gross) + 'đ';
+    $('discBtn').innerHTML = O.discAmt ? '🏷 −' + money(O.discAmt) + 'đ' + (O.disc ? ' · ' + esc(discLabel(O.disc)) : '') : '🏷 Giảm giá (F6)';
+    $('cTotal').textContent = money(O.total) + 'đ';
+    $('cCount').textContent = O.cnt ? '(' + O.cnt + ' món)' : '';
     drawGrid();
   }
+  var dType = '%', dPromo = '';
+  function openDisc(){
+    if (!O || !O.items.length) return toast('Đơn chưa có món nào.');
+    calcO(); var d = O.disc || null;
+    dPromo = d && d.promo || ''; dType = d ? d.t : '%';
+    $('dVal').value = d && !d.promo ? (d.t === '%' ? d.v : money(d.v)) : ''; $('dReason').value = d && !d.promo ? (d.r || '') : '';
+    var P = (D && D.promos) || [];
+    $('discPromoBox').hidden = !P.length;
+    $('discPromos').innerHTML = P.map(function(x, k){ return '<button type="button" data-pr="' + k + '" class="' + (dPromo === x.n ? 'on' : '') + '">' + esc(x.n) + ' · ' + (x.t === '%' ? x.v + '%' : money(x.v) + 'đ') + '</button>'; }).join('');
+    $('discInfo').textContent = 'Tạm tính ' + money(O.subAfterItems) + 'đ' + (O.discAmt - O.orderDisc ? ' (đã trừ giảm giá món ' + money(O.discAmt - O.orderDisc) + 'đ)' : '');
+    $('dErr').hidden = true; drawDType(); discCalc();
+    $('discModal').hidden = false; setTimeout(function(){ $('dVal').focus(); }, 30);
+  }
+  function drawDType(){
+    Array.prototype.forEach.call(document.querySelectorAll('#dType button'), function(b){ b.classList.toggle('on', b.getAttribute('data-t') === dType); });
+    var q = dType === '%' ? [5, 10, 15, 20, 30, 50] : [5000, 10000, 20000, 50000];
+    $('dQuick').innerHTML = q.map(function(v){ return '<button type="button" data-dq="' + v + '">' + (dType === '%' ? v + '%' : money(v)) + '</button>'; }).join('');
+  }
+  function discDraft(){
+    var P = (D && D.promos) || [], pr = P.filter(function(x){ return x.n === dPromo; })[0];
+    if (pr) return { t: pr.t, v: pr.v, promo: pr.n, r: '' };
+    var v = +String($('dVal').value).replace(/[^\d]/g, '') || 0;
+    return v > 0 ? { t: dType, v: v, r: $('dReason').value.trim(), promo: '' } : null;
+  }
+  function discCalc(){
+    var d = discDraft(), sub = O.subAfterItems, a = 0;
+    if (d) a = Math.min(sub, d.t === '%' ? Math.round(sub * Math.min(d.v, 100) / 100) : d.v);
+    $('dAfter').textContent = money(sub - a) + 'đ' + (a ? ' (−' + money(a) + ')' : '');
+  }
+  $('discBtn').addEventListener('click', openDisc);
+  $('discPromos').addEventListener('click', function(e){ var b = e.target.closest('[data-pr]'); if (!b) return; var x = D.promos[+b.getAttribute('data-pr')]; dPromo = dPromo === x.n ? '' : x.n; $('dVal').value = ''; Array.prototype.forEach.call(document.querySelectorAll('#discPromos button'), function(y){ y.classList.toggle('on', y === b && !!dPromo); }); discCalc(); });
+  $('dType').addEventListener('click', function(e){ var b = e.target.closest('[data-t]'); if (!b) return; dType = b.getAttribute('data-t'); $('dVal').value = ''; drawDType(); discCalc(); });
+  $('dQuick').addEventListener('click', function(e){ var b = e.target.closest('[data-dq]'); if (!b) return; dPromo = ''; Array.prototype.forEach.call(document.querySelectorAll('#discPromos button'), function(y){ y.classList.remove('on'); }); $('dVal').value = dType === '%' ? b.getAttribute('data-dq') : money(+b.getAttribute('data-dq')); discCalc(); });
+  $('dVal').addEventListener('input', function(){ dPromo = ''; Array.prototype.forEach.call(document.querySelectorAll('#discPromos button'), function(y){ y.classList.remove('on'); }); var v = this.value.replace(/\D/g, ''); if (dType === '%') { if (+v > 100) v = '100'; this.value = v; } else this.value = v ? money(+v) : ''; discCalc(); });
+  $('dCancel').addEventListener('click', function(){ $('discModal').hidden = true; });
+  $('dClear').addEventListener('click', function(){ O.disc = null; $('discModal').hidden = true; drawCart(); toast('Đã bỏ giảm giá đơn'); });
+  // Nhân viên tự nhập mức giảm (không theo chương trình) thì cần quản lý duyệt
+  function withApprove(what, done){
+    if (D && D.me && D.me.role === 'manager') return done(D.me.name);
+    needAp(what, function(ap){ return call('checkApprove', [PIN, ap]).then(function(r){ if (r && r.ok) done(r.by); return r; }); });
+  }
+  $('dOk').addEventListener('click', function(){
+    var d = discDraft();
+    if (!d) { O.disc = null; $('discModal').hidden = true; drawCart(); return; }
+    if (!d.promo && !d.r) { $('dErr').textContent = 'Ghi lý do giảm giá.'; $('dErr').hidden = false; return; }
+    var go = function(by){ d.by = by || ''; O.disc = d; $('discModal').hidden = true; drawCart(); toast('Đã giảm giá: ' + discLabel(d)); };
+    if (d.promo) go(D.me.name); else withApprove('Giảm giá đơn: ' + discLabel(d) + ' – ' + d.r, go);
+  });
   function openOrder(ord){
     if (needShift(function(){ openOrder(ord); })) return;
-    O = ord ? JSON.parse(JSON.stringify(ord)) : { id: null, code: '', src: 'Quầy', items: [], name: '', phone: '', pager: '', note: '', created: Date.now() };
+    O = ord ? JSON.parse(JSON.stringify(ord)) : { id: null, code: '', src: 'Quầy', items: [], name: '', phone: '', pager: '', note: '', disc: null, created: Date.now() };
     $('oTitle').textContent = ord ? ('Đơn #' + ord.code + ' · ' + (ord.src === 'Quầy' ? 'Tại quầy' : 'QR')) : 'Đơn mới · Tại quầy';
     $('oTime').textContent = ord ? 'gửi ' + hhmm(ord.created) : '';
     $('cName').value = O.name === 'Khách lẻ' ? '' : O.name; $('cPhone').value = O.phone || ''; $('cPager').value = O.pager || ''; $('cNote').value = O.note || '';
@@ -794,14 +891,27 @@
   // Ghi chú món
   var noteK = -1, QUICK_NOTES = ['Ít đá', 'Không đá', 'Ít ngọt', 'Không đường', 'Nhiều đá', 'Ít cay', 'Không cay', 'Cay nhiều', 'Mang về'];
   $('noteQuick').innerHTML = QUICK_NOTES.map(function(n){ return '<button type="button" data-qn="' + n + '">' + n + '</button>'; }).join('');
-  function openNote(k){ noteK = k; $('noteTitle').textContent = 'Ghi chú: ' + O.items[k].n; $('noteIn').value = O.items[k].t || ''; $('noteModal').hidden = false; setTimeout(function(){ $('noteIn').focus(); }, 30); }
+  var ndType = '%';
+  function drawNdType(){ Array.prototype.forEach.call(document.querySelectorAll('#ndType button'), function(b){ b.classList.toggle('on', b.getAttribute('data-t') === ndType); }); }
+  $('ndType').addEventListener('click', function(e){ var b = e.target.closest('[data-t]'); if (!b) return; ndType = b.getAttribute('data-t'); $('ndVal').value = ''; drawNdType(); });
+  $('ndVal').addEventListener('input', function(){ var v = this.value.replace(/\D/g, ''); if (ndType === '%') { if (+v > 100) v = '100'; this.value = v; } else this.value = v ? money(+v) : ''; });
+  function openNote(k){ noteK = k; var it = O.items[k]; $('noteTitle').textContent = 'Món: ' + it.n + ' · ' + money(it.p) + 'đ'; $('noteIn').value = it.t || ''; ndType = it.dt || '%'; $('ndVal').value = it.dv ? (ndType === '%' ? it.dv : money(it.dv)) : ''; drawNdType(); $('noteModal').hidden = false; setTimeout(function(){ $('noteIn').focus(); }, 30); }
   $('noteQuick').addEventListener('click', function(e){ var b = e.target.closest('[data-qn]'); if (!b) return; var v = $('noteIn').value.trim(); $('noteIn').value = v ? v + ', ' + b.getAttribute('data-qn').toLowerCase() : b.getAttribute('data-qn'); });
   function saveNote(){
     var it = O.items[noteK], t = $('noteIn').value.trim().slice(0, 60);
+    var dv = +String($('ndVal').value).replace(/[^\d]/g, '') || 0, oldDv = it ? (+it.dv || 0) : 0;
+    if (it && (dv !== oldDv || (dv && ndType !== (it.dt || '%')))) {
+      var apply = function(){ if (dv) { it.dt = ndType; it.dv = dv; } else { delete it.dt; delete it.dv; } saveNoteText(it, t); };
+      if (!dv) return apply();
+      return withApprove('Giảm giá món ' + it.n + ': ' + (ndType === '%' ? dv + '%' : money(dv) + 'đ/món'), apply);
+    }
+    saveNoteText(it, t);
+  }
+  function saveNoteText(it, t){
     if (it) {
       // tách 1 ly ra nếu có nhiều ly mà chỉ ghi chú 1
       if (it.q > 1 && t && t !== (it.t || '') && confirm('Ghi chú cho cả ' + it.q + ' món? (Bấm Hủy để chỉ ghi chú 1 món)') === false) {
-        it.q--; O.items.splice(noteK + 1, 0, { n: it.n, g: it.g, p: it.p, q: 1, t: t });
+        it.q--; var one = { n: it.n, g: it.g, p: it.p, q: 1, t: t }; if (it.dt) { one.dt = it.dt; one.dv = it.dv; } O.items.splice(noteK + 1, 0, one);
       } else { if (t) it.t = t; else delete it.t; }
     }
     $('noteModal').hidden = true; drawCart();
@@ -812,8 +922,8 @@
 
   function payload(pay){
     readHead();
-    return { name: O.name, phone: O.phone, pager: O.pager, note: O.note, pay: pay || '',
-      items: O.items.map(function(i){ var x = { n: i.n, q: i.q }; if (i.t) x.t = i.t; return x; }) };
+    return { name: O.name, phone: O.phone, pager: O.pager, note: O.note, pay: pay || '', disc: O.disc || null,
+      items: O.items.map(function(i){ var x = { n: i.n, q: i.q }; if (i.t) x.t = i.t; if (i.dt && i.dv) { x.dt = i.dt; x.dv = i.dv; } return x; }) };
   }
   function save(pay){
     if (!O.items.length) { toast('Đơn chưa có món nào.'); return Promise.reject(new Error('empty')); }
@@ -853,7 +963,8 @@
     METHOD = 'Tiền mặt';
     Array.prototype.forEach.call(document.querySelectorAll('.meth'), function(b){ b.classList.toggle('on', b.getAttribute('data-m') === METHOD); });
     $('payTitle').textContent = 'Thanh toán ' + (O.code ? '#' + O.code : 'đơn mới');
-    $('payTot').textContent = money(O.total) + 'đ';
+    calcO(); $('payTot').textContent = money(O.total) + 'đ';
+    $('payDisc').hidden = !O.discAmt; $('payDisc').textContent = O.discAmt ? 'Tạm tính ' + money(O.gross) + 'đ · Giảm ' + money(O.discAmt) + 'đ' + (O.disc ? ' (' + discLabel(O.disc) + ')' : '') : '';
     $('given').value = ''; $('change').textContent = '0đ';
     var t = O.total, opts = [t];
     [10000, 20000, 50000, 100000, 200000, 500000].forEach(function(b){ var v = Math.ceil(t / b) * b; if (v > t && opts.indexOf(v) < 0 && opts.length < 5) opts.push(v); });
@@ -902,11 +1013,13 @@
     if (!PIN) return;
     if (!$('payModal').hidden) { if (e.key === 'Enter') { e.preventDefault(); doPay(); } if (e.key === 'Escape') $('payModal').hidden = true; return; }
     if (!$('noteModal').hidden) { if (e.key === 'Escape') $('noteModal').hidden = true; return; }
+    if (!$('discModal').hidden) { if (e.key === 'Escape') { e.preventDefault(); $('discModal').hidden = true; } else if (e.key === 'Enter') { e.preventDefault(); $('dOk').click(); } return; }
     if (!$('tblModal').hidden) { if (e.key === 'Escape') { e.preventDefault(); $('tblModal').hidden = true; } return; }
     if (!$('setModal').hidden) return;
     if (!$('ordView').hidden) {
       if (e.key === 'F1') { e.preventDefault(); openPay(); }
       else if (e.key === 'F3') { e.preventDefault(); doSave(); }
+      else if (e.key === 'F6') { e.preventDefault(); openDisc(); }
       else if (e.key === 'F4') { e.preventDefault(); $('search').focus(); $('search').select(); }
       else if (e.key === 'Escape') { e.preventDefault(); $('exitBtn').click(); }
     } else if (e.key === 'F2') { e.preventDefault(); openOrder(null); }
@@ -931,6 +1044,7 @@
     ['bill_w','bill_c','bep_w','bep_c','tem_s','tem_ink'].forEach(function(k){ $('s_' + k).value = S[k]; });
     $('s_shop').value = S.shop; $('s_addr').value = S.addr; $('s_foot').value = S.foot;
     $('s_tables').value = tablesText(tablesOf());
+    $('s_promos').value = ((D && D.promos) || []).map(function(x){ return x.n + ': ' + (x.t === '%' ? x.v + '%' : x.v + 'đ'); }).join('\n');
     var gs = []; (D ? D.menu.concat(D.other || []) : []).forEach(function(m){ if (gs.indexOf(m.g) < 0) gs.push(m.g); });
     $('s_grp').innerHTML = gs.map(function(g){ var w = where(g);
       return '<label>' + esc(g) + '<select data-g="' + esc(g) + '"><option value="bar"' + (w === 'bar' ? ' selected' : '') + '>Tem ly (Bar)</option><option value="bep"' + (w === 'bep' ? ' selected' : '') + '>Phiếu bếp</option><option value="none"' + (w === 'none' ? ' selected' : '') + '>Không in</option></select></label>'; }).join('');
@@ -1039,6 +1153,18 @@
     });
     return out;
   }
+  $('s_promos_save').addEventListener('click', function(){
+    var bad = [], P = $('s_promos').value.split(/\n/).map(function(l){ return l.trim(); }).filter(Boolean).map(function(l){
+      var c = l.lastIndexOf(':'), n = (c > 0 ? l.slice(0, c) : '').trim(), v = c > 0 ? l.slice(c + 1).trim().toLowerCase() : '';
+      var num = +v.replace(/[^\d]/g, ''), t = /%/.test(v) ? '%' : 'đ';
+      if (!n || !num || (t === '%' && num > 100)) { bad.push(l); return null; }
+      return { n: n.slice(0, 60), t: t, v: num };
+    }).filter(Boolean);
+    if (bad.length) return toast('Dòng chưa đúng: ' + bad[0] + ' (VD: Khách quen: 10%)', 4000);
+    needAp('Đổi chương trình khuyến mãi (' + P.length + ')', function(ap){
+      return call('cashierSetting', [PIN, 'promos', JSON.stringify(P), ap]).then(function(r){ if (r && r.needApprove) return r; apply(r); toast('Đã lưu ' + P.length + ' chương trình khuyến mãi'); return r; });
+    });
+  });
   $('s_tables_save').addEventListener('click', function(){
     var t = parseTables($('s_tables').value);
     if (!t.length) return toast('Sơ đồ bàn đang trống.');
@@ -1144,7 +1270,7 @@
       '<div class="cards"><div><span>Doanh thu</span><b class="num">' + money(t.revenue) + '</b></div><div><span>Số đơn</span><b>' + t.orders + '</b></div>' +
       '<div><span>TB / đơn</span><b class="num">' + money(t.orders ? Math.round(t.revenue / t.orders) : 0) + '</b></div><div><span>Tiền mặt</span><b class="num">' + money(t.cash) + '</b></div>' +
       '<div><span>Chuyển khoản</span><b class="num">' + money(t.transfer) + '</b></div><div><span>Đơn QR</span><b>' + t.qr + '</b></div>' +
-      (mgr ? '<div><span>Đơn đang chờ</span><b>' + t.pending + '</b></div>' : '') + '<div><span>Đơn hủy</span><b>' + r.cancels.length + '</b></div></div>' +
+      (mgr ? '<div><span>Đơn đang chờ</span><b>' + t.pending + '</b></div>' : '') + '<div><span>Đơn hủy</span><b>' + r.cancels.length + '</b></div><div><span>Giảm giá</span><b class="num">' + money(t.disc || 0) + '</b></div></div>' +
       '<h3>Ca thu ngân</h3>' + tbl([['Thu ngân'], ['Mở'], ['Kết'], ['Đơn', 1], ['Doanh thu', 1], ['Tiền mặt', 1], ['CK', 1], ['Đầu ca', 1], ['Phải có', 1], ['Đếm được', 1], ['Lệch', 1], ['Ghi chú']],
         r.shifts.map(function(s){ var open = s.status === 'Đang mở';
           return '<tr>' + td(esc(s.name) + (s.role === 'Quản lý' ? ' <small>(QL)</small>' : '')) + td(hhmm(s.openAt)) + td(open ? '<b>Đang mở</b>' : hhmm(s.closeAt)) + td(s.orders, 1) + td(money(s.revenue), 1) + td(money(s.cash), 1) + td(money(s.transfer), 1) +
@@ -1152,6 +1278,8 @@
             '<td class="r num ' + (s.diff < 0 ? 'neg' : s.diff > 0 ? 'pos' : '') + '">' + (open || s.diff == null ? '–' : (s.diff > 0 ? '+' : '') + money(s.diff)) + '</td>' + td(esc(s.note)) + '</tr>'; })) +
       (mgr ? '<h3>Theo thu ngân</h3>' + tbl([['Thu ngân'], ['Đơn', 1], ['Doanh thu', 1], ['Tiền mặt', 1], ['Chuyển khoản', 1]],
         r.cashiers.map(function(c){ return '<tr>' + td(esc(c.name)) + td(c.orders, 1) + td(money(c.revenue), 1) + td(money(c.cash), 1) + td(money(c.transfer), 1) + '</tr>'; })) : '') +
+      '<h3>Đơn giảm giá</h3>' + tbl([['Mã'], ['Khách'], ['Tạm tính', 1], ['Giảm', 1], ['Thu', 1], ['Lý do / khuyến mãi'], ['Người duyệt']],
+        (r.discounts || []).map(function(x){ return '<tr>' + td('#' + esc(x.code)) + td(esc(x.name)) + td(money(x.gross), 1) + td('-' + money(x.amt), 1) + td(money(x.total), 1) + td(esc(x.why)) + td(esc(x.by)) + '</tr>'; })) +
       '<h3>Đơn hủy</h3>' + tbl([['Mã'], ['Khách'], ['Nguồn'], ['Tiền', 1], ['Người hủy'], ['Duyệt'], ['Lúc']],
         r.cancels.map(function(c){ return '<tr>' + td('#' + esc(c.code)) + td(esc(c.name)) + td(esc(c.src)) + td(money(c.total), 1) + td(esc(c.by)) + td(esc(String(c.x || '').replace(/^duyệt: /, ''))) + td(c.at ? hhmm(c.at) : '') + '</tr>'; })) +
       '<h3>Món bán chạy</h3>' + tbl([['Món'], ['Nhóm'], ['SL', 1], ['Doanh thu', 1]],
