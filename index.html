@@ -131,6 +131,7 @@
   .gy .star.on{color:var(--sun)}
   .gy .star-lbl{font-size:13px;color:var(--muted);margin-top:4px;min-height:18px}
   .ctas{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .cta-link{display:inline-flex;align-items:center;gap:6px;color:var(--band-ink);font-weight:600;font-size:15px;text-decoration:none;padding:13px 16px;border-radius:999px;border:1px solid rgba(234,246,244,.45)}
   .cta2{display:inline-flex;align-items:center;gap:6px;color:var(--band-ink);font-weight:600;font-size:15px;text-decoration:none;padding:13px 16px;border-radius:999px;border:1px solid rgba(234,246,244,.45)}
   .gg-in{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
   .gg-ic{flex:0 0 48px;height:48px;border-radius:50%;background:var(--sun-soft);display:grid;place-items:center;font-size:24px}
@@ -259,7 +260,7 @@
       <div class="eyebrow" style="color:var(--band-ink);opacity:.8">Cà phê · Hồ bơi · Khu vui chơi</div>
       <h1 style="margin-top:10px">Hôm nay bạn muốn nghe <em>bài gì?</em></h1>
       <p>Lên hát cùng ban nhạc Chata, hoặc gửi bài để ban nhạc hát tặng bạn. Tặng người thương, tặng bé, hay chỉ để chill bên ly cà phê.</p>
-      <div class="ctas"><a class="cta" href="#dang-ky">♪ Đăng ký bài hát</a><a class="cta2" href="#dat-ban-form">🍽 Đặt bàn &amp; món</a><a class="cta2" href="#gop-y">💛 Ủng hộ đêm nhạc</a></div>
+      <div class="ctas"><a class="cta" href="#dang-ky">♪ Đăng ký bài hát</a><a class="cta2" href="#dat-ban-form">🍽 Đặt bàn &amp; món</a><a class="cta-link" href="goimon.html">🧾 Gọi món</a><a class="cta2" href="#gop-y">💛 Ủng hộ đêm nhạc</a></div>
     </div>
     <svg class="wave" viewBox="0 0 1440 56" preserveAspectRatio="none" aria-hidden="true">
       <path fill="currentColor" d="M0 32c120-18 240-26 360-14s240 30 360 26 240-28 360-30 240 14 360 22V56H0z"/>
@@ -331,14 +332,14 @@
         <button type="button" class="modal-x" id="bkClose" aria-label="Đóng">✕</button>
         <div class="eyebrow">Đặt bàn đêm nhạc</div>
         <h3 style="margin-top:6px">Giữ chỗ &amp; đặt món trước</h3>
-        <p class="lead">Điền vài thông tin, Chata sẽ gọi hoặc nhắn xác nhận bàn cho bạn sớm nhất.</p>
+        <p class="lead">Đêm nhạc diễn ra tối thứ 3 hằng tuần. Điền vài thông tin, Chata sẽ gọi hoặc nhắn xác nhận bàn cho bạn sớm nhất.</p>
         <form id="bkForm" autocomplete="on" novalidate>
           <div class="row2">
             <div><label for="bkName">Tên bạn *</label><input id="bkName" maxlength="40" autocomplete="name" placeholder="VD: Minh"></div>
             <div><label for="bkPhone">Số điện thoại *</label><input id="bkPhone" type="tel" inputmode="tel" maxlength="15" autocomplete="tel" placeholder="VD: 0912 345 678"></div>
           </div>
           <div class="row2">
-            <div><label for="bkDate">Ngày đến *</label><input id="bkDate" type="date"></div>
+            <div><label for="bkDate">Đêm nhạc thứ 3 *</label><select id="bkDate"></select></div>
             <div><label for="bkTime">Giờ đến *</label><input id="bkTime" type="time" value="19:00" step="900"></div>
           </div>
           <div class="row2">
@@ -520,7 +521,7 @@
       if (fn==='submitFeedback' && String(args[0].text||'').trim()) mock.alerts.push({row:Date.now(), time:Date.now(), star:args[0].star, text:args[0].text, name:args[0].name});
       if (fn==='submitFeedback') return ok(String(args[0].text||'').trim() ? {ok:true} : {ok:false,msg:'Bạn viết vài dòng góp ý giúp Chata nhé.'});
       if (fn==='adminLogin') return ok(args[0] ? {ok:true} : {ok:false,msg:'Bạn nhập mã đăng nhập nhé.'});
-      if (fn==='getMenu') return ok({areas:['Không yêu cầu','Gần sân khấu','Xa loa, yên tĩnh','Ngoài trời'], menu:[
+      if (fn==='getMenu') return ok({areas:['Không yêu cầu','Gần sân khấu','Xa loa, yên tĩnh','Ngoài trời'], tuesdays:[new Date().toISOString().slice(0,10)], menu:[
         {g:'Đồ ăn',n:'Mì cay xúc xích cá viên',p:35000},{g:'Đồ ăn',n:'Mì cay thập cẩm',p:49000},{g:'Lai rai',n:'Mẹt Lai Rai',p:49000},
         {g:'Lai rai',n:'Hạt dưa',p:15000},{g:'Trà & trà sữa',n:'Trà đào',p:29000},{g:'Trà & trà sữa',n:'Trà sữa kem trứng (M)',p:35000},{g:'Bia',n:'Bia Tiger cao',p:23000}]});
       if (fn==='submitBooking') { var b=args[0]; mock.bookings.push({id:'B'+Date.now(),name:b.name,phone:b.phone,date:b.date,time:b.time,people:b.people,area:b.area,
@@ -804,6 +805,7 @@
     if (!MENU) call('getMenu', [], function(r){
       MENU = (r && r.menu) || [];
       $('bkArea').innerHTML = ((r && r.areas) || ['Không yêu cầu']).map(function(a){ return '<option>' + esc(a) + '</option>'; }).join('');
+      $('bkDate').innerHTML = ((r && r.tuesdays) || []).map(function(d){ return '<option value="' + d + '">' + esc(dayLbl(d)) + '</option>'; }).join('');
       var cats = []; MENU.forEach(function(m){ if (cats.indexOf(m.g) < 0) cats.push(m.g); });
       curCat = cats[0] || '';
       $('bkCats').innerHTML = cats.map(function(c){ return '<button type="button" class="chip" data-cat="' + esc(c) + '">' + esc(c) + '</button>'; }).join('');
