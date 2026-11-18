@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Chata – Trạm in tem</title>
+<style id="pageCss"></style>
+<style>
+  :root{--bg:#F4F6F1;--line:#D6DFD7;--ink:#1A2926;--muted:#5A6B65;--accent:#0D6C68;--sun-soft:#FBEFD3;--leaf-soft:#E2EDD7;--bad:#B23A2E;--bad-soft:#F6DCD8}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.45}
+  button,select,input{font:inherit}
+  [hidden]{display:none!important}
+  .top{background:var(--accent);color:#EAF6F4;padding:12px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .top b{font-size:20px}.top a{color:#EAF6F4;margin-left:auto;font-weight:600}
+  .wrap{max-width:900px;margin:0 auto;padding:14px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+  .row label{display:flex;flex-direction:column;font-size:13px;font-weight:600;gap:4px}
+  select,input[type=password]{padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:#FBFCFA;font-size:15px}
+  .auto{display:flex;align-items:center;gap:8px;font-weight:700;padding:9px 12px;border-radius:9px;background:var(--sun-soft);cursor:pointer}
+  .auto.on{background:var(--leaf-soft)}
+  .st{font-size:14px;color:var(--muted);margin-top:8px}
+  .grp{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:6px}
+  .grp label{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;border:1px solid var(--line);border-radius:9px;padding:6px 8px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  td,th{padding:8px;border-top:1px solid var(--line);text-align:left;vertical-align:top}
+  th{font-size:12.5px;color:var(--muted)}
+  .btn{padding:7px 11px;border-radius:8px;border:1.5px solid var(--line);background:#fff;font-weight:600;cursor:pointer;font-size:13px;white-space:nowrap}
+  .btn.p{background:var(--accent);border-color:var(--accent);color:#fff}
+  .send{width:100%;margin-top:12px;padding:12px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer}
+  .msg{margin-top:8px;padding:9px 11px;border-radius:9px;background:var(--bad-soft);color:#7c271f;font-size:14px}
+  details summary{cursor:pointer;font-weight:700}
+  details li{margin:4px 0}
+  code{background:#EEF2EC;padding:1px 5px;border-radius:5px;font-size:13px}
+  #printArea{display:none}
+  /* ---- Bản in ---- */
+  .lbl{overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#000;display:flex;flex-direction:column;page-break-after:always;break-after:page}
+  .lbl .h{display:flex;justify-content:space-between;font-weight:700;border-bottom:.25mm solid #000;padding-bottom:.5mm}
+  .lbl .n{font-weight:800;line-height:1.1;margin-top:.8mm;flex:1}
+  .lbl .o{line-height:1.15}
+  .lbl .f{display:flex;justify-content:space-between;font-weight:700}
+  .tk{font-family:Arial,Helvetica,sans-serif;color:#000;page-break-after:always;break-after:page}
+  .tk .t{text-align:center;font-weight:800;letter-spacing:.3mm}
+  .tk .c{font-size:9mm;font-weight:900;text-align:center;line-height:1.05;margin:1mm 0}
+  .tk .m{display:flex;justify-content:space-between;font-weight:700}
+  .tk hr{border:none;border-top:.4mm dashed #000;margin:1.5mm 0}
+  .tk .it{display:flex;gap:2mm;font-weight:800;line-height:1.2;margin:1mm 0}
+  .tk .it b{min-width:9mm}
+  .tk .no{font-weight:700;border:.3mm solid #000;padding:1mm;margin-top:1.5mm}
+  .tk .ft{text-align:center;margin-top:2mm}
+  @media print{
+    body{background:#fff}
+    .top,.wrap{display:none!important}
+    #printArea{display:block}
+  }
+</style>
+</head>
+<body>
+<div class="top"><b>🖨 Trạm in tem</b><span id="modeLbl"></span><a href="thungan.html">← Màn hình thu ngân</a></div>
+
+<div class="wrap" id="loginView" hidden>
+  <form class="card" id="loginForm" style="max-width:420px;margin:30px auto" novalidate>
+    <h3 style="margin:0 0 6px">Đăng nhập trạm in</h3>
+    <p class="st" style="margin:0">Dùng mã thu ngân.</p>
+    <input id="pw" type="password" style="width:100%;margin-top:10px" autocomplete="current-password">
+    <button class="send" type="submit">Đăng nhập</button>
+    <div class="msg" id="loginMsg" hidden></div>
+  </form>
+</div>
+
+<div class="wrap" id="mainView" hidden>
+  <div class="card">
+    <div class="row">
+      <label>Máy in này in
+        <select id="loai"><option value="tem">Tem nhãn đồ uống (Bar)</option><option value="bep">Tem bếp (món ăn)</option></select>
+      </label>
+      <label id="sizeTemL">Khổ tem
+        <select id="sizeTem"><option>50x30</option><option>40x30</option><option>50x40</option><option>40x25</option><option>35x22</option><option>70x50</option></select>
+      </label>
+      <label id="sizeBepL" hidden>Khổ giấy
+        <select id="sizeBep"><option value="80">K80 (80mm)</option><option value="58">K58 (58mm)</option></select>
+      </label>
+      <label class="auto" id="autoL"><input type="checkbox" id="auto"> Tự động in đơn vừa thanh toán</label>
+      <button class="btn" id="testBtn" type="button">In thử</button>
+    </div>
+    <div class="st" id="status">Đang kết nối…</div>
+  </div>
+
+  <div class="card">
+    <b>Nhóm món in ở đâu</b>
+    <div class="grp" id="grp"></div>
+  </div>
+
+  <div class="card">
+    <b>Đơn đã thanh toán hôm nay</b>
+    <div id="list" style="margin-top:6px"></div>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary>Cách cài để in tự động, không hiện hộp thoại in</summary>
+      <ol>
+        <li>Cài driver máy in tem (Bar) và máy in nhiệt (Bếp) trên máy tính, đặt khổ giấy đúng trong driver (VD tem 50×30mm, giấy K80).</li>
+        <li>Tạo 2 lối tắt Chrome trên màn hình, mỗi lối tắt một hồ sơ riêng và bật in im lặng:<br>
+          <code>chrome.exe --kiosk-printing --user-data-dir="C:\ChataIn\Tem" https://taichata123.github.io/baihat/in.html?loai=tem</code><br>
+          <code>chrome.exe --kiosk-printing --user-data-dir="C:\ChataIn\Bep" https://taichata123.github.io/baihat/in.html?loai=bep</code></li>
+        <li>Mở từng lối tắt, đăng nhập, bấm <b>In thử</b> một lần (tắt hết cửa sổ Chrome khác trước). Lần đầu chọn đúng máy in, lề "Không", tỉ lệ 100%. Chrome nhớ máy in đó cho hồ sơ này.</li>
+        <li>Bật <b>Tự động in</b> và để 2 cửa sổ mở suốt ca. Đơn thanh toán ở màn hình thu ngân sẽ tự ra tem trong vài giây.</li>
+        <li>Không dùng lối tắt (mở Chrome bình thường) vẫn in được, chỉ là mỗi lần sẽ hiện hộp thoại in, bấm Enter để in.</li>
+      </ol>
+    </details>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+(function(){
+  var API = 'https://script.google.com/macros/s/AKfycbxvRhb0Jjbrokyew1RBqWwBTCiqSIsvciWx_Vns9LeOs9LLCvTJcxOk71-7CMKuI1I/exec';
+  var $ = function(id){ return document.getElementById(id); };
+  function call(fn, args){
+    return fetch(API, { method:'POST', redirect:'follow', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ fn: fn, args: args || [] }) })
+      .then(function(r){ return r.json(); }).then(function(j){ if (j && j.ok) return j.data; throw new Error(j && j.error || 'Lỗi kết nối'); });
+  }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function money(v){ return (Number(v)||0).toLocaleString('vi-VN') + 'đ'; }
+  function hhmm(t){ var d = new Date(t); return ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2); }
+  function ddmm(t){ var d = new Date(t); return ('0'+d.getDate()).slice(-2) + '/' + ('0'+(d.getMonth()+1)).slice(-2); }
+  function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){ return null; } }
+
+  var Q = new URLSearchParams(location.search);
+  var PIN = ls('chata_cashier') || '', D = null;
+  var DEF_GROUP = { 'Đồ ăn':'bep', 'Lai rai':'bep', 'Bia':'none' };
+  var groups = {}; try { groups = JSON.parse(ls('chata_print_groups') || '{}'); } catch(e){}
+  function where(g){ return groups[g] || DEF_GROUP[g] || 'bar'; }
+
+  var loai = Q.get('loai') === 'bep' ? 'bep' : (Q.get('loai') === 'tem' ? 'tem' : (ls('chata_print_loai') || 'tem'));
+  $('loai').value = loai;
+  $('sizeTem').value = ls('chata_print_tem') || '50x30';
+  $('sizeBep').value = ls('chata_print_bep') || '80';
+  function lastKey(){ return 'chata_print_last_' + loai; }
+  function autoKey(){ return 'chata_print_auto_' + loai; }
+  function syncUI(){
+    $('sizeTemL').hidden = loai !== 'tem'; $('sizeBepL').hidden = loai !== 'bep';
+    $('modeLbl').textContent = loai === 'tem' ? '· Tem nhãn đồ uống' : '· Tem bếp';
+    $('auto').checked = ls(autoKey()) === '1';
+    $('autoL').classList.toggle('on', $('auto').checked);
+    document.title = (loai === 'tem' ? 'Tem nhãn' : 'Tem bếp') + ' – Chata';
+  }
+  $('loai').addEventListener('change', function(){ loai = $('loai').value; ls('chata_print_loai', loai); syncUI(); drawList(); });
+  $('sizeTem').addEventListener('change', function(){ ls('chata_print_tem', $('sizeTem').value); });
+  $('sizeBep').addEventListener('change', function(){ ls('chata_print_bep', $('sizeBep').value); });
+  $('auto').addEventListener('change', function(){
+    ls(autoKey(), $('auto').checked ? '1' : '0');
+    if ($('auto').checked) ls(lastKey(), String(Date.now()));   // chỉ in đơn thanh toán từ lúc bật
+    syncUI();
+  });
+
+  /* ---- Dựng bản in ---- */
+  function partsOf(o){
+    var bar = [], bep = [];
+    (o.items || []).forEach(function(i){ var w = where(i.g); if (w === 'bep') bep.push(i); else if (w === 'bar') bar.push(i); });
+    return { bar: bar, bep: bep };
+  }
+  function labelsHtml(o){
+    var sz = $('sizeTem').value.split('x'), W = +sz[0], H = +sz[1];
+    var fs = Math.max(2.2, Math.min(3.6, H / 9)), nfs = Math.max(3, Math.min(5.2, H / 6.2));
+    var bar = partsOf(o).bar, total = bar.reduce(function(s, i){ return s + i.q; }, 0), k = 0, out = '';
+    bar.forEach(function(i){
+      for (var q = 0; q < i.q; q++) {
+        k++;
+        out += '<div class="lbl" style="width:' + W + 'mm;height:' + H + 'mm;padding:1.2mm 1.8mm;font-size:' + fs + 'mm">' +
+          '<div class="h"><span>#' + esc(o.code) + ' ' + esc(o.name) + '</span><span>' + hhmm(o.paidAt || o.created) + '</span></div>' +
+          '<div class="n" style="font-size:' + nfs + 'mm">' + esc(i.n) + '</div>' +
+          (o.note ? '<div class="o">' + esc(o.note) + '</div>' : '') +
+          '<div class="f"><span>' + k + '/' + total + (o.pager ? ' · Thẻ ' + esc(o.pager) : '') + '</span><span>' + money(i.p) + '</span></div></div>';
+      }
+    });
+    return { html: out, page: '@page{size:' + W + 'mm ' + H + 'mm;margin:0}' };
+  }
+  function ticketHtml(o){
+    var w = +$('sizeBep').value, cw = w === 80 ? 72 : 48, fs = w === 80 ? 4 : 3.4;
+    var bep = partsOf(o).bep; if (!bep.length) return { html: '', page: '' };
+    var html = '<div class="tk" style="width:' + w + 'mm;padding:3mm ' + ((w - cw) / 2) + 'mm 4mm;font-size:' + fs + 'mm">' +
+      '<div class="t">TEM BẾP · CHATA</div><div class="c">#' + esc(o.code) + '</div>' +
+      '<div class="m"><span>' + esc(o.name) + '</span><span>' + (o.pager ? 'Thẻ rung ' + esc(o.pager) : '') + '</span></div>' +
+      '<div class="m" style="font-weight:400"><span>' + hhmm(o.paidAt || o.created) + ' ' + ddmm(o.paidAt || o.created) + '</span><span>' + (o.mode === 'Đêm nhạc' ? 'Đêm nhạc' : '') + '</span></div><hr>' +
+      bep.map(function(i){ return '<div class="it" style="font-size:' + (fs * 1.25) + 'mm"><b>' + i.q + ' x</b><span>' + esc(i.n) + '</span></div>'; }).join('') +
+      '<hr>' + (o.note ? '<div class="no">Ghi chú: ' + esc(o.note) + '</div>' : '') +
+      '<div class="ft">' + bep.reduce(function(s, i){ return s + i.q; }, 0) + ' món · in lúc ' + hhmm(Date.now()) + '</div></div>';
+    return { html: html, page: '' , w: w };
+  }
+  function printOrders(list, done){
+    var html = '', page = '';
+    if (loai === 'tem') { list.forEach(function(o){ var r = labelsHtml(o); html += r.html; page = r.page; }); }
+    else { list.forEach(function(o){ html += ticketHtml(o).html; }); }
+    if (!html) { if (done) done(false); return; }
+    $('printArea').innerHTML = html;
+    if (loai === 'bep') {
+      var w = +$('sizeBep').value; $('printArea').style.display = 'block';
+      var hmax = 0; Array.prototype.forEach.call($('printArea').children, function(el){ hmax = Math.max(hmax, el.getBoundingClientRect().height); });
+      $('printArea').style.display = '';
+      page = '@page{size:' + w + 'mm ' + Math.ceil(hmax * 25.4 / 96 + 2) + 'mm;margin:0}';
+    }
+    $('pageCss').textContent = page;
+    setTimeout(function(){ window.print(); if (done) done(true); }, 120);
+  }
+
+  /* ---- Danh sách & tự in ---- */
+  function drawList(){
+    if (!D) return;
+    $('list').innerHTML = D.paid.length ? '<table><tr><th>Mã</th><th>Khách</th><th>Đồ uống (tem)</th><th>Món ăn (bếp)</th><th>Giờ</th><th></th></tr>' + D.paid.map(function(o){
+      var p = partsOf(o), f = function(a){ return a.map(function(i){ return i.q + '× ' + esc(i.n); }).join(', ') || '–'; };
+      return '<tr><td><b>#' + esc(o.code) + '</b></td><td>' + esc(o.name) + '</td><td>' + f(p.bar) + '</td><td>' + f(p.bep) + '</td><td>' + hhmm(o.paidAt) + '</td>' +
+        '<td><button class="btn p" data-pid="' + o.id + '">In ' + (loai === 'tem' ? 'tem' : 'bếp') + '</button></td></tr>';
+    }).join('') + '</table>' : '<p class="st">Chưa có đơn nào thanh toán hôm nay.</p>';
+    var gs = []; (D.menu || []).concat(D.night || []).forEach(function(m){ if (gs.indexOf(m.g) < 0) gs.push(m.g); });
+    $('grp').innerHTML = gs.map(function(g){
+      var w = where(g);
+      return '<label>' + esc(g) + '<select data-g="' + esc(g) + '"><option value="bar"' + (w === 'bar' ? ' selected' : '') + '>Tem nhãn (Bar)</option>' +
+        '<option value="bep"' + (w === 'bep' ? ' selected' : '') + '>Tem bếp</option><option value="none"' + (w === 'none' ? ' selected' : '') + '>Không in</option></select></label>';
+    }).join('');
+  }
+  $('grp').addEventListener('change', function(e){ var s = e.target.closest('select[data-g]'); if (!s) return; groups[s.getAttribute('data-g')] = s.value; ls('chata_print_groups', JSON.stringify(groups)); drawList(); });
+  $('list').addEventListener('click', function(e){ var b = e.target.closest('[data-pid]'); if (!b) return; var o = D.paid.find(function(x){ return x.id === b.getAttribute('data-pid'); }); if (o) printOrders([o]); });
+  $('testBtn').addEventListener('click', function(){
+    printOrders([{ code:'000', name:'In thử', pager:'5', note:'ít đá', created:Date.now(), paidAt:Date.now(), mode:'',
+      items: loai === 'tem' ? [{ n:'Trà sữa kem trứng', g:'__bar', p:39000, q:1 }] : [{ n:'Mì cay bò', g:'__bep', p:55000, q:1 }] }]);
+  });
+  groups.__bar = 'bar'; groups.__bep = 'bep';
+
+  var busy = false, onceDone = false;
+  function tick(){
+    if (!PIN) return;
+    call('getCashier', [PIN]).then(function(d){
+      D = d; drawList();
+      var auto = ls(autoKey()) === '1';
+      if (!ls(lastKey())) ls(lastKey(), String(Date.now()));
+      var last = +ls(lastKey()) || Date.now();
+      var fresh = d.paid.filter(function(o){ return o.paidAt > last; }).sort(function(a, b){ return a.paidAt - b.paidAt; });
+      $('status').textContent = (auto ? '🟢 Đang tự in' : '⏸ Chưa bật tự in') + ' · kiểm tra lúc ' + hhmm(Date.now()) + ':' + ('0' + new Date().getSeconds()).slice(-2) +
+        ' · hôm nay đã thanh toán ' + d.paid.length + ' đơn';
+      // In lại 1 đơn theo yêu cầu từ màn hình thu ngân (?id=...)
+      if (Q.get('id') && !onceDone) {
+        onceDone = true;
+        var o = d.paid.concat(d.pending).find(function(x){ return x.id === Q.get('id'); });
+        if (o) printOrders([o], function(ok){ if (Q.get('once')) setTimeout(function(){ window.close(); }, ok ? 800 : 2500); if (!ok) $('status').textContent = 'Đơn này không có món cần in ' + (loai === 'tem' ? 'tem nhãn.' : 'tem bếp.'); });
+        return;
+      }
+      if (auto && fresh.length && !busy && !Q.get('once')) {
+        busy = true;
+        ls(lastKey(), String(fresh[fresh.length - 1].paidAt));
+        printOrders(fresh, function(){ busy = false; });
+      }
+    }).catch(function(e){
+      if (/Sai mã/.test(e.message)) { ls('chata_cashier', null); PIN = ''; show(); }
+      else $('status').textContent = '⚠️ Mất kết nối, đang thử lại… (' + hhmm(Date.now()) + ')';
+    });
+  }
+  function show(){ $('loginView').hidden = !!PIN; $('mainView').hidden = !PIN; }
+  $('loginForm').addEventListener('submit', function(e){
+    e.preventDefault(); var p = $('pw').value.trim(); if (!p) return;
+    call('cashierLogin', [p]).then(function(r){
+      if (r.ok) { PIN = p; ls('chata_cashier', p); show(); tick(); }
+      else { $('loginMsg').textContent = r.msg; $('loginMsg').hidden = false; }
+    });
+  });
+  syncUI(); show(); tick();
+  setInterval(function(){ if (!busy) tick(); }, 5000);
+})();
+</script>
+</body>
+</html>

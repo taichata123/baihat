@@ -82,6 +82,7 @@
   .acts2 .bad{color:var(--bad);border-color:var(--bad-soft)}
   button:disabled{opacity:.55;cursor:default}
   .msg{margin-top:10px;padding:10px 12px;border-radius:10px;font-size:14px;background:var(--bad-soft);color:#7c271f}
+  .pbtn{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:5px 11px;font-weight:600;font-size:13px;cursor:pointer;margin-top:8px}
   .paidtag{display:inline-block;background:var(--leaf-soft);color:#2f5220;font-weight:700;border-radius:999px;padding:4px 12px;margin-top:8px}
   .login{max-width:420px;margin:50px auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px}
   .send{width:100%;margin-top:16px;padding:14px;border:none;border-radius:12px;background:var(--accent);color:#fff;font-weight:700;font-size:16px;cursor:pointer}
@@ -98,6 +99,7 @@
     <option value="Thường">Menu: Thường</option>
   </select>
   <button class="tbtn" id="openBtn" type="button" hidden></button>
+  <a class="tbtn" href="in.html" target="_blank" style="text-decoration:none">🖨 Trạm in</a>
   <button class="tbtn" id="logoutBtn" type="button" hidden>Đăng xuất</button>
 </div></div>
 
@@ -257,7 +259,8 @@
     var paid = cur.status === 'Đã thanh toán';
     $('dCode').textContent = '#' + cur.code; $('dName').textContent = cur.name;
     $('dMeta').innerHTML = (cur.phone ? '<a href="tel:' + esc(cur.phone) + '">📞 ' + esc(cur.phone) + '</a> · ' : '') + 'gửi lúc ' + hhmm(cur.created) + (cur.mode === 'Đêm nhạc' ? ' · 🎶 menu đêm nhạc' : '');
-    $('dPaid').innerHTML = paid ? '<span class="paidtag">✓ Đã thanh toán · ' + esc(cur.pay) + ' · ' + hhmm(cur.paidAt) + '</span>' : '';
+    $('dPaid').innerHTML = paid ? '<span class="paidtag">✓ Đã thanh toán · ' + esc(cur.pay) + ' · ' + hhmm(cur.paidAt) + '</span>' +
+      ' <button type="button" class="pbtn" data-print="tem">🖨 In lại tem nhãn</button> <button type="button" class="pbtn" data-print="bep">🖨 In lại tem bếp</button>' : '';
     $('dNote').value = cur.note || ''; $('dPager').value = cur.pager || '';
     $('dNote').disabled = $('dPager').disabled = paid;
     $('dActs').hidden = paid; $('pickWrap').hidden = paid; $('dMsg').hidden = true;
@@ -315,6 +318,10 @@
         else closeOrder();
       }).catch(function(){ Array.prototype.forEach.call(btns, function(b){ b.disabled = false; }); $('dMsg').textContent = 'Mạng chập chờn, bấm lại nhé.'; $('dMsg').hidden = false; });
   }
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('[data-print]'); if (!b || !cur) return;
+    window.open('in.html?loai=' + b.getAttribute('data-print') + '&id=' + encodeURIComponent(cur.id) + '&once=1', 'chata_in', 'width=560,height=700');
+  });
   $('payCash').addEventListener('click', function(){ act('pay', 'Tiền mặt'); });
   $('payBank').addEventListener('click', function(){ act('pay', 'Chuyển khoản'); });
   $('saveBtn').addEventListener('click', function(){ act('save'); });
