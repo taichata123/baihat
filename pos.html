@@ -228,7 +228,7 @@
       <button class="tbtn" id="shiftBtn" type="button" hidden>⏱ Kết ca</button>
       <button class="tbtn" id="updBtn" type="button" hidden style="background:#13C48A;color:#fff;border-color:#13C48A">⬆ Cập nhật app</button>
       <button class="tbtn" id="setBtn" type="button">🖨 Máy in</button>
-      <button class="tbtn" id="lockBtn" type="button" title="Khóa máy / đổi người (F9)">🔒 Khóa</button>
+      <button class="tbtn" id="lockBtn" type="button" title="Khóa máy / đổi người (F10)">🔒 Khóa</button>
       <button class="tbtn" id="outBtn" type="button">Đăng xuất</button>
     </div>
   </div>
@@ -237,7 +237,7 @@
     <div class="paid" id="paidView" hidden></div>
     <div class="rep" id="repView" hidden></div>
     <div class="side">
-      <button class="new" id="newBtn" type="button">＋ Tạo đơn mới <small style="font-weight:400">(F2)</small></button>
+      <button class="new" id="newBtn" type="button">＋ Tạo đơn mới <small style="font-weight:400">(F1)</small></button>
       <input class="findOrd" id="findOrd" placeholder="Mở đơn: gõ số thẻ / mã + Enter" maxlength="10" autocomplete="off">
       <div class="stat">
         <h4>Hôm nay</h4>
@@ -263,7 +263,7 @@
   <div class="cats" id="cats"></div>
   <div class="mid">
     <div class="mtop">
-      <input id="search" placeholder="Gõ tên hoặc chữ đầu món (VD: ts) + Enter · ↑↓ chọn" autocomplete="off">
+      <input id="search" placeholder="Chọn món (F2): gõ tên hoặc chữ đầu (VD: ts) + Enter · ↑↓ chọn" autocomplete="off">
       <select id="menuPick" title="Bảng giá"><option value="cur">Menu hiện tại</option><option value="other">Menu khác</option></select>
     </div>
     <div class="grid" id="grid"></div>
@@ -285,7 +285,7 @@
       <button class="a-save" id="saveBtn" type="button">Lưu đơn<small>(F3)</small></button>
       <button class="a-cancel" id="cancelBtn" type="button">Hủy đơn<small>ghi lại cho QL</small></button>
       <button class="a-more" id="moreBtn" type="button">Báo bếp<small>in trước (F7)</small></button>
-      <button class="a-pay" id="payBtn" type="button">Thanh toán<small>(F1)</small></button>
+      <button class="a-pay" id="payBtn" type="button">Thanh toán<small>(F9)</small></button>
     </div>
   </div>
 </div>
@@ -1224,18 +1224,19 @@
     if (!$('tblModal').hidden) { if (e.key === 'Escape') { e.preventDefault(); $('tblModal').hidden = true; } return; }
     if (!$('setModal').hidden) return;
     if (!$('ordView').hidden) {
-      if (e.key === 'F1') { e.preventDefault(); openPay(); }
+      if (e.key === 'F9') { e.preventDefault(); openPay(); }
       else if (e.key === 'F3') { e.preventDefault(); doSave(); }
       else if (e.key === 'F6') { e.preventDefault(); openDisc(); }
-      else if (e.key === 'F4') { e.preventDefault(); $('search').focus(); $('search').select(); }
+      else if (e.key === 'F2') { e.preventDefault(); $('search').focus(); $('search').select(); }
+      else if (e.key === 'F1' || e.key === 'F10') { e.preventDefault(); }
       else if (e.key === 'F7') { e.preventDefault(); if (!$('moreBtn').hidden) $('moreBtn').click(); else toast('Lưu đơn trước (F3) rồi mới báo bếp riêng.'); }
       else if (e.key === 'F8') { e.preventDefault(); $('togoBtn').click(); }
       else if (e.key === 'Escape') { e.preventDefault(); $('exitBtn').click(); }
       else if (!/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && !document.querySelector('.mask:not([hidden])')) {
         if (!cartKey(e) && e.key.length === 1 && !e.ctrlKey && !e.altKey) $('search').focus();
       }
-    } else if (e.key === 'F2') { e.preventDefault(); openOrder(null); }
-    else if (e.key === 'F9') { e.preventDefault(); lockNow(); }
+    } else if (e.key === 'F1') { e.preventDefault(); openOrder(null); }
+    else if (e.key === 'F10') { e.preventDefault(); lockNow(); }
     else if (!/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && !document.querySelector('.mask:not([hidden])') && $('ordView').hidden && /^[0-9a-zA-Z]$/.test(e.key) && !e.ctrlKey && !e.altKey && TAB !== 'rep' && TAB !== 'paid') $('findOrd').focus();
   });
   $('newBtn').addEventListener('click', function(){ openOrder(null); });
