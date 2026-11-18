@@ -438,6 +438,17 @@
   </form>
 </div>
 
+<div class="mask" id="rfModal" hidden>
+  <form class="modal" id="rfForm" style="width:min(420px,94vw)" novalidate>
+    <h3>Hoàn / hủy đơn đã thanh toán</h3>
+    <p id="rfWhat" style="margin:0 0 6px;font-weight:700"></p>
+    <p style="margin:0 0 10px;color:var(--muted);font-size:13px">Đơn sẽ bị trừ khỏi doanh thu. Nếu khách trả tiền mặt, nhớ trả lại tiền – ca của bạn sẽ trừ khoản này.</p>
+    <input id="rfWhy" type="text" maxlength="120" placeholder="Lý do (VD: thu nhầm món, khách đổi ý, làm sai món…)" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font-size:16px">
+    <div class="err" id="rfErr" hidden></div>
+    <div class="mbtns"><button type="button" id="rfCancel">Thôi</button><button type="submit" class="ok">Tiếp tục</button></div>
+  </form>
+</div>
+
 <div class="busy" id="busy" hidden><div id="busyTxt">Đang lưu…</div></div>
 <div class="toast" id="toast" hidden></div>
 <iframe id="printFrame" title="in"></iframe>
@@ -616,8 +627,8 @@
     (o.items || []).forEach(function(i){ var w = where(i.g); if (w === 'bep') bep.push(i); else if (w === 'bar') bar.push(i); });
     return { bar: bar, bep: bep };
   }
-  function printOrder(o, what, extra){
-    var p = split(o);
+  function printOrder(o, what, extra, kItems){
+    var p = split(kItems ? { items: kItems } : o);
     if (what.bep && p.bep.length) sendPrint('bep', bepHtml(o, p.bep));
     if (what.tem && p.bar.length) sendPrint('tem', temHtml(o, p.bar));
     if (what.bill) sendPrint('bill', billHtml(o, extra));
@@ -720,7 +731,7 @@
     $('paidView').innerHTML = D.paid.length ? '<table><tr><th>Mã</th><th>Giờ</th><th>Khách</th><th>Món</th><th>Tiền</th><th>TT</th><th>Thu ngân</th><th>In lại</th></tr>' + D.paid.map(function(o){
       return '<tr><td><b>#' + esc(o.code) + '</b><br><small>' + (o.src === 'Quầy' ? 'Quầy' : 'QR') + '</small></td><td>' + hhmm(o.paidAt) + '</td><td>' + esc(o.name) + (o.pager ? '<br><small>Thẻ ' + esc(o.pager) + '</small>' : '') + '</td>' +
         '<td>' + o.items.map(function(i){ return i.q + '× ' + esc(i.n) + (i.t ? ' <i>(' + esc(i.t) + ')</i>' : ''); }).join('<br>') + '</td><td class="num"><b>' + money(o.total) + '</b></td><td>' + esc(o.pay) + '</td><td><small>' + esc(o.cashier || '') + '</small></td>' +
-        '<td><button class="sbtn" data-rp="bill" data-id="' + o.id + '">Hóa đơn</button><button class="sbtn" data-rp="bep" data-id="' + o.id + '">Bếp</button><button class="sbtn" data-rp="tem" data-id="' + o.id + '">Tem</button></td></tr>';
+        '<td><button class="sbtn" data-rp="bill" data-id="' + o.id + '">Hóa đơn</button><button class="sbtn" data-rp="bep" data-id="' + o.id + '">Bếp</button><button class="sbtn" data-rp="tem" data-id="' + o.id + '">Tem</button><br><button class="sbtn" data-fx="method" data-id="' + o.id + '">Đổi sang ' + (o.pay === 'Chuyển khoản' ? 'TM' : 'CK') + '</button><button class="sbtn" data-fx="refund" data-id="' + o.id + '" style="color:#C0392B">Hoàn/hủy</button></td></tr>';
     }).join('') + '</table>' : '<div class="empty">Chưa có đơn nào thanh toán hôm nay.</div>';
   }
   document.querySelector('.tabs').addEventListener('click', function(e){
@@ -736,11 +747,39 @@
     openOrder(ord); if (p) openPay();
   });
   $('paidView').addEventListener('click', function(e){
+    var f = e.target.closest('[data-fx]');
+    if (f) { var po = D.paid.find(function(x){ return x.id === f.getAttribute('data-id'); }); if (po) fixPaid(po, f.getAttribute('data-fx')); return; }
     var b = e.target.closest('[data-rp]'); if (!b) return;
     var o = D.paid.find(function(x){ return x.id === b.getAttribute('data-id'); }); if (!o) return;
     var k = b.getAttribute('data-rp'), w = {}; w[k] = true;
     if (k !== 'bill' && !split(o)[k === 'bep' ? 'bep' : 'bar'].length) return toast('Đơn này không có món cần in ' + (k === 'bep' ? 'phiếu bếp' : 'tem ly') + '.');
     printOrder(o, w); toast('Đã gửi lệnh in');
+  });
+  /* Sửa đơn đã thanh toán: đổi hình thức TT hoặc hoàn/hủy (cần quản lý duyệt) */
+  var rfO = null;
+  function fixPaid(o, kind){
+    if (kind === 'method') {
+      var np = o.pay === 'Chuyển khoản' ? 'Tiền mặt' : 'Chuyển khoản';
+      if (!confirm('Đơn #' + o.code + ' (' + money(o.total) + 'đ): đổi từ ' + o.pay + ' sang ' + np + '?')) return;
+      return needAp('Đổi hình thức TT đơn #' + o.code + ': ' + o.pay + ' → ' + np, function(ap){
+        return call('cashierUpdate', [PIN, o.id, 'method', { pay: np, approve: ap }]).then(function(r){ if (r.needApprove) return r; if (r.ok) { apply(r.data); toast('Đã đổi đơn #' + o.code + ' sang ' + np); } else toast(r.msg, 4000); return r; });
+      });
+    }
+    rfO = o; $('rfWhat').textContent = 'Đơn #' + o.code + ' · ' + o.name + ' · ' + money(o.total) + 'đ · ' + o.pay;
+    $('rfWhy').value = ''; $('rfErr').hidden = true; $('rfModal').hidden = false; setTimeout(function(){ $('rfWhy').focus(); }, 30);
+  }
+  $('rfCancel').addEventListener('click', function(){ $('rfModal').hidden = true; rfO = null; });
+  $('rfForm').addEventListener('submit', function(e){
+    e.preventDefault(); var o = rfO, why = $('rfWhy').value.trim(); if (!o) return;
+    if (!why) { $('rfErr').textContent = 'Ghi lý do hoàn/hủy.'; $('rfErr').hidden = false; return; }
+    $('rfModal').hidden = true; rfO = null;
+    needAp('Hoàn/hủy đơn đã thu #' + o.code + ' (' + money(o.total) + 'đ) – ' + why, function(ap){
+      return call('cashierUpdate', [PIN, o.id, 'refund', { reason: why, approve: ap }]).then(function(r){
+        if (r.needApprove) return r;
+        if (r.ok) { apply(r.data); toast('Đã hoàn/hủy đơn #' + o.code + (o.pay === 'Tiền mặt' ? ' · Trả khách ' + money(o.total) + 'đ tiền mặt' : ''), 5000); } else toast(r.msg, 4000);
+        return r;
+      });
+    });
   });
   $('modeSel').addEventListener('change', function(){
     var v = $('modeSel').value;
@@ -864,11 +903,13 @@
     $('search').value = ''; $('menuPick').value = 'cur'; $('menuPick').hidden = !(D && D.other && D.other.length);
     $('menuPick').options[1].textContent = D && D.mode === 'night' ? 'Menu thường' : 'Menu đêm nhạc';
     $('moreBtn').hidden = !ord;
-    $('ordView').hidden = false; drawCats(); drawCart();
+    $('ordView').hidden = false; drawCats(); drawCart(); O0 = snap();
   }
   function closeOrder(){ $('ordView').hidden = true; O = null; drawHome(); }
   function readHead(){ O.name = $('cName').value.trim(); O.phone = $('cPhone').value.trim(); O.pager = $('cPager').value.trim(); O.note = $('cNote').value.trim(); }
-  function dirty(){ return O && (O.items.length || $('cName').value.trim()) && !O.id; }
+  var O0 = '';
+  function snap(){ return JSON.stringify([O.items, $('cName').value.trim(), $('cPhone').value.trim(), $('cPager').value.trim(), $('cNote').value.trim(), O.disc || null]); }
+  function dirty(){ return !!O && snap() !== O0; }
 
   $('cats').addEventListener('click', function(e){ var b = e.target.closest('[data-cat]'); if (!b) return; CAT = b.getAttribute('data-cat'); $('search').value = ''; drawCats(); drawGrid(); });
   $('search').addEventListener('input', drawGrid);
@@ -886,7 +927,10 @@
     else if ((t = e.target.closest('[data-dec]'))) { var k = +t.getAttribute('data-dec'); if (--O.items[k].q < 1) O.items.splice(k, 1); drawCart(); }
     else if ((t = e.target.closest('[data-note]'))) openNote(+t.getAttribute('data-note'));
   });
-  $('exitBtn').addEventListener('click', function(){ if (dirty() && !confirm('Thoát và bỏ đơn đang tạo?')) return; closeOrder(); });
+  $('exitBtn').addEventListener('click', function(){
+    if (dirty() && !confirm(O.id ? 'Đơn #' + O.code + ' có thay đổi chưa lưu. Thoát và bỏ thay đổi?' : 'Thoát và bỏ đơn đang tạo?')) return;
+    closeOrder();
+  });
 
   // Ghi chú món
   var noteK = -1, QUICK_NOTES = ['Ít đá', 'Không đá', 'Ít ngọt', 'Không đường', 'Nhiều đá', 'Ít cay', 'Không cay', 'Cay nhiều', 'Mang về'];
@@ -925,14 +969,15 @@
     return { name: O.name, phone: O.phone, pager: O.pager, note: O.note, pay: pay || '', disc: O.disc || null,
       items: O.items.map(function(i){ var x = { n: i.n, q: i.q }; if (i.t) x.t = i.t; if (i.dt && i.dv) { x.dt = i.dt; x.dv = i.dv; } return x; }) };
   }
-  function save(pay){
+  function save(pay, kitchen){
     if (!O.items.length) { toast('Đơn chưa có món nào.'); return Promise.reject(new Error('empty')); }
-    var d = payload(pay);
+    var d = payload(pay); if (kitchen) d.kitchen = true;
     var p = O.id ? call('cashierUpdate', [PIN, O.id, pay ? 'pay' : 'save', d]) : call('cashierCreate', [PIN, d]);
     return p.then(function(r){
       if (!r.ok) throw new Error(r.msg || 'Không lưu được đơn.');
       apply(r.data);
       var o = r.order || (r.data.paid.concat(r.data.pending)).find(function(x){ return x.id === O.id; });
+      if (o) o._k = r.kitchen || [];
       return o;
     });
   }
@@ -946,12 +991,17 @@
     save('').then(function(o){ busy(false); toast('Đã lưu đơn #' + (o ? o.code : '')); closeOrder(); },
       function(e){ busy(false); if (e.message !== 'empty') toast('⚠️ ' + e.message, 4000); });
   }
+  /* Báo bếp: lưu đơn rồi chỉ in những món chưa báo (gọi thêm món thì chỉ in món thêm) */
   $('moreBtn').addEventListener('click', function(){
-    if (!O || !O.id) return;
-    var o = JSON.parse(JSON.stringify(O)); readHead(); o.name = O.name || o.name; o.pager = O.pager; o.note = O.note;
-    var p = split(o);
-    if (!p.bep.length && !p.bar.length) return toast('Đơn không có món cần báo bếp/bar.');
-    printOrder(o, { bep: true, tem: true }); toast('Đã gửi phiếu bếp & tem ly');
+    if (!O || !O.id || paying) return;
+    busy(true, 'Đang báo bếp…');
+    save('', true).then(function(o){
+      busy(false); var k = (o && o._k) || [], p = split({ items: k });
+      O0 = snap();
+      if (!p.bep.length && !p.bar.length) return toast(k.length ? 'Món mới không cần in bếp/tem.' : 'Đã báo bếp đủ rồi, không có món mới.');
+      printOrder(o, { bep: true, tem: true }, null, k);
+      toast('Đã báo bếp ' + k.reduce(function(s, i){ return s + i.q; }, 0) + ' món mới');
+    }, function(e){ busy(false); if (e.message !== 'empty') toast('⚠️ ' + e.message, 4000); });
   });
 
   /* Thanh toán */
@@ -991,9 +1041,9 @@
     if (given && given < O.total) { $('payErr').textContent = 'Tiền khách đưa chưa đủ.'; $('payErr').hidden = false; return; }
     paying = true; busy(true, 'Đang thanh toán…');
     var wantBill = $('pBill').checked, wantTem = $('pTem').checked;
-    save(METHOD).then(function(o){
+    save(METHOD, wantTem).then(function(o){
       paying = false; busy(false); $('payModal').hidden = true;
-      if (o) printOrder(o, { bill: wantBill, bep: wantTem && S.bep_on, tem: wantTem && S.tem_on }, { given: given });
+      if (o) printOrder(o, { bill: wantBill, bep: wantTem && S.bep_on, tem: wantTem && S.tem_on }, { given: given }, o._k || []);
       toast('✓ Đã thanh toán #' + (o ? o.code : '') + (given > O.total ? ' · Thối ' + money(given - O.total) + 'đ' : ''), 4000);
       closeOrder();
     }, function(e){ paying = false; busy(false); if (e.message !== 'empty') { $('payErr').textContent = e.message; $('payErr').hidden = false; } });
@@ -1014,6 +1064,7 @@
     if (!$('payModal').hidden) { if (e.key === 'Enter') { e.preventDefault(); doPay(); } if (e.key === 'Escape') $('payModal').hidden = true; return; }
     if (!$('noteModal').hidden) { if (e.key === 'Escape') $('noteModal').hidden = true; return; }
     if (!$('discModal').hidden) { if (e.key === 'Escape') { e.preventDefault(); $('discModal').hidden = true; } else if (e.key === 'Enter') { e.preventDefault(); $('dOk').click(); } return; }
+    if (!$('rfModal').hidden) { if (e.key === 'Escape') { e.preventDefault(); $('rfCancel').click(); } return; }
     if (!$('tblModal').hidden) { if (e.key === 'Escape') { e.preventDefault(); $('tblModal').hidden = true; } return; }
     if (!$('setModal').hidden) return;
     if (!$('ordView').hidden) {
@@ -1214,8 +1265,8 @@
     var s = D && D.shift; if (!s) return;
     $('closeSum').innerHTML = '<table style="width:100%;font-size:14.5px;border-collapse:collapse">' + [
       ['Mở ca lúc', hhmm(s.openAt) + ' ' + dmy(s.openAt)], ['Số đơn đã thu', s.orders], ['Doanh thu', money(s.revenue) + 'đ'], ['Chuyển khoản', money(s.transfer) + 'đ'],
-      ['Tiền mặt thu', money(s.cash) + 'đ'], ['Tiền mặt đầu ca', money(s.openCash) + 'đ'], ['Đơn hủy', s.cancels], ['<b>Tiền mặt phải có</b>', '<b>' + money(s.expect) + 'đ</b>']
-    ].map(function(r){ return '<tr><td style="padding:4px 0">' + r[0] + '</td><td style="text-align:right">' + r[1] + '</td></tr>'; }).join('') + '</table>';
+      ['Tiền mặt thu', money(s.cash) + 'đ'], ['Tiền mặt đầu ca', money(s.openCash) + 'đ'], ['Đơn hủy', s.cancels]].concat(s.refunds ? [['Hoàn tiền (' + s.refunds + ' đơn)', '−' + money(s.refundAmt) + 'đ']] : []).concat([['<b>Tiền mặt phải có</b>', '<b>' + money(s.expect) + 'đ</b>']
+    ]).map(function(r){ return '<tr><td style="padding:4px 0">' + r[0] + '</td><td style="text-align:right">' + r[1] + '</td></tr>'; }).join('') + '</table>';
     $('closeCash').value = ''; $('closeNote').value = ''; $('closeErr').hidden = true; closeCalc();
     $('closeModal').hidden = false; setTimeout(function(){ $('closeCash').focus(); }, 30);
   });
@@ -1244,7 +1295,7 @@
       '<div style="text-align:center;font-weight:800;margin:1mm 0 2mm">PHIẾU KẾT CA</div>' +
       row('Thu ngân', esc(r.name) + ' (' + esc(r.code) + ')') + row('Mở ca', hhmm(r.openAt) + ' ' + dmy(r.openAt)) + row('Kết ca', hhmm(r.closeAt) + ' ' + dmy(r.closeAt)) +
       '<div style="border-top:.3mm dashed #000;margin:1.5mm 0"></div>' +
-      row('Số đơn đã thu', r.orders) + row('Doanh thu', money(r.revenue) + 'đ', true) + row('Chuyển khoản', money(r.transfer) + 'đ') + row('Tiền mặt thu', money(r.cash) + 'đ') + row('Đơn hủy', r.cancels) +
+      row('Số đơn đã thu', r.orders) + row('Doanh thu', money(r.revenue) + 'đ', true) + row('Chuyển khoản', money(r.transfer) + 'đ') + row('Tiền mặt thu', money(r.cash) + 'đ') + row('Đơn hủy', r.cancels) + (r.refunds ? row('Hoàn tiền (' + r.refunds + ' đơn)', '-' + money(r.refundAmt) + 'đ') : '') +
       '<div style="border-top:.3mm dashed #000;margin:1.5mm 0"></div>' +
       row('Tiền mặt đầu ca', money(r.openCash) + 'đ') + row('Tiền mặt phải có', money(r.expect) + 'đ', true) + row('Tiền mặt đếm được', money(r.counted) + 'đ', true) +
       row('Chênh lệch', (r.diff > 0 ? '+' : '') + money(r.diff) + 'đ', true) + (r.note ? '<div style="margin-top:1.5mm">Ghi chú: ' + esc(r.note) + '</div>' : '') +

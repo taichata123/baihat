@@ -17,7 +17,7 @@
   var SES_KEY = 'chata_fb_pos';
 
   var db = null, auth = null, listeners = [], subs = {};
-  var C = { cfg: null, menu: { normal: null, night: null }, orders: null, shifts: null, songs: null, fb: null, bk: null };
+  var C = { cfg: null, menu: { normal: null, night: null }, orders: null, pend: null, paid: null, keep: {}, shifts: null, songs: null, fb: null, bk: null };
 
   function loadJs(src) {
     return new Promise(function (res, rej) {
@@ -82,9 +82,19 @@
   }
   function wantOrders() {
     return ready.then(function () {
-      return watch('ord', db.collection('posOrders').where('created', '>=', Date.now() - 36 * 3600000), function (s) {
-        var m = {}; s.forEach(function (d) { m[d.id] = Object.assign({ id: d.id }, d.data()); }); C.orders = m;
-      });
+      return Promise.all([
+        watch('ord', db.collection('posOrders').where('created', '>=', Date.now() - 36 * 3600000), function (s) {
+          var m = {}; s.forEach(function (d) { m[d.id] = Object.assign({ id: d.id }, d.data()); }); C.orders = m;
+        }),
+        // đơn thu tiền gần đây (kể cả đơn ghi sổ tạo từ lâu) để tính đúng ca và tab Đã thanh toán
+        watch('paid', db.collection('posOrders').where('paidAt', '>=', Date.now() - 36 * 3600000), function (s) {
+          var m = {}; s.forEach(function (d) { m[d.id] = Object.assign({ id: d.id }, d.data()); }); C.paid = m;
+        }),
+        // mọi đơn chưa thu, kể cả đơn cũ hơn 36 giờ
+        watch('pend', db.collection('posOrders').where('status', '==', 'Chờ thanh toán'), function (s) {
+          var m = {}; s.forEach(function (d) { m[d.id] = Object.assign({ id: d.id }, d.data()); }); C.pend = m;
+        })
+      ]);
     });
   }
   function wantShifts() {
@@ -172,6 +182,28 @@
     }
     return { gross: L.gross, itemDisc: L.idisc, disc: od, discAmt: L.idisc + amt, total: sub - amt };
   }
+  // Báo bếp: chỉ in phần món mới so với lần báo trước (sent = [{k: tên|ghi chú, q}])
+  function kKey(i) { return i.n + '|' + (i.t || ''); }
+  function kitchenDelta(items, sent) {
+    var had = {}, cur = {}, out = [], left = {};
+    (Array.isArray(sent) ? sent : []).forEach(function (x) { had[x.k] = (had[x.k] || 0) + (Number(x.q) || 0); });
+    items.forEach(function (i) { var k = kKey(i); cur[k] = (cur[k] || 0) + i.q; });
+    Object.keys(cur).forEach(function (k) { left[k] = Math.max(0, cur[k] - (had[k] || 0)); });
+    items.forEach(function (i) {
+      var k = kKey(i), take = Math.min(i.q, left[k] || 0); if (take < 1) return; left[k] -= take;
+      var x = { n: i.n, g: i.g, p: i.p, q: take }; if (i.t) x.t = i.t; out.push(x);
+    });
+    return { items: out, sent: Object.keys(cur).map(function (k) { return { k: k, q: cur[k] }; }) };
+  }
+  // Đơn QR do khách gửi: giá luôn lấy theo menu, không tin giá ghi trong đơn
+  function inMenu(menu, n) { return menu.some(function (m) { return m.n === n; }); }
+  function qrMenu(o) { return menuFor(o.mode === 'Đêm nhạc' ? 'night' : 'normal').concat(menuFor(orderMode())); }
+  function priceExtra(o, menu) { return o.src === 'Quầy' ? o.items : (o.items || []).filter(function (i) { return !inMenu(menu, i.n); }); }
+  function fixQR(o) {
+    if (o.src === 'Quầy') return o;
+    var menu = qrMenu(o), L = lines(o.items, menu, priceExtra(o, menu)), A = applyDisc(L, o.disc);
+    return Object.assign({}, o, { items: L.items, total: A.total, gross: A.gross, discAmt: A.discAmt });
+  }
   function cleanPromos(v) {
     try { if (typeof v === 'string') v = JSON.parse(v); } catch (e) { return []; }
     return (Array.isArray(v) ? v : []).slice(0, 20).map(function (x) {
@@ -248,26 +280,37 @@
   }
   function byCode(w, code) { return !!w && (w === code || w.indexOf('(' + code + ')') >= 0 || w.split(' (')[0] === code); }
   function sumFor(all, code, from, to) {
-    var s = { orders: 0, revenue: 0, cash: 0, transfer: 0, cancels: 0 };
+    var s = { orders: 0, revenue: 0, cash: 0, transfer: 0, cancels: 0, refunds: 0, refundAmt: 0 };
     all.forEach(function (o) {
-      if (o.status === 'Đã thanh toán' && o.paidAt >= from && o.paidAt < to && byCode(o.cashier, code)) {
+      if ((o.status === 'Đã thanh toán' || o.refundAt) && o.paidAt >= from && o.paidAt < to && byCode(o.cashier, code)) {
         s.orders++; s.revenue += o.total; if (o.pay === 'Chuyển khoản') s.transfer += o.total; else s.cash += o.total;
+      }
+      // hoàn tiền đơn đã thu: trừ vào ca của người hoàn
+      if (o.refundAt && o.refundAt >= from && o.refundAt < to && o.refundCode === code) {
+        s.refunds++; s.refundAmt += o.total; s.revenue -= o.total; if (o.pay === 'Chuyển khoản') s.transfer -= o.total; else s.cash -= o.total;
       }
       if (o.status === 'Đã hủy') (o.log || []).forEach(function (l) { if (l.a === 'huy' && l.at >= from && l.at < to && byCode(l.by, code)) s.cancels++; });
     });
     return s;
   }
-  function allOrders() { return Object.keys(C.orders || {}).map(function (k) { return C.orders[k]; }); }
+  function allOrders() {
+    var m = {}, b = C.orders || {};
+    [C.keep, C.pend, C.paid].forEach(function (a) { Object.keys(a || {}).forEach(function (k) { m[k] = a[k]; }); });
+    Object.keys(b).forEach(function (k) { m[k] = b[k]; }); // bản trong C.orders là bản mới nhất trên máy
+    return Object.keys(m).map(function (k) { return m[k]; });
+  }
   function openShiftOf(code) { return (C.shifts || []).filter(function (s) { return s.code === code; }).sort(function (a, b) { return a.openAt - b.openAt; }).pop() || null; }
   function shiftLive(u) {
     var s = openShiftOf(u.c); if (!s) return null;
     var t = sumFor(allOrders(), u.c, s.openAt, Date.now() + 60000);
     return { id: s.id, openAt: s.openAt, openCash: s.openCash, orders: t.orders, revenue: t.revenue, cash: t.cash, transfer: t.transfer,
-      cancels: t.cancels, expect: s.openCash + t.cash };
+      cancels: t.cancels, refunds: t.refunds, refundAmt: t.refundAmt, expect: s.openCash + t.cash };
   }
   function cashierData(u) {
-    var mode = orderMode(), d = today(), since = Date.now() - 6 * 3600000, all = allOrders();
-    var pending = all.filter(function (o) { return o.status === 'Chờ thanh toán' && o.created >= since; }).sort(function (a, b) { return a.created - b.created; }).map(pub);
+    // Đơn tại quầy chưa thu: luôn hiện (không tự mất). Đơn QR khách gửi mà không ra quầy: ẩn sau 12 giờ.
+    var mode = orderMode(), d = today(), qrSince = Date.now() - 12 * 3600000, all = allOrders();
+    var pending = all.filter(function (o) { return o.status === 'Chờ thanh toán' && (o.src === 'Quầy' || o.created >= qrSince); })
+      .sort(function (a, b) { return a.created - b.created; }).map(function (o) { return pub(fixQR(o)); });
     var paid = all.filter(function (o) { return o.status === 'Đã thanh toán' && (o.paidDate || o.date) === d; });
     var sum = function (a) { return a.reduce(function (s, o) { return s + o.total; }, 0); };
     return {
@@ -385,10 +428,11 @@
               paidDate: pay ? today() : '', mode: mode === 'night' ? 'Đêm nhạc' : 'Thường', token: '', src: 'Quầy', cashier: pay ? who(u) : '', cashierCode: pay ? u.c : '', log: [] };
             act(o, u, 'tao'); if (pay) act(o, u, 'thu', pay);
             if (c.temp) o.tempCode = true;
+            var K = d.kitchen ? kitchenDelta(L.items, null) : null; if (K) { o.sent = K.sent; act(o, u, 'bep'); }
             C.orders[id] = Object.assign({ id: id }, o);
             save(db.collection('posOrders').doc(id), o);
             if (pay) dayLater(o.paidDate);
-            return { ok: true, order: pub(C.orders[id]), data: cashierData(u) };
+            return { ok: true, order: pub(C.orders[id]), kitchen: K ? K.items : [], data: cashierData(u) };
           });
         });
       });
@@ -396,20 +440,32 @@
     cashierUpdate: function (tok, id, action, d) {
       d = d || {};
       return me().then(function (u) {
-        return posReady().then(function () { return action === 'cancel' ? approve(u, d.approve) : { ok: true }; }).then(function (ok) {
+        var needOk = action === 'cancel' || action === 'refund' || action === 'method';
+        return posReady().then(function () { return needOk ? approve(u, d.approve) : { ok: true }; }).then(function (ok) {
           if (!ok.ok) return ok;
-          var cur = C.orders[id];
+          var cur = C.orders[id] || (C.paid || {})[id] || (C.pend || {})[id] || C.keep[id], K = null;
           var get = cur ? Promise.resolve(cur) : db.doc('posOrders/' + id).get().then(function (s) { return s.exists ? Object.assign({ id: s.id }, s.data()) : null; });
           return get.then(function (o0) {
             if (!o0) return { ok: false, msg: 'Không tìm thấy đơn.' };
             var o = JSON.parse(JSON.stringify(o0)); delete o.id;
-            if (action === 'cancel') {
+            var apx = ok.by && ok.by !== who(u) ? 'duyệt: ' + ok.by : '';
+            if (action === 'method') {
+              if (o.status !== 'Đã thanh toán') return { ok: false, msg: 'Chỉ đổi được hình thức của đơn đã thanh toán.' };
+              var np = d.pay === 'Chuyển khoản' ? 'Chuyển khoản' : 'Tiền mặt';
+              if (np === o.pay) return { ok: false, msg: 'Đơn này đã là ' + np + '.' };
+              act(o, u, 'doitt', o.pay + ' → ' + np + (apx ? ' · ' + apx : '')); o.pay = np;
+            } else if (action === 'refund') {
+              if (o.status !== 'Đã thanh toán') return { ok: false, msg: 'Đơn này chưa thanh toán, dùng Hủy đơn.' };
+              var why = clean(d.reason, 120); if (!why) return { ok: false, msg: 'Ghi lý do hoàn/hủy đơn.' };
+              o.status = 'Đã hủy'; o.refundAt = Date.now(); o.refundCode = u.c; o.refundBy = who(u); o.refundWhy = why;
+              act(o, u, 'hoan', why + (apx ? ' · ' + apx : ''));
+            } else if (action === 'cancel') {
               if (o.status === 'Đã thanh toán') return { ok: false, msg: 'Đơn đã thanh toán, không hủy ở đây được.' };
-              o.status = 'Đã hủy'; act(o, u, 'huy', ok.by !== who(u) ? 'duyệt: ' + ok.by : '');
+              o.status = 'Đã hủy'; act(o, u, 'huy', apx);
             } else {
               if (o.status === 'Đã hủy') return { ok: false, msg: 'Đơn này đã bị hủy.' };
               if (o.status === 'Đã thanh toán' && action === 'pay') return { ok: false, msg: 'Đơn đã thanh toán rồi.' };
-              var L = lines(d.items, menuFor(o.mode === 'Đêm nhạc' ? 'night' : 'normal').concat(menuFor(orderMode())), o.items);
+              var menu = qrMenu(o), L = lines(d.items, menu, priceExtra(o, menu));
               if (!L.items.length) return { ok: false, msg: 'Đơn chưa có món nào.' };
               var note = clean(d.note, 200), A = applyDisc(L, d.disc);
               if (JSON.stringify(L.items) !== JSON.stringify(o.items) || note !== (o.note || '')) { o.edited = true; act(o, u, 'sua'); }
@@ -422,11 +478,15 @@
                 var pay = d.pay === 'Chuyển khoản' ? 'Chuyển khoản' : 'Tiền mặt';
                 o.status = 'Đã thanh toán'; o.pay = pay; o.paidAt = Date.now(); o.paidDate = today(); o.cashier = who(u); o.cashierCode = u.c; act(o, u, 'thu', pay);
               }
+              if (d.kitchen) { K = kitchenDelta(L.items, o.sent); o.sent = K.sent; if (K.items.length) act(o, u, 'bep'); }
             }
-            C.orders[id] = Object.assign({ id: id }, o);
+            C.orders[id] = C.keep[id] = Object.assign({ id: id }, o);
             save(db.doc('posOrders/' + id), o);
-            if (action === 'pay') dayLater(o.paidDate); else if (action === 'cancel') dayLater(o.date);
-            return { ok: true, total: o.total, data: cashierData(u) };
+            if (action === 'pay' || action === 'method') dayLater(o.paidDate);
+            else if (action === 'refund') { dayLater(o.paidDate); if (o.date !== o.paidDate) dayLater(o.date); }
+            else if (action === 'cancel') dayLater(o.date);
+            else if (o.status === 'Đã thanh toán' && o.paidDate) dayLater(o.paidDate);
+            return { ok: true, total: o.total, order: pub(C.orders[id]), kitchen: K ? K.items : [], data: cashierData(u) };
           });
         });
       });
@@ -470,7 +530,7 @@
           return src.then(function (all) {
             var t = sumFor(all, u.c, s.openAt, now + 1), expect = s.openCash + t.cash, c = Math.max(0, Math.round(Number(counted) || 0));
             var up = { closeAt: now, orders: t.orders, revenue: t.revenue, cash: t.cash, transfer: t.transfer, expect: expect, counted: c, diff: c - expect,
-              cancels: t.cancels, note: clean(note, 200), status: 'Đã kết' };
+              cancels: t.cancels, refunds: t.refunds, refundAmt: t.refundAmt, note: clean(note, 200), status: 'Đã kết' };
             C.shifts = (C.shifts || []).filter(function (x) { return x.id !== s.id; });
             save(db.doc('posShifts/' + s.id), up, true);
             return { ok: true, report: Object.assign({ id: s.id, code: u.c, name: u.n, openAt: s.openAt, openCash: s.openCash }, up) };
@@ -499,14 +559,14 @@
             (o.items || []).forEach(function (i) { var it = items[i.n] || (items[i.n] = { n: i.n, g: i.g, q: 0, a: 0 }); it.q += i.q; it.a += i.p * i.q - (i.da || 0); });
             var h = hhOf(o.paidAt), hh = hours[h] || (hours[h] = { h: h, orders: 0, revenue: 0 }); hh.orders++; hh.revenue += o.total;
           });
-          var cancels = all.filter(function (o) { return o.status === 'Đã hủy' && o.date === date; }).map(function (o) {
-            var l = (o.log || []).filter(function (x) { return x.a === 'huy'; }).pop() || {};
-            return { code: o.code, name: o.name, total: o.total, src: o.src, by: l.by || (o.src === 'QR' ? 'Khách tự hủy' : ''), at: l.at || 0, x: l.x || '' };
+          var cancels = all.filter(function (o) { return o.status === 'Đã hủy' && (o.refundAt ? o.paidDate === date : o.date === date); }).map(function (o) {
+            var l = (o.log || []).filter(function (x) { return x.a === 'huy' || x.a === 'hoan'; }).pop() || {};
+            return { code: o.code, name: o.name, total: o.total, src: o.refundAt ? 'Hoàn tiền (' + (o.pay || '') + ')' : o.src, by: l.by || (o.src === 'QR' ? 'Khách tự hủy' : ''), at: l.at || 0, x: l.x || '' };
           }).filter(function (c) { return mgr || byCode(c.by, u.c); });
           var shifts = [];
           r[2].forEach(function (d) {
             var s = Object.assign({ id: d.id }, d.data()); if (!mgr && s.code !== u.c) return;
-            if (s.status === 'Đang mở') { var mm = {}; allOrders().concat(all).forEach(function (x) { mm[x.id] = x; }); var t = sumFor(Object.keys(mm).map(function (k) { return mm[k]; }), s.code, s.openAt, Date.now() + 60000); s.orders = t.orders; s.revenue = t.revenue; s.cash = t.cash; s.transfer = t.transfer; s.cancels = t.cancels; s.expect = s.openCash + t.cash; }
+            if (s.status === 'Đang mở') { var mm = {}; allOrders().concat(all).forEach(function (x) { mm[x.id] = x; }); var t = sumFor(Object.keys(mm).map(function (k) { return mm[k]; }), s.code, s.openAt, Date.now() + 60000); s.orders = t.orders; s.revenue = t.revenue; s.cash = t.cash; s.transfer = t.transfer; s.cancels = t.cancels; s.refunds = t.refunds; s.refundAmt = t.refundAmt; s.expect = s.openCash + t.cash; }
             shifts.push(s);
           });
           shifts.sort(function (a, b) { return a.openAt - b.openAt; });
