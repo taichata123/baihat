@@ -1,0 +1,8 @@
+{
+ "version": "1.1.0",
+ "files": {
+  "main.js": "c4f45dc9e4173b7c351e88e1c94054ff9652a9b4443693a5c03ffb39103cc606",
+  "preload.js": "e2c87da8a7802c23f3d673739fa0eba4557f582bb285bb8c7b678d8b57e8903a",
+  "package.json": "c0139059dee335705bf01bae783167875f68e9c6bd7047d0583f964072007b55"
+ }
+}

@@ -30,7 +30,8 @@ if (-not (Test-Path $exe) -or $ver -ne $V) {
 Write-Host 'Buoc 3/3: Tai app Chata...'
 $app = Join-Path $dest 'resources\app'
 New-Item -ItemType Directory -Force -Path $app | Out-Null
-foreach ($f in 'main.js', 'preload.js', 'package.json') {
+foreach ($f in 'prev', 'update.pending', 'update.failed') { Remove-Item (Join-Path $app $f) -Recurse -Force -ErrorAction SilentlyContinue }
+foreach ($f in 'boot.js', 'main.js', 'preload.js', 'package.json') {
   Invoke-WebRequest ($base + $f + '?t=' + [DateTime]::Now.Ticks) -OutFile (Join-Path $app $f) -UseBasicParsing
 }
 
