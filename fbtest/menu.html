@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chata – Quản lý menu</title>
+<style>
+  :root{--bg:#F4F6F9;--ink:#1B2333;--muted:#6B7385;--line:#E2E6EE;--g:#13C48A;--red:#D93B3B;--blue:#1E6FE8}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;font-size:15px}
+  header{background:#2B3F5C;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:5}
+  header b{font-size:18px}header .sp{flex:1}
+  button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:#fff;padding:8px 12px}
+  button.ok{background:var(--g);border-color:var(--g);color:#fff;font-weight:700}
+  button.ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.4)}
+  main{max-width:980px;margin:0 auto;padding:14px}
+  .card{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .login{max-width:380px;margin:60px auto}
+  .login input{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit;margin:6px 0}
+  .tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+  .tabs button.on{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
+  .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  .bar input{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;min-width:200px;flex:1}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden}
+  th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+  th{background:#F4F6F9;color:var(--muted);font-size:13px;font-weight:600}
+  td input{width:100%;padding:7px 8px;border:1px solid transparent;border-radius:6px;font:inherit;background:transparent}
+  td input:hover,td input:focus{border-color:var(--line);background:#fff;outline:none}
+  td.p input{text-align:right;max-width:110px}
+  tr.off td{opacity:.5}
+  tr.dirty{background:#FFF8E5}
+  .grp{background:#EEF3FB;font-weight:700;color:#2B3F5C}
+  .x{border:none;background:none;color:var(--muted);padding:4px 6px}
+  .x:hover{color:var(--red)}
+  .sw{appearance:none;width:42px;height:24px;border-radius:12px;background:#C9CFDA;position:relative;cursor:pointer;vertical-align:middle}
+  .sw:checked{background:var(--g)}.sw::after{content:"";position:absolute;width:20px;height:20px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.15s}.sw:checked::after{left:20px}
+  .hint{color:var(--muted);font-size:13px}
+  .err{color:var(--red);font-size:14px;margin:6px 0}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#1B2333;color:#fff;padding:10px 16px;border-radius:8px;z-index:20}
+  .save{position:sticky;bottom:0;background:var(--bg);padding:10px 0;display:flex;gap:8px;justify-content:flex-end;align-items:center}
+  @media(max-width:640px){th.g,td.g{display:none}td input{padding:6px 4px}}
+</style>
+</head>
+<body>
+<header><b>Chata · Menu bán hàng</b><span class="sp"></span><span id="who"></span><button class="ghost" id="outBtn" hidden>Đăng xuất</button></header>
+<main>
+  <div class="card login" id="loginView">
+    <h3 style="margin-top:0">Đăng nhập quản lý</h3>
+    <p class="hint">Dùng mã + PIN quản lý của Web vận hành. Menu sửa ở đây áp dụng ngay cho app thu ngân và trang gọi món QR.</p>
+    <input id="lcode" placeholder="Mã quản lý (nếu có)" autocomplete="off">
+    <input id="lpin" type="password" placeholder="PIN quản lý" inputmode="numeric">
+    <div class="err" id="lerr" hidden></div>
+    <button class="ok" id="lbtn" style="width:100%;padding:11px">Đăng nhập</button>
+  </div>
+  <div id="appView" hidden>
+    <div class="tabs" id="tabs"><button data-k="normal" class="on">Menu thường</button><button data-k="night">Menu đêm nhạc</button></div>
+    <div class="bar"><input id="q" placeholder="Tìm món…"><button id="addBtn">＋ Thêm món</button><span class="hint" id="cnt"></span></div>
+    <table><thead><tr><th class="g">Nhóm</th><th>Món</th><th class="p" style="text-align:right">Giá (đ)</th><th>Bán</th><th></th></tr></thead><tbody id="rows"></tbody></table>
+    <p class="hint">Món tắt "Bán" sẽ ẩn khỏi app thu ngân và trang gọi món. Đổi tên nhóm để chuyển món sang nhóm khác (nhóm quyết định in tem ly hay phiếu bếp trong cài đặt máy in).</p>
+    <div class="save"><span class="hint" id="dirtyTxt"></span><button id="undoBtn">Hoàn tác</button><button class="ok" id="saveBtn">Lưu menu</button></div>
+  </div>
+</main>
+<div class="toast" id="toast" hidden></div>
+<script src="chata-api.js"></script>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var K = 'normal', DATA = null, EDIT = { normal: null, night: null };
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function money(v){ return (Number(v)||0).toLocaleString('vi-VN'); }
+  function toast(m){ var t = $('toast'); t.textContent = m; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(function(){ t.hidden = true; }, 2600); }
+  function call(fn, a){ return ChataAPI.call(fn, a || []); }
+  function clone(a){ return JSON.parse(JSON.stringify(a || [])); }
+  function dirty(k){ return DATA && JSON.stringify(EDIT[k]) !== JSON.stringify(DATA[k]); }
+
+  function start(){
+    call('getMenuAdmin').then(function(d){
+      if (d.me.role !== 'manager') throw new Error('Sai mã thu ngân');
+      DATA = d; EDIT.normal = clone(d.normal); EDIT.night = clone(d.night);
+      $('loginView').hidden = true; $('appView').hidden = false; $('outBtn').hidden = false; $('who').textContent = d.me.name; draw();
+    }).catch(function(){ $('loginView').hidden = false; $('appView').hidden = true; $('outBtn').hidden = true; $('who').textContent = ''; });
+  }
+  function draw(){
+    var list = EDIT[K], q = $('q').value.trim().toLowerCase(), last = null, html = '';
+    list.forEach(function(m, i){
+      if (q && (m.n + ' ' + m.g).toLowerCase().indexOf(q) < 0) return;
+      if (m.g !== last) { html += '<tr><td colspan="5" class="grp">' + esc(m.g || 'Khác') + '</td></tr>'; last = m.g; }
+      var orig = (DATA[K] || [])[i], ch = !orig || JSON.stringify(orig) !== JSON.stringify(m);
+      html += '<tr data-i="' + i + '" class="' + (m.on === false ? 'off ' : '') + (ch ? 'dirty' : '') + '">' +
+        '<td class="g"><input data-f="g" value="' + esc(m.g) + '" list="grps"></td>' +
+        '<td><input data-f="n" value="' + esc(m.n) + '" placeholder="Tên món"></td>' +
+        '<td class="p"><input data-f="p" value="' + (m.p ? money(m.p) : '') + '" inputmode="numeric" placeholder="0"></td>' +
+        '<td><input type="checkbox" class="sw" data-f="on"' + (m.on !== false ? ' checked' : '') + '></td>' +
+        '<td><button class="x" data-del="' + i + '" title="Xóa món">✕</button></td></tr>';
+    });
+    $('rows').innerHTML = html || '<tr><td colspan="5" class="hint">Không có món.</td></tr>';
+    var gs = []; list.forEach(function(m){ if (m.g && gs.indexOf(m.g) < 0) gs.push(m.g); });
+    var dl = $('grps') || document.body.appendChild(Object.assign(document.createElement('datalist'), { id: 'grps' }));
+    dl.innerHTML = gs.map(function(g){ return '<option value="' + esc(g) + '">'; }).join('');
+    $('cnt').textContent = list.filter(function(m){ return m.on !== false; }).length + ' / ' + list.length + ' món đang bán';
+    var d = ['normal','night'].filter(dirty);
+    $('dirtyTxt').textContent = d.length ? 'Chưa lưu: ' + d.map(function(k){ return k === 'normal' ? 'Menu thường' : 'Menu đêm nhạc'; }).join(', ') : 'Đã lưu';
+    Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function(b){ b.classList.toggle('on', b.getAttribute('data-k') === K); b.textContent = (b.getAttribute('data-k') === 'normal' ? 'Menu thường' : 'Menu đêm nhạc') + (dirty(b.getAttribute('data-k')) ? ' •' : ''); });
+  }
+  $('rows').addEventListener('change', function(e){
+    var tr = e.target.closest('tr[data-i]'); if (!tr) return; var m = EDIT[K][+tr.getAttribute('data-i')], f = e.target.getAttribute('data-f');
+    if (f === 'on') m.on = e.target.checked;
+    else if (f === 'p') m.p = +String(e.target.value).replace(/\D/g, '') || 0;
+    else m[f] = e.target.value.trim();
+    if (f === 'g') { // gom món về đúng nhóm
+      var L = EDIT[K], order = []; L.forEach(function(x){ if (order.indexOf(x.g) < 0) order.push(x.g); });
+      EDIT[K] = L.map(function(x, i){ return { x: x, i: i }; }).sort(function(a, b){ return order.indexOf(a.x.g) - order.indexOf(b.x.g) || a.i - b.i; }).map(function(o){ return o.x; });
+      // DATA giữ nguyên thứ tự cũ để so sánh
+    }
+    draw();
+  });
+  $('rows').addEventListener('click', function(e){
+    var b = e.target.closest('[data-del]'); if (!b) return; var i = +b.getAttribute('data-del');
+    if (!confirm('Xóa món "' + EDIT[K][i].n + '" khỏi ' + (K === 'normal' ? 'menu thường' : 'menu đêm nhạc') + '?\n(Muốn tạm ngưng bán thì tắt nút Bán thay vì xóa.)')) return;
+    EDIT[K].splice(i, 1); draw();
+  });
+  $('addBtn').addEventListener('click', function(){
+    var g = prompt('Nhóm của món mới (VD: Cà phê, Đồ ăn…):', EDIT[K].length ? EDIT[K][EDIT[K].length - 1].g : ''); if (g === null) return;
+    var n = prompt('Tên món:'); if (!n) return;
+    var p = +String(prompt('Giá bán (đồng):', '') || '').replace(/\D/g, ''); if (!p) return toast('Chưa nhập giá.');
+    var L = EDIT[K], at = -1; L.forEach(function(x, i){ if (x.g === g.trim()) at = i; });
+    var m = { g: g.trim() || 'Khác', n: n.trim(), p: p, on: true };
+    if (at >= 0) L.splice(at + 1, 0, m); else L.push(m);
+    $('q').value = ''; draw(); toast('Đã thêm, bấm "Lưu menu" để áp dụng.');
+  });
+  $('q').addEventListener('input', draw);
+  $('tabs').addEventListener('click', function(e){ var b = e.target.closest('[data-k]'); if (!b) return; K = b.getAttribute('data-k'); draw(); });
+  $('undoBtn').addEventListener('click', function(){ if (!dirty(K)) return; if (!confirm('Bỏ các thay đổi chưa lưu của bảng này?')) return; EDIT[K] = clone(DATA[K]); draw(); });
+  $('saveBtn').addEventListener('click', function(){
+    var ks = ['normal','night'].filter(dirty); if (!ks.length) return toast('Không có thay đổi.');
+    var bad = []; ks.forEach(function(k){ EDIT[k].forEach(function(m){ if (!m.n || !(m.p > 0)) bad.push(m.n || '(chưa đặt tên)'); }); });
+    if (bad.length) return toast('Món thiếu tên hoặc giá: ' + bad.slice(0, 3).join(', '));
+    $('saveBtn').disabled = true;
+    Promise.all(ks.map(function(k){ return call('saveMenu', ['', k, EDIT[k]]); })).then(function(r){
+      $('saveBtn').disabled = false;
+      var f = r.filter(function(x){ return !x.ok; })[0]; if (f) return toast(f.msg || 'Không lưu được.');
+      ks.forEach(function(k){ DATA[k] = clone(EDIT[k]); }); draw(); toast('Đã lưu menu – máy quầy và trang gọi món cập nhật ngay.');
+    }, function(e){ $('saveBtn').disabled = false; toast('⚠️ ' + e.message); });
+  });
+  $('lbtn').addEventListener('click', function(){
+    $('lerr').hidden = true; $('lbtn').disabled = true;
+    call('posLogin', ['manager', $('lcode').value, $('lpin').value]).then(function(r){
+      $('lbtn').disabled = false; if (!r.ok) { $('lerr').textContent = r.msg; $('lerr').hidden = false; return; }
+      $('lpin').value = ''; start();
+    }, function(e){ $('lbtn').disabled = false; $('lerr').textContent = e.message; $('lerr').hidden = false; });
+  });
+  $('lpin').addEventListener('keydown', function(e){ if (e.key === 'Enter') $('lbtn').click(); });
+  $('outBtn').addEventListener('click', function(){ call('posLogout').then(start); });
+  window.addEventListener('beforeunload', function(e){ if (['normal','night'].some(dirty)) { e.preventDefault(); e.returnValue = ''; } });
+  start();
+})();
+</script>
+</body>
+</html>
