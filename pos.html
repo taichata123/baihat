@@ -134,6 +134,14 @@
   .given{margin-top:12px}
   .given input{width:100%;font-size:22px;padding:10px;border:1px solid var(--line);border-radius:8px;text-align:right}
   .quick{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .tarea h4{margin:12px 0 6px;font-size:14px;color:var(--muted)}
+  .tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+  .tb{border:2px solid var(--line);background:#F4F6F9;border-radius:8px;padding:10px 4px 8px;font-size:21px;font-weight:800;text-align:center;cursor:pointer;color:var(--ink)}
+  .tb small{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tb:hover{border-color:#13C48A}
+  .tb.used{background:#FDECEC;border-color:#F2B8B5}.tb.used small{color:#B3261E}
+  .tb.cur{background:#E9FBF3;border-color:#13C48A}.tb.cur small{color:#0A8F5F}
+  #s_tables{width:100%;font:inherit;font-size:14px;padding:8px;border:1px solid var(--line);border-radius:6px;resize:vertical}
   .quick button{flex:1 1 22%;border:1px solid var(--line);background:#F4F6F9;border-radius:6px;padding:9px 4px;font-weight:600}
   .change{display:flex;justify-content:space-between;font-size:18px;margin-top:10px}
   .chk{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14.5px}
@@ -328,6 +336,11 @@
       <div class="grp" id="s_grp"></div>
     </div>
     <div class="set">
+      <h4>Sơ đồ bàn / thẻ rung <small style="font-weight:400;color:var(--muted)">(dùng chung mọi máy · nhân viên cần quản lý duyệt)</small></h4>
+      <textarea id="s_tables" rows="4" placeholder="Thẻ rung: 1-20&#10;Sân vườn: S1-S8, Võng 1, Võng 2"></textarea>
+      <div class="row" style="align-items:center"><span class="hint" style="flex:1;margin:0">Mỗi dòng một khu: <b>Tên khu: các bàn</b>, cách nhau dấu phẩy. <b>1-20</b> = từ 1 đến 20, <b>S1-S8</b> = S1 đến S8. Tên bàn chính là số thẻ rung in trên tem / hóa đơn.</span><button class="sbtn" type="button" id="s_tables_save">Lưu sơ đồ bàn</button></div>
+    </div>
+    <div class="set">
       <h4>Thông tin trên hóa đơn</h4>
       <div class="row">
         <label>Tên quán<input id="s_shop" maxlength="40"></label>
@@ -337,6 +350,17 @@
     </div>
     <p class="hint" id="appVer"></p>
     <div class="mbtns"><button type="button" class="ok" id="setClose">Lưu & đóng</button></div>
+  </div>
+</div>
+
+<!-- Chọn bàn khi lưu đơn -->
+<div class="mask" id="tblModal" hidden>
+  <div class="modal" style="width:min(900px,96vw)">
+    <h3 style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:0"><span>Lưu đơn · chọn bàn / thẻ rung</span>
+      <input id="tblFind" placeholder="Gõ số bàn + Enter" maxlength="10" style="width:170px;font-size:15px;padding:8px 10px;border:1px solid var(--line);border-radius:6px"></h3>
+    <p class="hint" id="tblInfo" style="margin:4px 0 0"></p>
+    <div id="tblAreas"></div>
+    <div class="mbtns"><button type="button" id="tblCancel">Quay lại (Esc)</button><button type="button" id="tblNone">Lưu, không gắn bàn</button></div>
   </div>
 </div>
 
@@ -645,7 +669,7 @@
       var qr = o.src !== 'Quầy';
       return '<div class="oc' + (qr ? ' qr' : '') + (Date.now() - o.created > 30 * 60000 ? ' late' : '') + '" data-open="' + o.id + '">' +
         '<div class="h"><span class="src">' + (qr ? 'QR' : 'Tại quầy') + '</span><span>⏱ ' + ago(o.created) + '</span></div>' +
-        '<div class="c">#' + esc(o.code) + '</div><div class="n">' + esc(o.name) + '</div>' +
+        '<div class="c">#' + esc(o.code) + (o.pager ? ' <small style="font-size:13px;color:#0A8F5F">· Bàn ' + esc(o.pager) + '</small>' : '') + '</div><div class="n">' + esc(o.name) + '</div>' +
         '<div class="it">' + o.items.map(function(i){ return i.q + '× ' + esc(i.n); }).join(', ') + '</div>' +
         '<div class="f"><span>' + o.items.reduce(function(s, i){ return s + i.q; }, 0) + ' món</span><b class="num">' + money(o.total) + 'đ</b></div>' +
         '<div class="a"><button type="button" data-open="' + o.id + '">Mở đơn</button><button type="button" data-pay="' + o.id + '">Thanh toán</button></div></div>';
@@ -801,6 +825,9 @@
   $('saveBtn').addEventListener('click', doSave);
   function doSave(){
     if (!O.items.length) return toast('Đơn chưa có món nào.');
+    openTables();
+  }
+  function saveNow(){
     busy(true, 'Đang lưu đơn…');
     save('').then(function(o){ busy(false); toast('Đã lưu đơn #' + (o ? o.code : '')); closeOrder(); },
       function(e){ busy(false); if (e.message !== 'empty') toast('⚠️ ' + e.message, 4000); });
@@ -870,6 +897,7 @@
     if (!PIN) return;
     if (!$('payModal').hidden) { if (e.key === 'Enter') { e.preventDefault(); doPay(); } if (e.key === 'Escape') $('payModal').hidden = true; return; }
     if (!$('noteModal').hidden) { if (e.key === 'Escape') $('noteModal').hidden = true; return; }
+    if (!$('tblModal').hidden) { if (e.key === 'Escape') { e.preventDefault(); $('tblModal').hidden = true; } return; }
     if (!$('setModal').hidden) return;
     if (!$('ordView').hidden) {
       if (e.key === 'F1') { e.preventDefault(); openPay(); }
@@ -897,6 +925,7 @@
     ['bill_on','bep_on','tem_on'].forEach(function(k){ $('s_' + k).checked = !!S[k]; });
     ['bill_w','bill_c','bep_w','bep_c','tem_s','tem_ink'].forEach(function(k){ $('s_' + k).value = S[k]; });
     $('s_shop').value = S.shop; $('s_addr').value = S.addr; $('s_foot').value = S.foot;
+    $('s_tables').value = tablesText(tablesOf());
     var gs = []; (D ? D.menu.concat(D.other || []) : []).forEach(function(m){ if (gs.indexOf(m.g) < 0) gs.push(m.g); });
     $('s_grp').innerHTML = gs.map(function(g){ var w = where(g);
       return '<label>' + esc(g) + '<select data-g="' + esc(g) + '"><option value="bar"' + (w === 'bar' ? ' selected' : '') + '>Tem ly (Bar)</option><option value="bep"' + (w === 'bep' ? ' selected' : '') + '>Phiếu bếp</option><option value="none"' + (w === 'none' ? ' selected' : '') + '>Không in</option></select></label>'; }).join('');
@@ -933,6 +962,83 @@
   function tick(){ var d = new Date(); $('clock').textContent = hhmm(d) + ' · ' + dmy(d); }
   setInterval(tick, 15000); tick();
   window.addEventListener('beforeunload', function(e){ if (dirty()) { e.preventDefault(); e.returnValue = ''; } });
+
+  /* ================= Sơ đồ bàn / thẻ rung ================= */
+  function tablesOf(){ return (D && D.tables && D.tables.length) ? D.tables : [{ a: 'Thẻ rung', t: ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20'] }]; }
+  function openTables(){
+    readHead();
+    var used = {};
+    (D && D.pending || []).forEach(function(o){ if (o.pager && o.id !== O.id) (used[o.pager] = used[o.pager] || []).push('#' + o.code); });
+    var cur = O.pager || '', known = false;
+    $('tblAreas').innerHTML = tablesOf().map(function(z){
+      return '<div class="tarea"><h4>' + esc(z.a) + '</h4><div class="tgrid">' + z.t.map(function(t){
+        var u = used[t], c = t === cur; if (c) known = true;
+        return '<button type="button" class="tb' + (u ? ' used' : '') + (c ? ' cur' : '') + '" data-tb="' + esc(t) + '">' + esc(t) +
+          '<small>' + (c ? 'đang chọn' : u ? u.join(', ') : 'trống') + '</small></button>';
+      }).join('') + '</div></div>';
+    }).join('');
+    $('tblInfo').textContent = 'Đơn ' + (O.code ? '#' + O.code : 'mới') + ' · ' + money(O.total) + 'đ' + (cur ? ' · đang gắn: ' + cur + (known ? '' : ' (không có trong sơ đồ)') + ' – Enter để giữ' : '') + '. Ô đỏ = bàn đang có đơn chờ.';
+    $('tblFind').value = ''; $('tblModal').hidden = false; setTimeout(function(){ $('tblFind').focus(); }, 30);
+  }
+  function pickTable(t){
+    t = String(t || '').trim();
+    var other = (D && D.pending || []).filter(function(o){ return t && o.pager === t && o.id !== O.id; });
+    if (other.length && !confirm('Bàn ' + t + ' đang có đơn ' + other.map(function(o){ return '#' + o.code; }).join(', ') + '. Vẫn gắn đơn này vào bàn ' + t + '?')) return;
+    O.pager = t; $('cPager').value = t; $('tblModal').hidden = true; saveNow();
+  }
+  $('tblAreas').addEventListener('click', function(e){ var b = e.target.closest('[data-tb]'); if (b) pickTable(b.getAttribute('data-tb')); });
+  $('tblNone').addEventListener('click', function(){ pickTable(''); });
+  $('tblCancel').addEventListener('click', function(){ $('tblModal').hidden = true; });
+  $('tblFind').addEventListener('keydown', function(e){
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); $('tblModal').hidden = true; return; }
+    if (e.key !== 'Enter') return;
+    e.preventDefault(); e.stopPropagation(); var v = this.value.trim();
+    if (!v) { if (O.pager) pickTable(O.pager); return; }
+    var all = []; tablesOf().forEach(function(z){ all = all.concat(z.t); });
+    var hit = all.find(function(t){ return t.toLowerCase() === v.toLowerCase(); });
+    if (hit) return pickTable(hit);
+    if (confirm('Không có bàn "' + v + '" trong sơ đồ. Vẫn gắn số này?')) pickTable(v);
+  });
+  $('tblFind').addEventListener('input', function(){
+    var v = this.value.trim().toLowerCase();
+    Array.prototype.forEach.call(document.querySelectorAll('#tblAreas .tb'), function(b){ b.style.outline = v && b.getAttribute('data-tb').toLowerCase() === v ? '3px solid #1E6FE8' : ''; });
+  });
+  // Soạn sơ đồ bằng chữ: "Tên khu: 1-20, S1-S8, Võng 1"
+  function tablesText(list){
+    return list.map(function(z){
+      var parts = [], i = 0, t = z.t;
+      while (i < t.length) {
+        var m = /^(\D*?)(\d+)$/.exec(t[i]), j = i;
+        if (m) { while (j + 1 < t.length) { var n = /^(\D*?)(\d+)$/.exec(t[j + 1]); if (n && n[1] === m[1] && +n[2] === +m[2] + (j + 1 - i) && String(+n[2]) === n[2]) j++; else break; } }
+        parts.push(j - i >= 2 ? t[i] + '-' + t[j] : t.slice(i, j + 1).join(', ')); i = j + 1;
+      }
+      return z.a + ': ' + parts.join(', ');
+    }).join('\n');
+  }
+  function parseTables(txt){
+    var out = [];
+    String(txt || '').split(/\n/).forEach(function(line, k){
+      line = line.trim(); if (!line) return;
+      var c = line.indexOf(':'), a = c >= 0 ? line.slice(0, c).trim() : 'Khu ' + (k + 1), rest = c >= 0 ? line.slice(c + 1) : line, t = [];
+      rest.split(',').forEach(function(x){
+        x = x.trim(); if (!x) return;
+        var r = /^(\D*?)(\d+)\s*-\s*(\D*?)(\d+)$/.exec(x);
+        if (r && (!r[3] || r[3] === r[1]) && +r[4] >= +r[2] && +r[4] - +r[2] < 150) { for (var n = +r[2]; n <= +r[4]; n++) t.push(r[1] + n); }
+        else t.push(x.slice(0, 10));
+      });
+      if (t.length) out.push({ a: a.slice(0, 24) || 'Khu', t: t });
+    });
+    return out;
+  }
+  $('s_tables_save').addEventListener('click', function(){
+    var t = parseTables($('s_tables').value);
+    if (!t.length) return toast('Sơ đồ bàn đang trống.');
+    var n = t.reduce(function(s, z){ return s + z.t.length; }, 0);
+    needAp('Đổi sơ đồ bàn (' + t.length + ' khu, ' + n + ' bàn)', function(ap){
+      return call('cashierSetting', [PIN, 'tables', JSON.stringify(t), ap]).then(function(r){
+        if (r && r.needApprove) return r; apply(r); $('s_tables').value = tablesText(tablesOf()); toast('Đã lưu sơ đồ bàn: ' + n + ' bàn'); return r; });
+    });
+  });
 
   /* ================= Ca thu ngân ================= */
   var openSkipped = false, afterOpen = null;
