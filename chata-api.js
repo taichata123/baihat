@@ -218,6 +218,18 @@
     }).filter(function (x) { return x.n && x.v > 0 && (x.t === 'đ' || x.v <= 100); });
   }
 
+  /* Sự kiện sắp diễn ra (Tài 19/11): hiện ở trang QR (đầu menu + phiếu chờ món). w = thứ (0 CN … 6 T7) lặp hằng tuần, hoặc d = ngày YYYY-MM-DD */
+  var EV_DEF = [{ n: 'Đêm nhạc Chata', w: 2, h: '19:30', s: 'Lên hát cùng ban nhạc, gửi bài hát, đặt bàn trước', u: 'index.html' }];
+  function cleanEvents(v) {
+    try { if (typeof v === 'string') v = JSON.parse(v); } catch (e) { return []; }
+    return (Array.isArray(v) ? v : []).slice(0, 10).map(function (x) {
+      x = x || {}; var e = { n: clean(x.n, 60), h: /^\d{1,2}:\d{2}$/.test(String(x.h || '')) ? String(x.h) : '', s: clean(x.s, 100), u: /^(https:\/\/|[\w-]+\.html)/.test(String(x.u || '')) ? clean(x.u, 200) : '' };
+      if (x.w !== undefined && x.w !== '' && +x.w >= 0 && +x.w <= 6) e.w = +x.w; else if (/^\d{4}-\d{2}-\d{2}$/.test(String(x.d || ''))) e.d = String(x.d); else return null;
+      return e.n ? e : null;
+    }).filter(Boolean);
+  }
+  function eventsCfg() { var c = cfg(); return c.events === undefined ? EV_DEF : cleanEvents(c.events); }
+
   /* ---------- số đơn trong ngày ---------- */
   function tempCode(date) {
     // mất mạng: số tạm theo giờ phút giây (Thhmmss, không trùng trong ngày), đồng bộ khi có mạng
@@ -238,7 +250,8 @@
       status: o.status, pay: o.pay || '', pager: o.pager || '', created: o.created || 0, paidAt: o.paidAt || 0, mode: o.mode || '',
       src: o.src || 'QR', cashier: o.cashier || '', by: o.createdBy || (log.length ? log[0].by : ''),
       gross: o.gross || o.total || 0, discAmt: o.discAmt || 0, disc: o.disc || null, togo: !!o.togo,
-      ack: o.ack && o.ack.at || 0, ackBy: o.ack && o.ack.by || '' };
+      ack: o.ack && o.ack.at || 0, ackBy: o.ack && o.ack.by || '',
+      ready: o.ready && o.ready.at || 0, readyBy: o.ready && o.ready.by || '', askPhone: o.askPhone || 0 };
   }
   function save(ref, data, merge) {
     var p = merge ? ref.set(data, { merge: true }) : ref.set(data);
@@ -333,6 +346,20 @@
     return { id: s.id, openAt: s.openAt, openCash: s.openCash, orders: t.orders, revenue: t.revenue, cash: t.cash, transfer: t.transfer,
       cancels: t.cancels, refunds: t.refunds, refundAmt: t.refundAmt, expect: s.openCash + t.cash };
   }
+  function cashierPatch(id, fn) {
+    return me().then(function (u) {
+      return posReady().then(function () {
+        var c = C.orders[id] || (C.pend || {})[id] || (C.paid || {})[id] || C.keep[id];
+        var get = c ? Promise.resolve(JSON.parse(JSON.stringify(c))) : db.doc('posOrders/' + id).get().then(function (s) { return s.exists ? Object.assign({ id: s.id }, s.data()) : null; });
+        return get.then(function (o) {
+          if (!o) return { ok: false, msg: 'Không tìm thấy đơn.' };
+          var r = fn(o, u); if (typeof r === 'string') return { ok: false, msg: r };
+          if (r !== true) { delete o.id; C.keep[id] = Object.assign({ id: id }, o); if (C.orders[id]) C.orders[id] = C.keep[id]; if (C.paid && C.paid[id]) C.paid[id] = C.keep[id]; save(db.doc('posOrders/' + id), o); }
+          return { ok: true, order: pub(Object.assign({ id: id }, o)), data: cashierData(u) };
+        });
+      });
+    });
+  }
   function cashierData(u) {
     // Đơn tại quầy chưa thu: luôn hiện (không tự mất). Đơn QR khách gửi mà không ra quầy: ẩn sau 12 giờ.
     var mode = orderMode(), d = today(), qrSince = Date.now() - 12 * 3600000, all = allOrders();
@@ -344,7 +371,9 @@
       me: { code: u.c, name: u.n, role: u.r }, shift: shiftLive(u), revPending: u.r === 'manager' ? Object.keys(C.rev || {}).filter(function (k) { return C.rev[k].status === 'Chờ duyệt'; }).length : 0,
       mode: mode, modeSetting: modeSetting(), open: orderOpen(), tables: cleanTables(cfg().tables), promos: cleanPromos(cfg().promos),
       menu: menuFor(mode), night: mode === 'night' ? null : menuFor('night'), other: menuFor(mode === 'night' ? 'normal' : 'night'),
-      pending: pending,
+      pending: pending, events: eventsCfg(),
+      /* đơn QR đã thu tiền nhưng chưa báo món xong (3 giờ gần đây) – để thu ngân bấm "Món xong" */
+      waiting: paid.filter(function (o) { return o.src !== 'Quầy' && !(o.ready && o.ready.at) && Date.now() - (o.paidAt || 0) < 3 * 3600000; }).sort(function (a, b) { return a.paidAt - b.paidAt; }).map(pub),
       paid: paid.sort(function (a, b) { return b.paidAt - a.paidAt; }).slice(0, 40).map(pub),
       stats: { paid: paid.length, revenue: sum(paid), cash: sum(paid.filter(function (o) { return o.pay === 'Tiền mặt'; })),
         transfer: sum(paid.filter(function (o) { return o.pay === 'Chuyển khoản'; })) }
@@ -374,7 +403,7 @@
 
   var API = {
     /* ===== Khách gọi món QR ===== */
-    getOrderMenu: function () { return wantCfg().then(function () { var mode = orderMode(); return { mode: mode, open: orderOpen(), menu: menuFor(mode).filter(function (m) { return !m.nq; }) }; }); },
+    getOrderMenu: function () { return wantCfg().then(function () { var mode = orderMode(); return { mode: mode, open: orderOpen(), events: eventsCfg(), menu: menuFor(mode).filter(function (m) { return !m.nq; }) }; }); },
     submitOrder: function (d) {
       d = d || {};
       return wantCfg().then(function () {
@@ -395,8 +424,22 @@
     getMyOrder: function (id, token) {
       return ready.then(function () { return db.doc('posOrders/' + String(id)).get(); }).then(function (s) {
         if (!s.exists || s.data().token !== token) return { ok: false };
-        return { ok: true, order: pub(Object.assign({ id: s.id }, s.data())) };
+        var out = { ok: true, order: pub(Object.assign({ id: s.id }, s.data())) };
+        return wantCfg().then(function () { out.events = eventsCfg(); return out; }, function () { return out; });
       }, function () { return { ok: false }; });
+    },
+    /* Khách bổ sung SĐT khi quầy yêu cầu (Tài 19/11): chỉ ghi được trường phone của đơn mình (quy tắc Firestore) */
+    setMyPhone: function (id, token, phone) {
+      var ph = phoneOf(phone);
+      if (!ph) return Promise.resolve({ ok: false, msg: 'Số điện thoại chưa đúng, bạn kiểm tra lại giúp Chata nhé.' });
+      return ready.then(function () {
+        var ref = db.doc('posOrders/' + String(id));
+        return ref.get().then(function (s) {
+          if (!s.exists || s.data().token !== token) return { ok: false, msg: 'Không tìm thấy đơn.' };
+          if (s.data().status === 'Đã hủy') return { ok: false, msg: 'Đơn này đã hủy.' };
+          return ref.update({ phone: ph }).then(function () { return { ok: true }; });
+        });
+      }).catch(function () { return { ok: false, msg: 'Chưa gửi được, bạn đọc số điện thoại cho thu ngân giúp Chata nhé.' }; });
     },
     cancelMyOrder: function (id, token) {
       return ready.then(function () {
@@ -548,7 +591,7 @@
     },
     /* Gộp đơn (Tài yêu cầu 19/11): chuyển hết món của đơn chờ srcId vào đơn chờ id; đơn srcId chuyển "Đã hủy" ghi "gộp vào #mã" */
     /* Xác nhận đơn QR (19/11/2026): thu ngân mở đơn, kiểm tra rồi bấm Xác nhận → trang của khách hiện "Quầy đã nhận đơn" */
-    cashierAck: function (tok, id, pager) {
+    cashierAck: function (tok, id, pager, askPhone) {
       return me().then(function (u) {
         return posReady().then(function () {
           var c = C.orders[id] || (C.pend || {})[id] || C.keep[id];
@@ -558,12 +601,32 @@
             if (o.status !== 'Chờ thanh toán') return { ok: false, msg: 'Đơn này không còn chờ thanh toán.' };
             if (o.ack && o.ack.at) return { ok: true, order: pub(o), data: cashierData(u) };
             /* thẻ rung thu ngân sửa trên đầu đơn trước khi xác nhận */
-            delete o.id; o.ack = { at: Date.now(), by: u.n }; if (pager != null) o.pager = clean(pager, 10); act(o, u, 'xn', o.pager ? 'thẻ ' + o.pager : '');
+            delete o.id; o.ack = { at: Date.now(), by: u.n }; if (pager != null) o.pager = clean(pager, 10);
+            if (askPhone && !o.pager && !o.phone) o.askPhone = Date.now();
+            act(o, u, 'xn', o.pager ? 'thẻ ' + o.pager : o.askPhone ? 'xin SĐT khách' : '');
             C.orders[id] = C.keep[id] = Object.assign({ id: id }, o);
             save(db.doc('posOrders/' + id), o);
             return { ok: true, order: pub(C.orders[id]), data: cashierData(u) };
           });
         });
+      });
+    },
+    /* Báo món xong cho đơn QR (Tài 19/11): trang của khách kêu + rung, báo 1 lần. Dùng được khi đơn chờ thanh toán (thẻ rung) hoặc đã thanh toán */
+    cashierReady: function (tok, id) {
+      return cashierPatch(id, function (o, u) {
+        if (o.status === 'Đã hủy') return 'Đơn này đã hủy.';
+        if (o.ready && o.ready.at) return true;
+        o.ready = { at: Date.now(), by: u.n }; act(o, u, 'mx');
+      });
+    },
+    /* Cập nhật thẻ rung / SĐT sau khi đã xác nhận hoặc đã thu tiền */
+    cashierContact: function (tok, id, pager, phone) {
+      return cashierPatch(id, function (o, u) {
+        if (o.status === 'Đã hủy') return 'Đơn này đã hủy.';
+        var ph = phone == null ? (o.phone || '') : phoneOf(phone); if (ph === null) return 'Số điện thoại chưa đúng.';
+        var pg = pager == null ? (o.pager || '') : clean(pager, 10);
+        if (pg === (o.pager || '') && ph === (o.phone || '')) return true;
+        o.pager = pg; o.phone = ph; act(o, u, 'lh', [pg ? 'thẻ ' + pg : '', ph].filter(Boolean).join(' · '));
       });
     },
     cashierMerge: function (tok, id, srcId) {
@@ -607,8 +670,10 @@
           if (key === 'open') up.qrOpen = !!val;
           if (key === 'tables') up.tables = cleanTables(val);
           if (key === 'promos') up.promos = cleanPromos(val);
+          if (key === 'events') up.events = cleanEvents(val);
           up.updatedBy = ok.by; up.updatedAt = Date.now();
           var desc = key === 'mode' ? 'Menu: ' + val : key === 'open' ? (val ? 'Bật' : 'Tắt') + ' nhận đơn QR' : key === 'tables' ? 'Sơ đồ bàn: ' + (up.tables || []).map(function (z) { return z.a + ' (' + z.t.length + ')'; }).join(', ')
+            : key === 'events' ? 'Sự kiện: ' + (up.events || []).map(function (x) { return x.n; }).join(', ')
             : key === 'promos' ? 'Khuyến mãi: ' + (up.promos || []).map(function (x) { return x.n + ' ' + (x.t === '%' ? x.v + '%' : x.v + 'đ'); }).join(', ') : key;
           logReview(u, 'Đổi cài đặt', null, 0, '', desc);
           C.cfg = Object.assign({}, cfg(), up);

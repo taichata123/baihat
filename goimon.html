@@ -123,6 +123,16 @@
   .evb b{font-size:16px}
   .evb .evt span{font-size:12.5px;opacity:.88}
   .evb .evg{font-size:28px;flex:none;opacity:.8}
+  div.evb{cursor:default}
+  .evs{margin-top:16px;text-align:left}.evs h4{margin:0 0 8px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.evs .evb+.evb{margin-top:8px}
+  .rdy{margin-top:14px;background:#E8F7EE;border:2px solid #2E9E5B;color:#1D5E36;border-radius:14px;padding:14px;font-size:17px;font-weight:800;line-height:1.4;animation:rdyp 1s ease-in-out 6}
+  .rdy small{display:block;font-weight:600;font-size:14px;margin-top:4px}
+  @keyframes rdyp{50%{transform:scale(1.03);box-shadow:0 0 0 6px rgba(46,158,91,.18)}}
+  .snd{margin-top:10px;width:100%;padding:11px;border:1.5px dashed var(--accent);border-radius:12px;background:var(--accent-soft);color:var(--accent-d);font-weight:700;font-size:14.5px;cursor:pointer}
+  .keep{margin-top:8px;font-size:13px;color:var(--muted)}
+  .askp{margin-top:14px;text-align:left;background:#FFF8E6;border:1.5px solid #F2B544;border-radius:12px;padding:12px}
+  .askp b{display:block;margin-bottom:8px;font-size:15px}
+  .askp .r{display:flex;gap:8px}.askp input{flex:1}.askp button{border:none;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;padding:0 16px;font-size:15px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -134,9 +144,7 @@
 
 <div id="menuView">
   <!-- Banner sự kiện (Tài 19/11): đêm nhạc thứ Ba -->
-  <div class="wrap" style="padding:10px 12px 0"><a class="evb" href="index.html">
-    <span class="evi">🎶</span><span class="evt"><small>Sự kiện hằng tuần</small><b>Đêm nhạc Chata · Tối thứ Ba</b><span>Lên hát cùng ban nhạc, gửi bài hát, đặt bàn trước</span></span><span class="evg">›</span>
-  </a></div>
+  <div class="wrap" id="evTop" style="padding:10px 12px 0" hidden></div>
   <div class="cats" id="cats"></div>
   <div class="wrap" style="padding:0 12px"><div id="menu"><div class="empty">Đang tải menu…</div></div><div class="pad"></div></div>
   <div class="bar"><button id="cartBtn" type="button" disabled><span><span class="ct" id="cartN">0</span><span id="cartCnt">Chưa chọn món</span></span><span id="cartTot">0đ</span></button></div>
@@ -152,10 +160,15 @@
     <div class="code" id="tCode">#000</div>
     <div class="who" id="tName"></div>
     <div class="st" id="tSt">Chờ thanh toán</div>
+    <div class="rdy" id="tReady" hidden>🔔 Món của bạn đã xong!<small id="tReadyS">Mời bạn ra quầy nhận món nhé.</small></div>
+    <div class="askp" id="tAsk" hidden><b>📱 Bạn cho Chata xin số điện thoại để báo khi món xong nhé</b><div class="r"><input id="tAskIn" type="tel" inputmode="tel" maxlength="15" autocomplete="tel" placeholder="VD: 0912 345 678"><button type="button" id="tAskOk">Gửi</button></div><div class="keep" id="tAskMsg" hidden></div></div>
     <div class="mixn" id="tMix" hidden>⚠️ Quý khách lưu ý: chỉ trả thẻ rung khi nhận đủ món. Xin cảm ơn!</div>
     <div class="guide" id="tGuide">👉 Ra <b>quầy thu ngân</b>, đọc <b>mã số</b> và <b>tên</b> ở trên. Thu ngân kiểm tra lại món với bạn rồi thanh toán.</div>
     <div class="lines" id="tLines"></div>
     <div class="tot"><span>Tổng tạm tính</span><b id="tTot">0đ</b></div>
+    <button class="snd" id="tSnd" type="button" hidden>🔔 Bật âm báo món xong</button>
+    <div class="keep" id="tKeep" hidden>Giữ trang này mở, máy sẽ kêu và rung khi món xong.</div>
+    <div class="evs" id="tEv" hidden></div>
     <button class="ghost bad" id="tCancel" type="button">Hủy đơn này</button>
     <button class="ghost" id="tNew" type="button" hidden>Gọi đơn mới</button>
   </div>
@@ -250,12 +263,29 @@
     GROUPS.sort(function(a, b){ var x = ORDER.indexOf(a.g), y = ORDER.indexOf(b.g); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y); });
     GROUPS.forEach(function(G){ G.tiles.sort(function(a, b){ return b.r - a.r; }); });
   }
+  /* Sự kiện sắp diễn ra (cài trong app thu ngân → Cài đặt → Sự kiện) */
+  var WDN = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+  function evNext(e){
+    var now = new Date(), hm = (e.h || '00:00').split(':'), t;
+    if (e.d) { var p = e.d.split('-'); t = new Date(+p[0], +p[1] - 1, +p[2], +hm[0], +hm[1]); }
+    else { t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), +hm[0], +hm[1]); t.setDate(t.getDate() + (e.w - now.getDay() + 7) % 7); if (t.getTime() + 4 * 3600000 < now) t.setDate(t.getDate() + 7); }
+    if (t.getTime() + 4 * 3600000 < now || t - now > 14 * 86400000) return null;
+    var d0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()), dd = Math.round((new Date(t.getFullYear(), t.getMonth(), t.getDate()) - d0) / 86400000);
+    var day = dd === 0 ? (t.getHours() >= 17 ? 'Tối nay' : 'Hôm nay') : dd === 1 ? 'Ngày mai' : WDN[t.getDay()] + ' ' + t.getDate() + '/' + (t.getMonth() + 1);
+    return { at: t.getTime(), lbl: day + (e.h ? ' · ' + e.h.replace(':', 'h') : ''), soon: t <= now };
+  }
+  function evList(E){ return (E || []).map(function(e){ var x = evNext(e); return x ? Object.assign({}, e, x) : null; }).filter(Boolean).sort(function(a, b){ return a.at - b.at; }); }
+  function evHtml(e){
+    var tag = e.u ? 'a' : 'div', ic = /nhạc|nhac/i.test(e.n) ? '🎶' : /kid|trẻ|bé|thiếu nhi/i.test(e.n) ? '🧒' : /sinh nhật/i.test(e.n) ? '🎂' : '🎉';
+    return '<' + tag + ' class="evb"' + (e.u ? ' href="' + esc(e.u) + '"' : '') + '><span class="evi">' + ic + '</span><span class="evt"><small>' + (e.soon ? 'Đang diễn ra' : 'Sắp diễn ra') + ' · ' + esc(e.lbl) + '</small><b>' + esc(e.n) + '</b>' + (e.s ? '<span>' + esc(e.s) + '</span>' : '') + '</span>' + (e.u ? '<span class="evg">›</span>' : '') + '</' + tag + '>';
+  }
   function loadMenu(){
     show('menu');
     call('getOrderMenu').then(function(d){
       if (!d.open) { show('closed'); return; }
       MENU = d.menu || [];
       $('modeBadge').hidden = d.mode !== 'night';
+      var ev = evList(d.events); $('evTop').hidden = !ev.length; $('evTop').innerHTML = ev.length ? evHtml(ev[0]) : '';
       CART = CART.filter(function(c){ return MENU.some(function(m){ return m.n === c.n; }); }).map(function(c){ var m = MENU.filter(function(x){ return x.n === c.n; })[0]; c.p = m.p; return c; });
       build();
       $('cats').innerHTML = GROUPS.map(function(G, i){ return '<button type="button" class="chip' + (i ? '' : ' on') + '" data-g="' + i + '">' + (ICO[G.g] || '') + ' ' + esc(grpName(G.g)) + '</button>'; }).join('');
@@ -417,11 +447,58 @@
         : pend && o.pager ? '👉 Đơn đã gửi tới quầy, thu ngân sẽ xác nhận trong ít phút. Bạn giữ <b>thẻ rung số ' + esc(o.pager) + '</b>, thẻ rung thì ra quầy lấy món và thanh toán.'
         : pend ? '👉 Đơn đã gửi tới quầy, thu ngân sẽ xác nhận trong ít phút. Bạn có thể ra <b>quầy thu ngân</b> luôn, đọc <b>mã số</b> và <b>tên</b> ở trên để thanh toán.'
         : 'Đơn này đã hủy. Bạn có thể gọi đơn mới.';
-      $('tCancel').hidden = !pend; $('tNew').hidden = pend;
+      /* Báo món xong (Tài 19/11): thu ngân bấm "Món xong" → trang này kêu + rung, mỗi đơn 1 lần */
+      var live = pend || paid, rd = live && o.ready;
+      $('tReady').hidden = !rd;
+      if (rd) {
+        $('tSt').className = 'st ok'; $('tSt').textContent = '🔔 Món đã xong';
+        $('tReadyS').innerHTML = pend ? 'Mời bạn ra <b>quầy</b> nhận món và thanh toán' + (o.pager ? ' (thẻ rung số ' + esc(o.pager) + ')' : '') + ' nhé.' : 'Mời bạn ra <b>quầy</b> nhận món nhé' + (o.pager ? ', nhớ mang theo thẻ rung số ' + esc(o.pager) : '') + '.';
+        $('tGuide').hidden = true; rdNotify(o);
+      } else $('tGuide').hidden = false;
+      var askp = live && !rd && o.askPhone && !o.phone && !o.pager;
+      $('tAsk').hidden = !askp;
+      $('tKeep').hidden = !(live && !rd); sndBtn(live && !rd);
+      var ev = evList(r.events); $('tEv').hidden = !ev.length;
+      $('tEv').innerHTML = ev.length ? '<h4>' + (rd || !live ? 'Sự kiện sắp tới' : 'Trong lúc chờ món · Sự kiện sắp tới') + '</h4>' + ev.slice(0, 3).map(evHtml).join('') : '';
+      $('tCancel').hidden = !pend || !!rd; $('tNew').hidden = pend && !rd;
       clearTimeout(timer);
-      if (pend) timer = setTimeout(function(){ if (!document.hidden) loadTicket(); else timer = setTimeout(loadTicket, 15000); }, 12000);
+      if (live && !rd && Date.now() - o.created < 6 * 3600000) timer = setTimeout(function(){ if (!document.hidden) loadTicket(); else timer = setTimeout(loadTicket, 15000); }, pend ? 12000 : 8000);
     }).catch(function(){ clearTimeout(timer); timer = setTimeout(loadTicket, 15000); });
   }
+  /* Âm báo: điện thoại chỉ cho phát tiếng sau khi khách chạm vào trang → mở khóa âm thanh ở lần chạm đầu tiên */
+  var AC = null;
+  function actx(){ try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); } catch(e){} return AC; }
+  function bell(){
+    var c = actx(); if (!c) return; if (c.state === 'suspended') c.resume();
+    [0, .35, 1.1, 1.45].forEach(function(at, i){
+      var o = c.createOscillator(), g = c.createGain(), t = c.currentTime + at; o.type = 'sine'; o.frequency.value = i % 2 ? 1318.5 : 1568;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+      o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.95);
+    });
+  }
+  function sndBtn(want){ var c = AC; $('tSnd').hidden = !want || !!(c && c.state === 'running'); }
+  document.addEventListener('pointerdown', function(){ var c = actx(); if (c && c.state === 'suspended') c.resume().then(function(){ sndBtn(!$('tKeep').hidden); }); }, true);
+  $('tSnd').addEventListener('click', function(){ var c = actx(); if (!c) return; c.resume().then(function(){ bell(); $('tSnd').hidden = true; }); });
+  var flashT = null;
+  function rdNotify(o){
+    var k = 'chata_rd_' + o.id; try { if (localStorage.getItem(k)) return; localStorage.setItem(k, '1'); } catch(e){}
+    bell(); try { if (navigator.vibrate) navigator.vibrate([400, 200, 400, 200, 600]); } catch(e){}
+    var t0 = document.title, n = 0; clearInterval(flashT);
+    flashT = setInterval(function(){ document.title = n++ % 2 ? t0 : '🔔 Món đã xong!'; if (n > 40) { clearInterval(flashT); document.title = t0; } }, 1000);
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch(e){}
+  }
+  $('tAskOk').addEventListener('click', function(){
+    var s = getSaved(), v = $('tAskIn').value.trim(), dg = v.replace(/\D/g, ''), m = $('tAskMsg');
+    if (!s) return;
+    if (dg.length < 9 || dg.length > 12) { m.hidden = false; m.textContent = 'Số điện thoại chưa đúng, bạn kiểm tra lại nhé.'; return; }
+    $('tAskOk').disabled = true;
+    call('setMyPhone', [s.id, s.token, v]).then(function(r){
+      $('tAskOk').disabled = false;
+      if (!r.ok) { m.hidden = false; m.textContent = r.msg || 'Chưa gửi được, bạn thử lại nhé.'; return; }
+      try { var me = JSON.parse(localStorage.getItem('chata_me') || '{}'); me.p = v; localStorage.setItem('chata_me', JSON.stringify(me)); } catch(e){}
+      m.hidden = true; loadTicket();
+    }, function(){ $('tAskOk').disabled = false; m.hidden = false; m.textContent = 'Mạng chập chờn, bạn bấm gửi lại nhé.'; });
+  });
   $('tCancel').addEventListener('click', function(){
     var s = getSaved(); if (!s || !confirm('Hủy đơn này?')) return;
     call('cancelMyOrder', [s.id, s.token]).then(function(r){ if (!r.ok) alert(r.msg); loadTicket(); });

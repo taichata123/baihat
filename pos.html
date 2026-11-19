@@ -42,6 +42,15 @@
   .oc.qnew .h{background:#FFF3C4}
   @keyframes qblink{0%,100%{box-shadow:0 0 0 3px #F2B544}50%{box-shadow:0 0 0 6px rgba(242,181,68,.25)}}
   .ackbar{display:flex;align-items:center;gap:10px;background:#FFF3C4;border:1px solid #F2B544;color:#6B4A00;border-radius:6px;padding:7px 10px;margin:6px 0 2px;font-size:13.5px}
+  .ackbar{flex-wrap:wrap}.ackbar>span{flex:1 1 100%}.ackbar button{flex:1}
+  .ackbar #ackAsk{background:#fff;color:#0A6C55;border:1.5px solid #0A8F5F;margin-left:0}
+  .oc .tagw{display:inline-block;margin-top:4px;font-size:12px;font-weight:700;color:#A35200;background:#FFF0DA;border-radius:4px;padding:1px 6px}
+  .oc .tagw.ok{color:#0A6C55;background:#E3F5EC}
+  .oc .a button.rdy{color:#fff;background:#E67E22}
+  .oc .a button.rdy.done{background:#fff;color:#0A8F5F;cursor:default}
+  .whd{grid-column:1/-1;font-weight:700;color:var(--muted);margin:10px 2px 0;font-size:14px}
+  .sbtn.rdy{background:#E67E22;color:#fff;border-color:#E67E22}
+  #readyBtn{background:#E67E22;color:#fff;border:none;border-radius:6px;padding:6px 10px;font-weight:700;cursor:pointer;white-space:nowrap}
   .ackbar button{margin-left:auto;background:#0A8F5F;color:#fff;border:none;border-radius:6px;padding:7px 12px;font-weight:700;font-size:13.5px;cursor:pointer;white-space:nowrap}
   .oc.late{box-shadow:0 0 0 3px var(--red)}
   .oc .h{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;font-size:13px;color:var(--muted);background:#F4F6F9}
@@ -314,11 +323,12 @@
   <div class="cart">
     <div class="chead">
       <div class="ocode"><span id="oTitle">Đơn mới · Tại quầy</span><span id="oTime"></span></div>
-      <div class="ackbar" id="ackBar" hidden>🔔 Đơn QR chưa xác nhận – kiểm tra món rồi bấm xác nhận để báo khách<button type="button" id="ackBtn">✓ Xác nhận đơn (F4)</button></div>
+      <div class="ackbar" id="ackBar" hidden><span>🔔 Đơn QR chưa xác nhận – kiểm tra món rồi bấm xác nhận để báo khách</span><button type="button" id="ackAsk" title="Khách chưa có thẻ rung, chưa để lại SĐT: trang QR của khách hiện ô nhập SĐT">📱 Xác nhận + xin SĐT</button><button type="button" id="ackBtn">✓ Xác nhận đơn (F4)</button></div>
       <input class="nm" id="cName" placeholder="Tên khách (Khách lẻ)" maxlength="30">
       <input class="ph" id="cPhone" placeholder="SĐT" inputmode="tel" maxlength="15">
       <input class="pg" id="cPager" placeholder="Thẻ rung" maxlength="10">
       <button type="button" class="togo" id="togoBtn">🥡 Mang đi (F8)</button>
+      <button type="button" id="readyBtn" hidden title="Trang QR của khách kêu + rung báo món xong">🔔 Món xong</button>
       <button type="button" class="kebab" id="opsBtn" title="Thao tác đơn: in lại tem / phiếu bếp, đổi bàn, hủy đơn">⋮</button>
     </div>
     <div class="lines" id="lines"></div>
@@ -364,6 +374,18 @@
       <button type="button" id="payCancel">Quay lại</button>
       <button type="button" class="ok" id="payOk">Xác nhận thanh toán (Enter)</button>
     </div>
+  </div>
+</div>
+
+<!-- Cập nhật thẻ rung / SĐT cho đơn đã xác nhận hoặc đã thu (Tài 19/11) -->
+<div class="mask" id="ctModal" hidden>
+  <div class="modal" style="width:min(380px,94vw)">
+    <h3 id="ctTitle">Thẻ rung / SĐT</h3>
+    <label style="display:block;font-size:14px;color:var(--muted)">Số thẻ rung</label>
+    <input id="ctPager" maxlength="10" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:16px">
+    <label style="display:block;margin-top:10px;font-size:14px;color:var(--muted)">Số điện thoại</label>
+    <input id="ctPhone" maxlength="15" inputmode="tel" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:16px">
+    <div class="mbtns"><button type="button" id="ctCancel">Hủy</button><button type="button" class="ok" id="ctOk">Lưu (Enter)</button></div>
   </div>
 </div>
 
@@ -420,6 +442,11 @@
       <h4>Chương trình khuyến mãi <small style="font-weight:400;color:var(--muted)">(dùng chung mọi máy · nhân viên sửa thì ghi lại cho quản lý xem)</small></h4>
       <textarea id="s_promos" rows="3" placeholder="Khách quen: 10%&#10;Nhân viên: 20%&#10;Sinh nhật: 30000đ"></textarea>
       <div class="row" style="align-items:center"><span class="hint" style="flex:1;margin:0">Mỗi dòng một chương trình: <b>Tên: mức giảm</b> (VD 10% hoặc 20000đ). Thu ngân chọn nhanh khi giảm giá đơn, không cần quản lý duyệt. Tự nhập mức giảm khác thì nhân viên cần quản lý duyệt.</span><button class="sbtn" type="button" id="s_promos_save">Lưu khuyến mãi</button></div>
+    </div>
+    <div class="set">
+      <h4>Sự kiện sắp diễn ra <small style="font-weight:400;color:var(--muted)">(hiện trên trang gọi món QR · dùng chung mọi máy)</small></h4>
+      <textarea id="s_events" rows="3" style="width:100%;font:inherit;font-size:14px;padding:8px;border:1px solid var(--line);border-radius:6px;resize:vertical" placeholder="Đêm nhạc Chata | Thứ 3 | 19:30 | Lên hát cùng ban nhạc | index.html&#10;Kid Adventure | 29/11 | 09:00 | Bắt cá, chơi với thỏ"></textarea>
+      <div class="row" style="align-items:center"><span class="hint" style="flex:1;margin:0">Mỗi dòng một sự kiện: <b>Tên | Ngày | Giờ | Mô tả | Link</b>. Ngày ghi <b>Thứ 2 … Thứ 7, CN</b> (lặp hằng tuần) hoặc <b>29/11</b> (một lần, tự ẩn khi qua). Mô tả, link có thể bỏ trống.</span><button class="sbtn" type="button" id="s_events_save">Lưu sự kiện</button></div>
     </div>
     <div class="set">
       <h4>Lý do chọn nhanh <small style="font-weight:400;color:var(--muted)">(máy này · tối đa 9 dòng, nhân viên bấm phím số 1–9)</small></h4>
@@ -920,16 +947,59 @@
       return '<div class="oc' + (qr ? ' qr' : '') + (qr && !o.ack ? ' qnew' : '') + (Date.now() - o.created > 30 * 60000 ? ' late' : '') + '" data-open="' + o.id + '">' +
         '<div class="h"><span class="src">' + (qr ? (o.ack ? 'QR ✓' : 'QR · chưa xác nhận') + (o.pager ? ' · trả khi lấy món' : '') : 'Tại quầy') + (o.togo ? ' · 🥡 Mang đi' : '') + '</span><span>⏱ ' + ago(o.created) + '</span></div>' +
         '<div class="c">#' + esc(o.code) + (o.pager ? ' <small style="font-size:13px;color:#0A8F5F">· Bàn ' + esc(o.pager) + '</small>' : '') + '</div><div class="n">' + esc(o.name) + '</div>' +
+        (qr ? ctTag(o) : '') +
         '<div class="it">' + o.items.map(function(i){ return i.q + '× ' + esc(i.n); }).join(', ') + '</div>' +
         '<div class="f"><span>' + o.items.reduce(function(s, i){ return s + i.q; }, 0) + ' món</span><b class="num">' + money(o.total) + 'đ</b></div>' +
-        '<div class="a"><button type="button" data-open="' + o.id + '">Mở đơn</button><button type="button" data-pay="' + o.id + '">Thanh toán</button></div></div>';
+        '<div class="a"><button type="button" data-open="' + o.id + '">Mở đơn</button>' + (qr && o.ack ? rdyBtn(o) : '') + '<button type="button" data-pay="' + o.id + '">Thanh toán</button></div></div>';
     }).join('') : '<div class="empty">' + (TAB === 'qr' ? 'Chưa có đơn QR nào đang chờ.' : 'Chưa có đơn nào đang chờ. Bấm <b>＋ Tạo đơn mới</b> để bán hàng.') + '</div>';
+    /* đơn QR đã thu tiền, đang làm món: bấm "Món xong" để báo khách */
+    var W = D.waiting || [];
+    if (W.length) $('orders').innerHTML += '<div class="whd">Đơn QR đã thu · chờ báo món xong (' + W.length + ')</div>' + W.map(function(o){
+      return '<div class="oc qr" data-wid="' + o.id + '">' +
+        '<div class="h"><span class="src">QR · đã thu ' + esc(o.pay === 'Chuyển khoản' ? 'CK' : 'TM') + (o.togo ? ' · 🥡 Mang đi' : '') + '</span><span>⏱ ' + ago(o.paidAt) + '</span></div>' +
+        '<div class="c">#' + esc(o.code) + (o.pager ? ' <small style="font-size:13px;color:#0A8F5F">· Bàn ' + esc(o.pager) + '</small>' : '') + '</div><div class="n">' + esc(o.name) + '</div>' + ctTag(o) +
+        '<div class="it">' + o.items.map(function(i){ return i.q + '× ' + esc(i.n); }).join(', ') + '</div>' +
+        '<div class="a"><button type="button" data-ct="' + o.id + '">Thẻ / SĐT</button>' + rdyBtn(o) + '</div></div>';
+    }).join('');
   }
+  /* Liên lạc với khách QR (Tài 19/11): chưa có thẻ rung, chưa có SĐT → nhắc thu ngân */
+  function ctTag(o){
+    if (o.pager) return '';
+    if (o.phone) return '<div><span class="tagw ok">📞 ' + esc(o.phone) + '</span></div>';
+    return '<div><span class="tagw">' + (o.askPhone ? '📱 đã xin SĐT, chờ khách nhập' : '⚠ chưa có liên lạc') + '</span></div>';
+  }
+  function rdyBtn(o){ return o.ready ? '<button type="button" class="rdy done" data-rdone="1">✓ Đã báo ' + hhmm(o.ready) + '</button>' : '<button type="button" class="rdy" data-ready="' + o.id + '">🔔 Món xong</button>'; }
+  function findOrd(id){ return (D.pending || []).concat(D.waiting || [], D.paid || []).filter(function(x){ return x.id === id; })[0]; }
+  function doReady(id){
+    var o = findOrd(id); if (!o) return;
+    call('cashierReady', [PIN, id]).then(function(r){
+      if (!r.ok) return toast(r.msg, 4000);
+      apply(r.data); if (O && O.id === id) { O.ready = r.order.ready; $('readyBtn').hidden = true; }
+      toast('🔔 Đã báo món xong cho khách đơn #' + r.order.code + (r.order.pager ? '' : r.order.phone ? ' – nếu khách chưa ra, gọi ' + r.order.phone : ''), 5000);
+    }, function(e){ toast('⚠️ ' + e.message, 4000); });
+  }
+  var CT = null;
+  function openCt(id){
+    var o = findOrd(id); if (!o) return; CT = id;
+    $('ctTitle').textContent = 'Thẻ rung / SĐT · đơn #' + o.code; $('ctPager').value = o.pager || ''; $('ctPhone').value = o.phone || '';
+    $('ctModal').hidden = false; setTimeout(function(){ $('ctPager').focus(); }, 30);
+  }
+  function saveCt(){
+    var id = CT; if (!id) return;
+    call('cashierContact', [PIN, id, $('ctPager').value.trim(), $('ctPhone').value.trim()]).then(function(r){
+      if (!r.ok) return toast(r.msg, 4000);
+      $('ctModal').hidden = true; CT = null; apply(r.data); toast('Đã cập nhật đơn #' + r.order.code);
+    }, function(e){ toast('⚠️ ' + e.message, 4000); });
+  }
+  $('ctOk').addEventListener('click', saveCt);
+  $('ctCancel').addEventListener('click', function(){ $('ctModal').hidden = true; CT = null; });
+  $('readyBtn').addEventListener('click', function(){ if (O && O.id) doReady(O.id); });
   function drawPaid(){
     $('paidView').innerHTML = D.paid.length ? '<table><tr><th>Mã</th><th>Giờ</th><th>Khách</th><th>Món</th><th>Tiền</th><th>TT</th><th>Thu ngân</th><th>In lại</th></tr>' + D.paid.map(function(o){
-      return '<tr><td><b>#' + esc(o.code) + '</b><br><small>' + (o.src === 'Quầy' ? 'Quầy' : 'QR') + '</small></td><td>' + hhmm(o.paidAt) + '</td><td>' + esc(o.name) + (o.pager ? '<br><small>Thẻ ' + esc(o.pager) + '</small>' : '') + (o.togo ? '<br><small>🥡 Mang đi</small>' : '') + '</td>' +
+      return '<tr><td><b>#' + esc(o.code) + '</b><br><small>' + (o.src === 'Quầy' ? 'Quầy' : 'QR') + '</small></td><td>' + hhmm(o.paidAt) + '</td><td>' + esc(o.name) + (o.pager ? '<br><small>Thẻ ' + esc(o.pager) + '</small>' : '') + (o.phone ? '<br><small>📞 ' + esc(o.phone) + '</small>' : '') + (o.togo ? '<br><small>🥡 Mang đi</small>' : '') + '</td>' +
         '<td>' + o.items.map(function(i){ return i.q + '× ' + esc(i.n) + (i.t ? ' <i>(' + esc(i.t) + ')</i>' : ''); }).join('<br>') + '</td><td class="num"><b>' + money(o.total) + '</b></td><td>' + esc(o.pay) + '</td><td><small>' + esc(o.cashier || '') + '</small></td>' +
-        '<td><button class="sbtn" data-rp="bill" data-id="' + o.id + '">Hóa đơn</button><button class="sbtn" data-rp="bep" data-id="' + o.id + '">Bếp</button><button class="sbtn" data-rp="tem" data-id="' + o.id + '">Tem</button><br><button class="sbtn" data-fx="method" data-id="' + o.id + '">Đổi sang ' + (o.pay === 'Chuyển khoản' ? 'TM' : 'CK') + '</button><button class="sbtn" data-fx="refund" data-id="' + o.id + '" style="color:#C0392B">Hoàn/hủy</button></td></tr>';
+        '<td><button class="sbtn" data-rp="bill" data-id="' + o.id + '">Hóa đơn</button><button class="sbtn" data-rp="bep" data-id="' + o.id + '">Bếp</button><button class="sbtn" data-rp="tem" data-id="' + o.id + '">Tem</button><br><button class="sbtn" data-fx="method" data-id="' + o.id + '">Đổi sang ' + (o.pay === 'Chuyển khoản' ? 'TM' : 'CK') + '</button><button class="sbtn" data-fx="refund" data-id="' + o.id + '" style="color:#C0392B">Hoàn/hủy</button>' +
+        (o.src !== 'Quầy' ? '<br>' + (o.ready ? '<small style="color:#0A8F5F">✓ Đã báo món ' + hhmm(o.ready) + '</small>' : '<button class="sbtn rdy" data-ready="' + o.id + '">🔔 Món xong</button>') + '<button class="sbtn" data-ct="' + o.id + '">Thẻ/SĐT</button>' : '') + '</td></tr>';
     }).join('') + '</table>' : '<div class="empty">Chưa có đơn nào thanh toán hôm nay.</div>';
   }
   document.querySelector('.tabs').addEventListener('click', function(e){
@@ -939,12 +1009,18 @@
     drawHome();
   });
   $('orders').addEventListener('click', function(e){
+    var rd = e.target.closest('[data-ready]'); if (rd) { e.stopPropagation(); return doReady(rd.getAttribute('data-ready')); }
+    if (e.target.closest('[data-rdone]')) return;
+    var ct = e.target.closest('[data-ct]'); if (ct) return openCt(ct.getAttribute('data-ct'));
+    if (e.target.closest('[data-wid]')) return;
     var p = e.target.closest('[data-pay]'), o = e.target.closest('[data-open]');
     var id = p ? p.getAttribute('data-pay') : (o ? o.getAttribute('data-open') : null); if (!id) return;
     var ord = D.pending.find(function(x){ return x.id === id; }); if (!ord) return;
     openOrder(ord); if (p) openPay();
   });
   $('paidView').addEventListener('click', function(e){
+    var rd = e.target.closest('[data-ready]'); if (rd) return doReady(rd.getAttribute('data-ready'));
+    var ct = e.target.closest('[data-ct]'); if (ct) return openCt(ct.getAttribute('data-ct'));
     var f = e.target.closest('[data-fx]');
     if (f) { var po = D.paid.find(function(x){ return x.id === f.getAttribute('data-id'); }); if (po) fixPaid(po, f.getAttribute('data-fx')); return; }
     var b = e.target.closest('[data-rp]'); if (!b) return;
@@ -1205,7 +1281,8 @@
     $('search').value = ''; $('menuPick').value = 'cur'; $('menuPick').hidden = !(D && D.other && D.other.length);
     $('menuPick').options[1].textContent = D && D.mode === 'night' ? 'Menu thường' : 'Menu đêm nhạc';
     $('moreBtn').hidden = true; $('cancelBtn').hidden = true; $('opsBtn').hidden = !ord;
-    $('ackBar').hidden = !(ord && ord.src !== 'Quầy' && !ord.ack);
+    $('ackBar').hidden = !(ord && ord.src !== 'Quầy' && !ord.ack); ackAskShow();
+    $('readyBtn').hidden = !(ord && ord.src !== 'Quầy' && ord.ack && !ord.ready);
     $('ordView').hidden = false; drawCats(); drawCart(); O0 = snap();
     setTimeout(function(){ if ($('payModal').hidden) $('search').focus(); }, 30);
   }
@@ -1407,21 +1484,26 @@
   }
   $('payOk').addEventListener('click', doPay);
   /* Xác nhận đơn QR: báo cho khách biết quầy đã nhận đơn (trang gọi món của khách tự cập nhật) */
-  function doAck(){
+  /* chưa có thẻ rung và SĐT: cho chọn "Xác nhận + xin SĐT" → trang QR của khách hiện ô nhập SĐT (Tài 19/11) */
+  function ackAskShow(){ $('ackAsk').hidden = !!($('cPager').value.trim() || $('cPhone').value.trim()); }
+  $('cPager').addEventListener('input', ackAskShow); $('cPhone').addEventListener('input', ackAskShow);
+  function doAck(ask){
     if (!O || !O.id || O.src === 'Quầy' || $('ackBar').hidden) return;
     /* khách nhập số thẻ rung lúc gọi món: trùng thẻ đơn khác đang chờ thì cảnh báo, sửa rồi xác nhận lại */
     var pg = $('cPager').value.trim(), np = norm(pg).toUpperCase();
     var dup = pg && D && D.pending.filter(function(x){ return x.id !== O.id && x.pager && norm(x.pager).toUpperCase() === np; })[0];
     if (dup) { toast('⚠️ Thẻ ' + pg + ' đang dùng cho đơn #' + dup.code + ' (' + dup.name + '). Sửa số thẻ ở ô "Thẻ rung" rồi xác nhận lại.', 6000); $('cPager').focus(); $('cPager').select(); return; }
     var id = O.id; $('ackBtn').disabled = true;
-    call('cashierAck', [PIN, id, pg]).then(function(r){
+    ask = ask === true && !pg && !$('cPhone').value.trim();
+    call('cashierAck', [PIN, id, pg, ask]).then(function(r){
       $('ackBtn').disabled = false;
       if (!r.ok) return toast(r.msg, 4000);
-      if (O && O.id === id) { O.ack = r.order.ack; O.pager = r.order.pager; $('ackBar').hidden = true; }
-      apply(r.data); toast('✓ Đã xác nhận đơn #' + r.order.code + ' – khách đã thấy "Quầy đã nhận đơn"'); back();
+      if (O && O.id === id) { O.ack = r.order.ack; O.pager = r.order.pager; O.askPhone = r.order.askPhone; $('ackBar').hidden = true; $('readyBtn').hidden = !!r.order.ready; }
+      apply(r.data); toast('✓ Đã xác nhận đơn #' + r.order.code + (ask ? ' – trang của khách đang xin SĐT' : ' – khách đã thấy "Quầy đã nhận đơn"'), 4000); back();
     }, function(e){ $('ackBtn').disabled = false; toast('⚠️ ' + e.message, 4000); });
   }
-  $('ackBtn').addEventListener('click', doAck);
+  $('ackBtn').addEventListener('click', function(){ doAck(false); });
+  $('ackAsk').addEventListener('click', function(){ doAck(true); });
   $('s_qr_test').addEventListener('click', function(e){ e.preventDefault(); ting(true); });
 
   /* ===== Màn hình phụ cho khách (khach.html) – Tài duyệt 19/11/2026 =====
@@ -1608,6 +1690,7 @@
       if (/^[1-9]$/.test(e.key)) pickVar(+e.key - 1); else if (e.key === 'Enter') pickVar(0); else if (e.key === 'Escape') { $('varModal').hidden = true; VAR = null; back(); }
       return;
     }
+    if (!$('ctModal').hidden) { if (e.key === 'Escape') { e.preventDefault(); $('ctCancel').click(); } else if (e.key === 'Enter') { e.preventDefault(); saveCt(); } return; }
     if (!$('noteModal').hidden) { if (e.key === 'Escape') { $('noteModal').hidden = true; back(); } return; }
     if (!$('discModal').hidden) { if (e.key === 'Escape') { e.preventDefault(); $('discModal').hidden = true; back(); } else if (e.key === 'Enter') { e.preventDefault(); $('dOk').click(); } return; }
     if (!$('rfModal').hidden) { if (e.key === 'Escape') { e.preventDefault(); $('rfCancel').click(); } return; }
@@ -1620,7 +1703,7 @@
       else if (e.key === 'F6') { e.preventDefault(); openDisc(); }
       else if (e.key === 'F2') { e.preventDefault(); $('search').focus(); $('search').select(); }
       else if (e.key === 'F1') { e.preventDefault(); }
-      else if (e.key === 'F4') { e.preventDefault(); doAck(); }
+      else if (e.key === 'F4') { e.preventDefault(); doAck(false); }
       else if (e.key === 'F7') { e.preventDefault(); if (O && O.id) $('moreBtn').click(); else toast('Lưu đơn trước (F3) rồi mới báo bếp riêng.'); }
       else if (e.key === 'F8') { e.preventDefault(); $('togoBtn').click(); }
       else if (e.altKey && /^[1-9]$/.test(e.key)) { e.preventDefault(); goBand(+e.key - 1); back(); }
@@ -1665,6 +1748,7 @@
     $('s_qr_bank').value = S.qr_bank || '970426'; $('s_qr_acc').value = S.qr_acc || ''; $('s_qr_name').value = S.qr_name || '';
     $('s_shop').value = S.shop; $('s_addr').value = S.addr; $('s_foot').value = S.foot; $('s_lock_min').value = String(S.lock_min || '0'); $('s_qr_sound').checked = S.qr_sound !== false;
     $('s_tables').value = tablesText(tablesOf());
+    $('s_events').value = ((D && D.events) || []).map(function(x){ return [x.n, x.w !== undefined ? WD[x.w] : x.d.slice(8) + '/' + x.d.slice(5, 7), x.h || '', x.s || '', x.u || ''].join(' | ').replace(/( \| )+$/, ''); }).join('\n');
     $('s_promos').value = ((D && D.promos) || []).map(function(x){ return x.n + ': ' + (x.t === '%' ? x.v + '%' : x.v + 'đ'); }).join('\n');
     var gs = []; (D ? D.menu.concat(D.other || []) : []).forEach(function(m){ if (gs.indexOf(m.g) < 0) gs.push(m.g); });
     $('s_grp').innerHTML = gs.map(function(g){ var w = where(g);
@@ -1784,6 +1868,20 @@
     });
     return out;
   }
+  var WD = ['CN', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+  $('s_events_save').addEventListener('click', function(){
+    var bad = [], now = new Date(), E = $('s_events').value.split(/\n/).map(function(l){ return l.trim(); }).filter(Boolean).map(function(l){
+      var f = l.split('|').map(function(x){ return x.trim(); }), e = { n: f[0] || '', h: f[2] || '', s: f[3] || '', u: f[4] || '' };
+      var dd = norm(f[1] || '').toLowerCase().replace(/\s+/g, ''), m;
+      if (/^(cn|chunhat)$/.test(dd)) e.w = 0; else if ((m = dd.match(/^(?:thu|t)([2-7])$/))) e.w = +m[1] - 1;
+      else if ((m = dd.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?$/))) { var y = m[3] ? +m[3] : now.getFullYear(); if (!m[3] && new Date(y, +m[2] - 1, +m[1]) < new Date(now.getFullYear(), now.getMonth(), now.getDate())) y++; e.d = y + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2); }
+      if (e.h && !/^\d{1,2}[:h]\d{2}$/.test(e.h)) { bad.push(l); return null; } e.h = e.h.replace('h', ':');
+      if (!e.n || (e.w === undefined && !e.d)) { bad.push(l); return null; }
+      return e;
+    }).filter(Boolean);
+    if (bad.length) return toast('Dòng chưa đúng: ' + bad[0] + ' (VD: Đêm nhạc Chata | Thứ 3 | 19:30)', 5000);
+    call('cashierSetting', [PIN, 'events', JSON.stringify(E)]).then(function(r){ apply(r); toast('Đã lưu ' + E.length + ' sự kiện – trang QR cập nhật ngay'); }, function(e){ toast('⚠️ ' + e.message, 4000); });
+  });
   $('s_promos_save').addEventListener('click', function(){
     var bad = [], P = $('s_promos').value.split(/\n/).map(function(l){ return l.trim(); }).filter(Boolean).map(function(l){
       var c = l.lastIndexOf(':'), n = (c > 0 ? l.slice(0, c) : '').trim(), v = c > 0 ? l.slice(c + 1).trim().toLowerCase() : '';
