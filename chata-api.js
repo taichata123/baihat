@@ -237,7 +237,8 @@
     return { id: o.id, code: o.code, name: o.name, phone: o.phone || '', items: o.items || [], total: o.total || 0, note: o.note || '',
       status: o.status, pay: o.pay || '', pager: o.pager || '', created: o.created || 0, paidAt: o.paidAt || 0, mode: o.mode || '',
       src: o.src || 'QR', cashier: o.cashier || '', by: o.createdBy || (log.length ? log[0].by : ''),
-      gross: o.gross || o.total || 0, discAmt: o.discAmt || 0, disc: o.disc || null, togo: !!o.togo };
+      gross: o.gross || o.total || 0, discAmt: o.discAmt || 0, disc: o.disc || null, togo: !!o.togo,
+      ack: o.ack && o.ack.at || 0, ackBy: o.ack && o.ack.by || '' };
   }
   function save(ref, data, merge) {
     var p = merge ? ref.set(data, { merge: true }) : ref.set(data);
@@ -546,6 +547,24 @@
       });
     },
     /* Gộp đơn (Tài yêu cầu 19/11): chuyển hết món của đơn chờ srcId vào đơn chờ id; đơn srcId chuyển "Đã hủy" ghi "gộp vào #mã" */
+    /* Xác nhận đơn QR (19/11/2026): thu ngân mở đơn, kiểm tra rồi bấm Xác nhận → trang của khách hiện "Quầy đã nhận đơn" */
+    cashierAck: function (tok, id) {
+      return me().then(function (u) {
+        return posReady().then(function () {
+          var c = C.orders[id] || (C.pend || {})[id] || C.keep[id];
+          var get = c ? Promise.resolve(JSON.parse(JSON.stringify(c))) : db.doc('posOrders/' + id).get().then(function (s) { return s.exists ? Object.assign({ id: s.id }, s.data()) : null; });
+          return get.then(function (o) {
+            if (!o) return { ok: false, msg: 'Không tìm thấy đơn.' };
+            if (o.status !== 'Chờ thanh toán') return { ok: false, msg: 'Đơn này không còn chờ thanh toán.' };
+            if (o.ack && o.ack.at) return { ok: true, order: pub(o), data: cashierData(u) };
+            delete o.id; o.ack = { at: Date.now(), by: u.n }; act(o, u, 'xn');
+            C.orders[id] = C.keep[id] = Object.assign({ id: id }, o);
+            save(db.doc('posOrders/' + id), o);
+            return { ok: true, order: pub(C.orders[id]), data: cashierData(u) };
+          });
+        });
+      });
+    },
     cashierMerge: function (tok, id, srcId) {
       return me().then(function (u) {
         return posReady().then(function () {

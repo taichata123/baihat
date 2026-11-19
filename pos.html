@@ -38,6 +38,11 @@
   .orders{flex:1;overflow:auto;padding:10px;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;align-content:start}
   .oc{background:var(--card);border-radius:6px;overflow:hidden;display:flex;flex-direction:column;border-top:4px solid var(--blue);cursor:pointer}
   .oc.qr{border-top-color:var(--orange)}
+  .oc.qnew{animation:qblink 1.2s ease-in-out infinite}
+  .oc.qnew .h{background:#FFF3C4}
+  @keyframes qblink{0%,100%{box-shadow:0 0 0 3px #F2B544}50%{box-shadow:0 0 0 6px rgba(242,181,68,.25)}}
+  .ackbar{display:flex;align-items:center;gap:10px;background:#FFF3C4;border:1px solid #F2B544;color:#6B4A00;border-radius:6px;padding:7px 10px;margin:6px 0 2px;font-size:13.5px}
+  .ackbar button{margin-left:auto;background:#0A8F5F;color:#fff;border:none;border-radius:6px;padding:7px 12px;font-weight:700;font-size:13.5px;cursor:pointer;white-space:nowrap}
   .oc.late{box-shadow:0 0 0 3px var(--red)}
   .oc .h{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;font-size:13px;color:var(--muted);background:#F4F6F9}
   .oc .src{font-weight:700;font-size:12px;padding:2px 7px;border-radius:5px;background:#E3EEFC;color:var(--blue)}
@@ -309,6 +314,7 @@
   <div class="cart">
     <div class="chead">
       <div class="ocode"><span id="oTitle">Đơn mới · Tại quầy</span><span id="oTime"></span></div>
+      <div class="ackbar" id="ackBar" hidden>🔔 Đơn QR chưa xác nhận – kiểm tra món rồi bấm xác nhận để báo khách<button type="button" id="ackBtn">✓ Xác nhận đơn (F4)</button></div>
       <input class="nm" id="cName" placeholder="Tên khách (Khách lẻ)" maxlength="30">
       <input class="ph" id="cPhone" placeholder="SĐT" inputmode="tel" maxlength="15">
       <input class="pg" id="cPager" placeholder="Thẻ rung" maxlength="10">
@@ -439,6 +445,7 @@
         <label>Số tài khoản<input id="s_qr_acc" maxlength="20" inputmode="numeric"></label>
         <label>Tên chủ tài khoản<input id="s_qr_name" maxlength="50" placeholder="VIẾT HOA KHÔNG DẤU"></label>
         <label>Tự khóa máy khi để không<select id="s_lock_min"><option value="0">Không tự khóa</option><option value="5">Sau 5 phút</option><option value="10">Sau 10 phút</option><option value="15">Sau 15 phút</option><option value="30">Sau 30 phút</option></select></label>
+        <label class="chk" style="margin-top:22px"><input type="checkbox" id="s_qr_sound"> 🔔 Âm báo "ting ting" khi có đơn QR <button class="sbtn" type="button" id="s_qr_test" style="margin-left:6px">Nghe thử</button></label>
       </div>
     </div>
     <p class="hint" id="appVer"></p>
@@ -838,15 +845,37 @@
   $('apCancel').addEventListener('click', function(){ $('apModal').hidden = true; apCb = null; if (D) $('modeSel').value = D.modeSetting; });
 
   var seenQr = null;
-  function ting(){
-    try { var a = new (window.AudioContext || window.webkitAudioContext)(), o = a.createOscillator(), g = a.createGain();
-      o.connect(g); g.connect(a.destination); o.frequency.value = 880; g.gain.setValueAtTime(.25, a.currentTime); g.gain.exponentialRampToValueAtTime(.001, a.currentTime + .8); o.start(); o.stop(a.currentTime + .8); } catch(e){}
+  /* Âm báo "ting ting" khi có đơn QR mới (Tài chốt 19/11/2026): 2 tiếng chuông, nhắc lại mỗi 5 phút nếu đơn chưa xác nhận (tối đa 3 lần) */
+  var AC = null;
+  function actx(){ try { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch(e){} return AC; }
+  ['pointerdown', 'keydown'].forEach(function(ev){ document.addEventListener(ev, function(){ actx(); }, true); });
+  function bell(a, t0, f){
+    [[f, .5], [f * 2.76, .12], [f * 5.4, .05]].forEach(function(h){
+      var o = a.createOscillator(), g = a.createGain(); o.type = 'sine'; o.frequency.value = h[0];
+      o.connect(g); g.connect(a.destination); g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(h[1], t0 + .01); g.gain.exponentialRampToValueAtTime(.0001, t0 + 1.1);
+      o.start(t0); o.stop(t0 + 1.15);
+    });
   }
+  function ting(force){
+    if (!force && S.qr_sound === false) return;
+    var a = actx(); if (!a) return;
+    try { var t0 = a.currentTime + .05; bell(a, t0, 1318.5); bell(a, t0 + .32, 1046.5); } catch(e){}
+  }
+  var QRING = {};
+  setInterval(function(){
+    if (!D || !PIN) return;
+    D.pending.forEach(function(o){
+      if (o.src === 'Quầy' || o.ack) return;
+      var r = QRING[o.id] || (QRING[o.id] = { at: o.created || Date.now(), n: 0 });
+      if (r.n < 3 && Date.now() - r.at >= 300000) { r.at = Date.now(); r.n++; ting(); toast('🔔 Đơn QR #' + o.code + ' (' + o.name + ') chưa xác nhận', 6000); }
+    });
+  }, 20000);
   function apply(d){
     D = d;
     var qr = d.pending.filter(function(o){ return o.src !== 'Quầy'; });
     var ids = qr.map(function(o){ return o.id; });
-    if (seenQr && ids.some(function(id){ return seenQr.indexOf(id) < 0; })) { ting(); toast('🧾 Có đơn QR mới'); }
+    if (seenQr && ids.some(function(id){ return seenQr.indexOf(id) < 0; })) { ting(); toast('🧾 Có đơn QR mới', 5000); }
+    ids.forEach(function(id){ if (!QRING[id]) QRING[id] = { at: Date.now(), n: 0 }; });
     seenQr = ids;
     $('bAll').textContent = d.pending.length; $('bAll').classList.toggle('z', !d.pending.length);
     $('bQr').textContent = qr.length; $('bQr').classList.toggle('z', !qr.length);
@@ -876,8 +905,8 @@
     var list = D.pending.filter(function(o){ return TAB === 'all' || o.src !== 'Quầy'; });
     $('orders').innerHTML = list.length ? list.map(function(o){
       var qr = o.src !== 'Quầy';
-      return '<div class="oc' + (qr ? ' qr' : '') + (Date.now() - o.created > 30 * 60000 ? ' late' : '') + '" data-open="' + o.id + '">' +
-        '<div class="h"><span class="src">' + (qr ? 'QR' : 'Tại quầy') + (o.togo ? ' · 🥡 Mang đi' : '') + '</span><span>⏱ ' + ago(o.created) + '</span></div>' +
+      return '<div class="oc' + (qr ? ' qr' : '') + (qr && !o.ack ? ' qnew' : '') + (Date.now() - o.created > 30 * 60000 ? ' late' : '') + '" data-open="' + o.id + '">' +
+        '<div class="h"><span class="src">' + (qr ? (o.ack ? 'QR ✓' : 'QR · chưa xác nhận') : 'Tại quầy') + (o.togo ? ' · 🥡 Mang đi' : '') + '</span><span>⏱ ' + ago(o.created) + '</span></div>' +
         '<div class="c">#' + esc(o.code) + (o.pager ? ' <small style="font-size:13px;color:#0A8F5F">· Bàn ' + esc(o.pager) + '</small>' : '') + '</div><div class="n">' + esc(o.name) + '</div>' +
         '<div class="it">' + o.items.map(function(i){ return i.q + '× ' + esc(i.n); }).join(', ') + '</div>' +
         '<div class="f"><span>' + o.items.reduce(function(s, i){ return s + i.q; }, 0) + ' món</span><b class="num">' + money(o.total) + 'đ</b></div>' +
@@ -1164,6 +1193,7 @@
     $('search').value = ''; $('menuPick').value = 'cur'; $('menuPick').hidden = !(D && D.other && D.other.length);
     $('menuPick').options[1].textContent = D && D.mode === 'night' ? 'Menu thường' : 'Menu đêm nhạc';
     $('moreBtn').hidden = true; $('cancelBtn').hidden = true; $('opsBtn').hidden = !ord;
+    $('ackBar').hidden = !(ord && ord.src !== 'Quầy' && !ord.ack);
     $('ordView').hidden = false; drawCats(); drawCart(); O0 = snap();
     setTimeout(function(){ if ($('payModal').hidden) $('search').focus(); }, 30);
   }
@@ -1364,6 +1394,19 @@
     }, function(e){ paying = false; busy(false); if (e.message !== 'empty') { $('payErr').textContent = e.message; $('payErr').hidden = false; } });
   }
   $('payOk').addEventListener('click', doPay);
+  /* Xác nhận đơn QR: báo cho khách biết quầy đã nhận đơn (trang gọi món của khách tự cập nhật) */
+  function doAck(){
+    if (!O || !O.id || O.src === 'Quầy' || $('ackBar').hidden) return;
+    var id = O.id; $('ackBtn').disabled = true;
+    call('cashierAck', [PIN, id]).then(function(r){
+      $('ackBtn').disabled = false;
+      if (!r.ok) return toast(r.msg, 4000);
+      if (O && O.id === id) { O.ack = r.order.ack; $('ackBar').hidden = true; }
+      apply(r.data); toast('✓ Đã xác nhận đơn #' + r.order.code + ' – khách đã thấy "Quầy đã nhận đơn"'); back();
+    }, function(e){ $('ackBtn').disabled = false; toast('⚠️ ' + e.message, 4000); });
+  }
+  $('ackBtn').addEventListener('click', doAck);
+  $('s_qr_test').addEventListener('click', function(e){ e.preventDefault(); ting(true); });
 
   /* ===== Màn hình phụ cho khách (khach.html) – Tài duyệt 19/11/2026 =====
      App thu ngân gửi trạng thái đơn qua BroadcastChannel 'chata_khach' (+ localStorage để cửa sổ mới mở đọc được).
@@ -1561,6 +1604,7 @@
       else if (e.key === 'F6') { e.preventDefault(); openDisc(); }
       else if (e.key === 'F2') { e.preventDefault(); $('search').focus(); $('search').select(); }
       else if (e.key === 'F1') { e.preventDefault(); }
+      else if (e.key === 'F4') { e.preventDefault(); doAck(); }
       else if (e.key === 'F7') { e.preventDefault(); if (O && O.id) $('moreBtn').click(); else toast('Lưu đơn trước (F3) rồi mới báo bếp riêng.'); }
       else if (e.key === 'F8') { e.preventDefault(); $('togoBtn').click(); }
       else if (e.altKey && /^[1-9]$/.test(e.key)) { e.preventDefault(); goBand(+e.key - 1); back(); }
@@ -1603,7 +1647,7 @@
     ['bill_w','bill_c','bep_w','bep_c','tem_s','tem_ink'].forEach(function(k){ $('s_' + k).value = S[k]; });
     ['disc', 'cancel', 'refund'].forEach(function(k){ $('s_rs_' + k).value = S['rs_' + k] || ''; });
     $('s_qr_bank').value = S.qr_bank || '970426'; $('s_qr_acc').value = S.qr_acc || ''; $('s_qr_name').value = S.qr_name || '';
-    $('s_shop').value = S.shop; $('s_addr').value = S.addr; $('s_foot').value = S.foot; $('s_lock_min').value = String(S.lock_min || '0');
+    $('s_shop').value = S.shop; $('s_addr').value = S.addr; $('s_foot').value = S.foot; $('s_lock_min').value = String(S.lock_min || '0'); $('s_qr_sound').checked = S.qr_sound !== false;
     $('s_tables').value = tablesText(tablesOf());
     $('s_promos').value = ((D && D.promos) || []).map(function(x){ return x.n + ': ' + (x.t === '%' ? x.v + '%' : x.v + 'đ'); }).join('\n');
     var gs = []; (D ? D.menu.concat(D.other || []) : []).forEach(function(m){ if (gs.indexOf(m.g) < 0) gs.push(m.g); });
@@ -1618,7 +1662,7 @@
     ['bill_w','bill_c','bep_w','bep_c','tem_s','tem_ink','bill_p','bep_p','tem_p'].forEach(function(k){ S[k] = $('s_' + k).value; });
     ['disc', 'cancel', 'refund'].forEach(function(k){ var v = $('s_rs_' + k).value.split(/\n/).map(function(x){ return x.trim(); }).filter(Boolean).slice(0, 9).join('\n'); S['rs_' + k] = v || DEF['rs_' + k]; });
     S.qr_bank = $('s_qr_bank').value; S.qr_acc = $('s_qr_acc').value.replace(/\D/g, ''); S.qr_name = norm($('s_qr_name').value).toUpperCase().replace(/[^A-Z0-9 ]/g, '').trim();
-    S.shop = $('s_shop').value.trim() || DEF.shop; S.addr = $('s_addr').value.trim(); S.foot = $('s_foot').value.trim(); S.lock_min = $('s_lock_min').value;
+    S.shop = $('s_shop').value.trim() || DEF.shop; S.addr = $('s_addr').value.trim(); S.foot = $('s_foot').value.trim(); S.lock_min = $('s_lock_min').value; S.qr_sound = $('s_qr_sound').checked;
     Array.prototype.forEach.call(document.querySelectorAll('#s_grp select'), function(s){ S.groups[s.getAttribute('data-g')] = s.value; });
     saveS(); drawPrintState();
   }

@@ -383,10 +383,13 @@
         (o.note ? '<div><span style="color:var(--muted)">Ghi chú: ' + esc(o.note) + '</span></div>' : '');
       $('tTot').textContent = money(o.total);
       var pend = o.status === 'Chờ thanh toán', paid = o.status === 'Đã thanh toán';
-      $('tSt').className = 'st' + (paid ? ' ok' : pend ? '' : ' no');
-      $('tSt').textContent = paid ? '✓ Đã thanh toán' + (o.pager ? ' · thẻ rung số ' + o.pager : '') : o.status;
+      /* Thu ngân bấm "Xác nhận đơn" → khách thấy quầy đã nhận đơn (19/11/2026) */
+      var ack = pend && o.ack;
+      $('tSt').className = 'st' + (paid || ack ? ' ok' : pend ? '' : ' no');
+      $('tSt').textContent = paid ? '✓ Đã thanh toán' + (o.pager ? ' · thẻ rung số ' + o.pager : '') : ack ? '✓ Quầy đã nhận đơn' : pend ? '⏳ Chờ quầy xác nhận' : o.status;
       $('tGuide').innerHTML = paid ? '🎉 Cảm ơn bạn! Món đang được chuẩn bị' + (o.pager ? ', thẻ rung số <b>' + esc(o.pager) + '</b> rung là món xong nhé.' : '.')
-        : pend ? '👉 Ra <b>quầy thu ngân</b>, đọc <b>mã số</b> và <b>tên</b> ở trên. Thu ngân kiểm tra lại món với bạn rồi thanh toán.'
+        : ack ? '👍 Quầy đã nhận đơn của bạn. Mời bạn ra <b>quầy thu ngân</b>, đọc <b>mã số #' + esc(o.code) + '</b> để thanh toán.'
+        : pend ? '👉 Đơn đã gửi tới quầy, thu ngân sẽ xác nhận trong ít phút. Bạn có thể ra <b>quầy thu ngân</b> luôn, đọc <b>mã số</b> và <b>tên</b> ở trên để thanh toán.'
         : 'Đơn này đã hủy. Bạn có thể gọi đơn mới.';
       $('tCancel').hidden = !pend; $('tNew').hidden = pend;
       clearTimeout(timer);
