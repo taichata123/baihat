@@ -115,6 +115,13 @@
   .lines .ci div{border:0;padding:0;justify-content:flex-start}.lines .ci .tx,.lines .ci .tx div{display:block}.lines .ci .rt{display:block}.lines .ci .im{justify-content:center}.lines .ci .stp{gap:6px}
   .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:#1A2926;color:#fff;padding:9px 16px;border-radius:999px;font-size:14px;z-index:70;opacity:0;transition:opacity .2s;pointer-events:none;max-width:92vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .toast.on{opacity:.95}
+  .evb{display:flex;align-items:center;gap:12px;text-decoration:none;color:#fff;background:linear-gradient(135deg,#0A3B39,#0D6C68 65%,#14807A);border-radius:14px;padding:12px 14px;box-shadow:0 6px 18px rgba(13,108,104,.22)}
+  .evb .evi{font-size:28px;flex:none}
+  .evb .evt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
+  .evb small{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#F2B544;font-weight:700}
+  .evb b{font-size:16px}
+  .evb .evt span{font-size:12.5px;opacity:.88}
+  .evb .evg{font-size:28px;flex:none;opacity:.8}
 </style>
 </head>
 <body>
@@ -125,6 +132,10 @@
 </div></div>
 
 <div id="menuView">
+  <!-- Banner sự kiện (Tài 19/11): đêm nhạc thứ Ba -->
+  <div class="wrap" style="padding:10px 12px 0"><a class="evb" href="index.html">
+    <span class="evi">🎶</span><span class="evt"><small>Sự kiện hằng tuần</small><b>Đêm nhạc Chata · Tối thứ Ba</b><span>Lên hát cùng ban nhạc, gửi bài hát, đặt bàn trước</span></span><span class="evg">›</span>
+  </a></div>
   <div class="cats" id="cats"></div>
   <div class="wrap" style="padding:0 12px"><div id="menu"><div class="empty">Đang tải menu…</div></div><div class="pad"></div></div>
   <div class="bar"><button id="cartBtn" type="button" disabled><span><span class="ct" id="cartN">0</span><span id="cartCnt">Chưa chọn món</span></span><span id="cartTot">0đ</span></button></div>
