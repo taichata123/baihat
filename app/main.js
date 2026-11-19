@@ -1,5 +1,5 @@
 // Chata Thu ngân – vỏ app Windows: mở trang bán hàng và in thẳng ra máy in (không hộp thoại)
-const { app, BrowserWindow, ipcMain, shell, Menu, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Menu, globalShortcut, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -25,6 +25,11 @@ function offlinePage(err) {
   win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
 }
 
+function otherDisplay() {
+  try { const p = screen.getPrimaryDisplay(); return screen.getAllDisplays().filter((d) => d.id !== p.id)[0] || null; } catch (e) { return null; }
+}
+ipcMain.on('displays', (e) => { try { e.returnValue = screen.getAllDisplays().length; } catch (x) { e.returnValue = 1; } });
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1366, height: 768, show: false, title: 'Chata Thu ngân', backgroundColor: '#2B3F5C', autoHideMenuBar: true,
@@ -36,7 +41,30 @@ function createWindow() {
   win.loadURL(startUrl());
   win.webContents.once('did-finish-load', () => { try { fs.unlinkSync(path.join(__dirname, 'update.pending')); } catch (e) {} if (updateReady) win.webContents.send('update-ready', updateReady); });
   win.webContents.on('did-fail-load', (e, code, desc, url, isMain) => { if (isMain && code !== -3) offlinePage(desc + ' (' + code + ')'); });
-  win.webContents.setWindowOpenHandler(({ url }) => { if (/^https?:/.test(url)) shell.openExternal(url); return { action: 'deny' }; });
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    /* Màn hình khách (khach.html): mở trong app, toàn màn hình trên màn thứ hai nếu có (từ 1.2.0) */
+    if (/^https:\/\/taichata123\.github\.io\/baihat\/khach\.html(\?|#|$)/.test(url)) {
+      const ext = otherDisplay(), b = (ext || screen.getPrimaryDisplay()).workArea;
+      return { action: 'allow', overrideBrowserWindowOptions: {
+        x: b.x, y: b.y, width: ext ? b.width : Math.min(1280, b.width), height: ext ? b.height : Math.min(720, b.height),
+        fullscreen: !!ext, focusable: !ext, autoHideMenuBar: true, title: 'Chata – Màn hình khách', backgroundColor: '#0D2F2D',
+        icon: path.join(__dirname, 'chata.ico'),
+        webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: false } } };
+    }
+    if (/^https?:/.test(url)) shell.openExternal(url); return { action: 'deny' };
+  });
+  win.webContents.on('did-create-window', (child) => {
+    child.setMenu(null);
+    child.on('page-title-updated', (e) => { e.preventDefault(); });
+    child.webContents.on('before-input-event', (e, input) => {
+      if (input.type !== 'keyDown') return;
+      if (input.key === 'F11') { child.setFullScreen(!child.isFullScreen()); e.preventDefault(); }
+      if (input.key === 'F5') { child.webContents.reloadIgnoringCache(); e.preventDefault(); }
+    });
+    /* trả bàn phím về màn thu ngân */
+    setTimeout(() => { if (win && !win.isDestroyed()) win.focus(); }, 400);
+  });
+  win.on('closed', () => { for (const w of BrowserWindow.getAllWindows()) { try { w.destroy(); } catch (e) {} } });
   win.webContents.on('before-input-event', (e, input) => {
     if (input.type !== 'keyDown') return;
     if (input.key === 'F5') { win.webContents.reloadIgnoringCache(); e.preventDefault(); }
