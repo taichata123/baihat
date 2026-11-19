@@ -275,7 +275,8 @@
   }
   $('menu').addEventListener('click', function(e){
     var p = e.target.closest('[data-p]'), t;
-    if (p) { t = tileOf(p.getAttribute('data-p')); if (!t) return; if (kinds(t)) return openItem(t); return addCart(defItem(t), 1, ''); }
+    /* mì cay cần chọn cấp độ: bấm + cũng mở bảng chọn (Tài 19/11) */
+    if (p) { t = tileOf(p.getAttribute('data-p')); if (!t) return; if (kinds(t) || /^Mì cay/.test(t.b)) return openItem(t); return addCart(defItem(t), 1, ''); }
     var c = e.target.closest('[data-t]'); if (c && (t = tileOf(c.getAttribute('data-t')))) openItem(t);
   });
   $('cats').addEventListener('click', function(e){ var b = e.target.closest('[data-g]'); if (!b) return; var s = $('g' + b.getAttribute('data-g')); if (s) window.scrollTo({ top: s.getBoundingClientRect().top + window.scrollY - $('cats').offsetHeight + 2, behavior: 'smooth' }); });
