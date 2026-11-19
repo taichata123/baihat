@@ -379,7 +379,58 @@
         transfer: sum(paid.filter(function (o) { return o.pay === 'Chuyển khoản'; })) }
     };
   }
-  function posReady() { return Promise.all([wantCfg(), wantOrders(), wantShifts()]); }
+  function posReady() { khoBeat(); return Promise.all([wantCfg(), wantOrders(), wantShifts()]); }
+  /* ===== Trừ kho theo đơn app thu ngân (Tài chốt 19/11/2026: trừ ngay khi lưu đơn, Sapo đã ngưng) =====
+     Mỗi lần lưu/thu/hủy/hoàn/gộp: so số món đã trừ (o.kho = {vid: số}) với món hiện tại, ghi phần chênh vào sales/{id}
+     (rows [{vid, title, qty}], qty âm = trả lại kho). Cloud Function truKhoBanHang trừ theo định lượng recipes/{vid}, mỗi phiếu 1 lần.
+     Món menu đêm nhạc chưa có định lượng → lấy theo món thường tương ứng (Tài chốt). */
+  var NIGHT_ALIAS = { 'xúc xích chiên': 'Xúc xích Đức (3 cây)', 'cá viên chiên': 'Cá viên', 'bò viên chiên': 'Bò viên', 'tôm viên chiên': 'Tôm viên',
+    'hồ lô chiên': 'Hồ lô', 'trà đác thơm': 'Trà thơm hạt đác', 'trà sữa trân châu': 'Trà sữa truyền thống (M)' };
+  function khoItem(n, vid) {
+    var N = menuFor('normal'), lo = function (x) { return String(x || '').toLowerCase().trim(); }, k = lo(n);
+    var hit = N.filter(function (m) { return m.n === n; })[0];
+    if (hit) return { vid: hit.vid || vid, n: n };
+    if (NIGHT_ALIAS[k]) k = lo(NIGHT_ALIAS[k]);
+    var c = N.filter(function (m) { return lo(m.n) === k; });
+    if (!c.length) c = N.filter(function (m) { return lo(m.b) === k; });
+    if (!c.length) c = N.filter(function (m) { return lo(m.n).indexOf(k + ' (') === 0; });
+    var m = c.filter(function (x) { return /^(m|vừa)$/i.test(x.s || ''); })[0] || c[0];
+    return m && m.vid ? { vid: m.vid, n: m.n } : { vid: vid, n: n };
+  }
+  function khoWant(o) {
+    var w = {}, t = {};
+    if (o.status !== 'Đã hủy') (o.items || []).forEach(function (i) {
+      var k = khoItem(i.n, i.vid); if (!k.vid) return;
+      w[k.vid] = (w[k.vid] || 0) + (Number(i.q) || 0); t[k.vid] = k.n;
+    });
+    return { w: w, t: t };
+  }
+  function vidName(v) { var m = menuFor('normal').concat(menuFor('night')).filter(function (x) { return x.vid === v; })[0]; return m ? m.n : v; }
+  function khoSync(o, id, u) {
+    var W = khoWant(o), had = o.kho || {}, rows = [];
+    Object.keys(W.w).concat(Object.keys(had)).forEach(function (v) {
+      if (rows.some(function (r) { return r.vid === v; })) return;
+      var dq = (W.w[v] || 0) - (Number(had[v]) || 0); if (dq) rows.push({ vid: v, title: W.t[v] || vidName(v), qty: dq });
+    });
+    if (!rows.length) return;
+    var now = Date.now();
+    o.kho = W.w;
+    save(db.doc('sales/p-' + id + '-' + now), { date: ymdOf(now), from: now - 1, to: now, at: now, by: 'App thu ngân · ' + (u ? u.n : ''), src: 'pos',
+      orderId: id, code: o.code || '', rows: rows });
+  }
+  /* Mốc đồng bộ bán hàng: phiếu kiểm kho chờ "đồng bộ bán hàng" tới giờ kiểm → 30 phút ghi 1 phiếu rỗng nếu mốc cũ (khi app đang mở) */
+  var beatT = 0;
+  function khoBeat() {
+    if (beatT || !window.ChataAPI) return; beatT = setInterval(beat, 30 * 60000); setTimeout(beat, 20000);
+    function beat() {
+      var s = getSes(); if (!s || !s.me) return;
+      db.doc('config/salesSync').get().then(function (d) {
+        var to = d.exists ? Number(d.data().to) || 0 : 0, now = Date.now() - 60000;
+        if (now - to < 30 * 60000) return;
+        return db.doc('sales/p-beat-' + now).set({ date: ymdOf(now), from: to, to: now, at: Date.now(), by: 'App thu ngân (mốc)', src: 'pos', rows: [] });
+      }).catch(function () {});
+    }
+  }
   /* Tổng hợp ngày cho báo cáo bán hàng của Web vận hành (revenuePos/{ngày}, cùng dạng revenue của Sapo) */
   var dayT = {};
   function dayLater(d) { if (!d) return; clearTimeout(dayT[d]); dayT[d] = setTimeout(function () { rebuildDay(d); }, 1500); }
@@ -448,6 +499,7 @@
           return t.get(ref).then(function (s) {
             if (!s.exists || s.data().token !== token) return { ok: false, msg: 'Không tìm thấy đơn.' };
             if (s.data().status !== 'Chờ thanh toán') return { ok: false, msg: 'Đơn đã được thu ngân xử lý, bạn ra quầy nhé.' };
+            if (s.data().kho && Object.keys(s.data().kho).length) return { ok: false, msg: 'Quầy đã làm món cho đơn này, bạn ra quầy để đổi/hủy nhé.' };
             t.update(ref, { status: 'Đã hủy', log: (s.data().log || []).concat([{ a: 'huy', by: 'Khách tự hủy', at: Date.now() }]) });
             return { ok: true };
           });
@@ -523,6 +575,7 @@
             act(o, u, 'tao'); if (pay) act(o, u, 'thu', pay);
             if (c.temp) o.tempCode = true;
             var K = d.kitchen ? kitchenDelta(L.items, null) : null; if (K) { o.sent = K.sent; act(o, u, 'bep'); }
+            khoSync(o, id, u);
             C.orders[id] = Object.assign({ id: id }, o);
             save(db.collection('posOrders').doc(id), o);
             discReview(u, C.orders[id], A, L, null, clean(d.idr, 160));
@@ -576,6 +629,7 @@
               }
               if (d.kitchen) { K = kitchenDelta(L.items, o.sent); o.sent = K.sent; if (K.items.length) act(o, u, 'bep'); }
             }
+            if (action !== 'method') khoSync(o, id, u);
             C.orders[id] = C.keep[id] = Object.assign({ id: id }, o);
             save(db.doc('posOrders/' + id), o);
             if (rv) logReview(u, rv[0], C.orders[id], rv[1], rv[2], rv[3]);
@@ -652,6 +706,7 @@
             if (x.togo) o.togo = true;
             act(o, u, 'gop', '#' + x.code + (x.pager ? ' (thẻ ' + x.pager + ')' : '') + ' · ' + x.total);
             x.status = 'Đã hủy'; x.mergedInto = o.code; x.mergedId = id; act(x, u, 'gop', '→ #' + o.code);
+            khoSync(x, srcId, u); khoSync(o, id, u);
             C.orders[id] = C.keep[id] = Object.assign({ id: id }, o);
             C.orders[srcId] = C.keep[srcId] = Object.assign({ id: srcId }, x);
             save(db.doc('posOrders/' + id), o); save(db.doc('posOrders/' + srcId), x);
