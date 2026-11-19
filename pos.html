@@ -161,6 +161,9 @@
   .opsp button:hover{background:#EEF4FF}.opsp button i{font-style:normal;width:24px;height:24px;border-radius:12px;background:var(--blue);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
   .opsp button.red{color:#C0392B}.opsp button small{margin-left:auto;color:var(--muted)}
   .opsp .ft{padding:9px 14px;font-size:13px;color:var(--muted);background:#F7F9FC}.opsp .ft div{display:flex;justify-content:space-between;padding:2px 0}
+  #mgList button{display:flex;align-items:center;gap:10px;width:100%;margin:5px 0;padding:11px 12px;font-size:15.5px;text-align:left;border:1px solid var(--line);border-radius:6px;background:#F7F9FC;cursor:pointer}
+  #mgList button i{font-style:normal;min-width:30px;height:30px;padding:0 4px;border-radius:15px;background:var(--blue);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+  #mgList button b.num{margin-left:auto}#mgList button small{color:var(--muted)}
   #rpList label{display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid var(--line);font-size:15.5px;cursor:pointer}
   #rpList label i{font-style:normal;color:var(--muted);font-size:12.5px;width:18px}#rpList label span{flex:1}#rpList input[type=checkbox]{width:20px;height:20px}
   #rpList input[type=number]{width:56px;padding:5px;font-size:15px;border:1px solid var(--line);border-radius:5px;text-align:center}
@@ -465,8 +468,18 @@
     <button type="button" data-op="bep"><i>3</i>In lại phiếu bếp</button>
     <button type="button" data-op="check"><i>4</i>In phiếu kiểm đồ</button>
     <button type="button" data-op="table"><i>5</i>Thay đổi bàn / thẻ rung</button>
-    <button type="button" data-op="cancel" class="red"><i>6</i>Hủy đơn</button>
+    <button type="button" data-op="merge"><i>6</i>Gộp đơn khác vào đơn này</button>
+    <button type="button" data-op="cancel" class="red"><i>7</i>Hủy đơn</button>
     <div class="ft" id="opsFt"></div>
+  </div>
+</div>
+<div class="mask" id="mgModal" hidden>
+  <div class="modal" style="width:min(620px,94vw)">
+    <h3 style="margin:0 0 4px;display:flex;justify-content:space-between;align-items:center;gap:10px"><span id="mgTitle"></span>
+      <input id="mgFind" placeholder="Gõ số thẻ / mã + Enter" maxlength="10" style="width:190px;font-size:15px;padding:8px 10px;border:1px solid var(--line);border-radius:6px"></h3>
+    <p class="hint" style="margin:0 0 6px">Gõ số thẻ rung (hoặc mã đơn) + Enter, hoặc bấm chọn đơn bên dưới. Đơn được chọn chuyển hết món sang đơn này rồi tự đóng.</p>
+    <div id="mgList"></div>
+    <div class="mbtns"><button type="button" id="mgCancel">Thôi (Esc)</button></div>
   </div>
 </div>
 <div class="mask" id="rpModal" hidden>
@@ -1353,6 +1366,7 @@
     if (k === 'send') return $('moreBtn').click();
     if (k === 'cancel') return $('cancelBtn').click();
     if (k === 'tem' || k === 'bep') return openReprint(o, k);
+    if (k === 'merge') return openMerge(o);
     if (k === 'check') {
       if (dirty()) toast('Đơn có thay đổi chưa lưu – phiếu in theo bản đã lưu.', 3500);
       sendPrint('bill', billHtml(o, { check: true })); toast('Đã gửi in phiếu kiểm đồ'); return back();
@@ -1363,6 +1377,44 @@
         function(e){ busy(false); if (e.message !== 'empty') toast('⚠️ ' + e.message, 4000); });
     }, 'Đổi bàn / thẻ rung · đơn #' + o.code);
   }
+  /* Gộp đơn: chọn 1 đơn đang chờ khác → chuyển hết món vào đơn đang mở (máy chủ: cashierMerge) */
+  var MG = null;
+  function openMerge(o){
+    if (dirty()) return toast('Lưu đơn trước (F3) rồi mới gộp đơn.');
+    var L = D.pending.filter(function(x){ return x.id !== o.id && x.status === 'Chờ thanh toán'; })
+      .sort(function(a, b){ return (+a.pager || 999) - (+b.pager || 999) || a.created - b.created; });
+    if (!L.length) return toast('Không có đơn chờ nào khác để gộp.');
+    MG = { o: o, L: L };
+    $('mgTitle').textContent = 'Gộp vào đơn #' + o.code + (o.pager ? ' · thẻ ' + o.pager : '');
+    $('mgList').innerHTML = L.map(function(x, k){
+      var n = x.items.reduce(function(s, i){ return s + i.q; }, 0);
+      return '<button type="button" data-mg="' + k + '"><i>' + esc(x.pager || '–') + '</i><span><b>#' + esc(x.code) + '</b>' + (x.pager ? ' · thẻ ' + esc(x.pager) : '') + ' · ' + esc(x.name) +
+        '<br><small>' + n + ' món · ' + esc(x.items.slice(0, 3).map(function(i){ return i.q + ' ' + i.n; }).join(', ')) + (x.items.length > 3 ? '…' : '') + ' · ' + (x.src === 'QR' ? 'QR · ' : '') + hhmm(x.created) + '</small></span><b class="num">' + money(x.total) + 'đ</b></button>';
+    }).join('');
+    $('mgFind').value = ''; $('mgModal').hidden = false; setTimeout(function(){ $('mgFind').focus(); }, 30);
+  }
+  function mgClose(){ $('mgModal').hidden = true; MG = null; back(); }
+  function mgPick(k){
+    if (!MG || !MG.L[k]) return; var x = MG.L[k], o = MG.o;
+    if (!confirm('Gộp đơn #' + x.code + (x.pager ? ' (thẻ ' + x.pager + ')' : '') + ' – ' + money(x.total) + 'đ vào đơn #' + o.code + '?\nĐơn #' + x.code + ' sẽ đóng lại, món chuyển hết sang #' + o.code + '.')) return;
+    $('mgModal').hidden = true; MG = null; busy(true, 'Đang gộp đơn…');
+    call('cashierMerge', [PIN, o.id, x.id]).then(function(r){
+      busy(false);
+      if (!r.ok) { toast('⚠️ ' + (r.msg || 'Không gộp được.'), 4000); return back(); }
+      apply(r.data); openOrder(r.order);
+      toast('Đã gộp đơn #' + x.code + ' vào #' + o.code + (r.lostDisc ? ' · giảm giá của đơn #' + x.code + ' không chuyển sang, kiểm tra lại giảm giá' : ''), 5000);
+    }, function(e){ busy(false); toast('⚠️ ' + e.message, 4000); back(); });
+  }
+  $('mgList').addEventListener('click', function(e){ var b = e.target.closest('[data-mg]'); if (b) mgPick(+b.getAttribute('data-mg')); });
+  $('mgCancel').addEventListener('click', mgClose);
+  $('mgFind').addEventListener('keydown', function(e){
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); return mgClose(); }
+    if (e.key !== 'Enter' || !MG) return; e.preventDefault(); e.stopPropagation();
+    var v = this.value.trim().toLowerCase().replace(/^#/, ''); if (!v) return;
+    var k = -1; MG.L.forEach(function(x, i){ if (k < 0 && (String(x.pager || '').toLowerCase() === v || String(x.code) === v || String(x.code) === ('00' + v).slice(-3))) k = i; });
+    if (k < 0) return toast('Không có đơn chờ gắn thẻ / mã "' + this.value.trim() + '".');
+    mgPick(k);
+  });
   var RP = null;
   function openReprint(o, k){
     var L = split(o)[k === 'bep' ? 'bep' : 'bar'];
@@ -1418,6 +1470,7 @@
       if (/^[1-9]$/.test(e.key) && ob[+e.key - 1]) ob[+e.key - 1].click(); else if (e.key === 'Escape') { $('opsMenu').hidden = true; back(); }
       return;
     }
+    if (!$('mgModal').hidden) { if (e.key === 'Escape') { e.preventDefault(); mgClose(); } return; }
     if (!$('rpModal').hidden) {
       if (e.target.tagName === 'INPUT' && e.target.type === 'number' && /^[0-9]$/.test(e.key)) return;
       if (/^[1-9]$/.test(e.key)) { e.preventDefault(); rpToggle(+e.key - 1); }

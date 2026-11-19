@@ -165,8 +165,8 @@
   }
   function lines(items, menu, extra) {
     var price = {};
-    (extra || []).forEach(function (x) { price[x.n] = { g: x.g || '', p: x.p }; });
-    menu.forEach(function (m) { if (!price[m.n]) price[m.n] = { g: m.g, p: m.p, vid: m.vid }; });
+    (extra || []).forEach(function (x) { price[x.n] = { g: x.g || '', p: x.p, vid: x.vid }; });
+    menu.forEach(function (m) { if (!price[m.n]) price[m.n] = { g: m.g, p: m.p, vid: m.vid }; else if (!price[m.n].vid && m.vid) price[m.n].vid = m.vid; });
     var out = [], total = 0, gross = 0, idisc = 0;
     (Array.isArray(items) ? items : []).slice(0, 60).forEach(function (it) {
       var n = String(it && it.n || ''), q = Math.round(Number(it && it.q) || 0), m = price[n], t = clean(it && it.t, 60);
@@ -363,7 +363,7 @@
         var h = hhOf(o.paidAt), hh = r.hours[h] || (r.hours[h] = [0, 0]); hh[0]++; hh[1] += o.total;
       });
       return db.collection('posOrders').where('date', '==', d).get().then(function (q2) {
-        q2.forEach(function (x) { var o = x.data(); if (o.status === 'Đã hủy') { r.cancel++; r.cancelAmt += o.total || 0; } });
+        q2.forEach(function (x) { var o = x.data(); if (o.status === 'Đã hủy' && !o.mergedInto) { r.cancel++; r.cancelAmt += o.total || 0; } });
         r.items = Object.keys(it).map(function (k) { return it[k]; }).sort(function (a, b) { return b.a - a.a; });
         return db.doc('revenuePos/' + d).set(r);
       });
@@ -545,6 +545,39 @@
         });
       });
     },
+    /* Gộp đơn (Tài yêu cầu 19/11): chuyển hết món của đơn chờ srcId vào đơn chờ id; đơn srcId chuyển "Đã hủy" ghi "gộp vào #mã" */
+    cashierMerge: function (tok, id, srcId) {
+      return me().then(function (u) {
+        return posReady().then(function () {
+          if (!id || !srcId || id === srcId) return { ok: false, msg: 'Chọn đơn khác để gộp.' };
+          function load(k) {
+            var c = C.orders[k] || (C.pend || {})[k] || C.keep[k];
+            return c ? Promise.resolve(JSON.parse(JSON.stringify(c))) : db.doc('posOrders/' + k).get().then(function (s) { return s.exists ? Object.assign({ id: s.id }, s.data()) : null; });
+          }
+          return Promise.all([load(id), load(srcId)]).then(function (r) {
+            var o = r[0], x = r[1];
+            if (!o || !x) return { ok: false, msg: 'Không tìm thấy đơn.' };
+            if (o.status !== 'Chờ thanh toán' || x.status !== 'Chờ thanh toán') return { ok: false, msg: 'Chỉ gộp được các đơn đang chờ thanh toán.' };
+            delete o.id; delete x.id;
+            var xf = fixQR(x), menu = qrMenu(o), L = lines((o.items || []).concat(xf.items || []), menu, priceExtra(o, menu).concat(xf.items || []));
+            if (!L.items.length) return { ok: false, msg: 'Đơn chưa có món nào.' };
+            var A = applyDisc(L, o.disc), sent = {};
+            (o.sent || []).concat(x.sent || []).forEach(function (s) { sent[s.k] = (sent[s.k] || 0) + (Number(s.q) || 0); });
+            o.items = L.items; o.total = A.total; o.gross = A.gross; o.itemDisc = A.itemDisc; o.disc = A.disc; o.discAmt = A.discAmt;
+            o.sent = Object.keys(sent).map(function (k) { return { k: k, q: sent[k] }; }); o.edited = true;
+            if (x.note) o.note = clean((o.note ? o.note + ' · ' : '') + x.note, 200);
+            if (x.togo) o.togo = true;
+            act(o, u, 'gop', '#' + x.code + (x.pager ? ' (thẻ ' + x.pager + ')' : '') + ' · ' + x.total);
+            x.status = 'Đã hủy'; x.mergedInto = o.code; x.mergedId = id; act(x, u, 'gop', '→ #' + o.code);
+            C.orders[id] = C.keep[id] = Object.assign({ id: id }, o);
+            C.orders[srcId] = C.keep[srcId] = Object.assign({ id: srcId }, x);
+            save(db.doc('posOrders/' + id), o); save(db.doc('posOrders/' + srcId), x);
+            dayLater(x.date);
+            return { ok: true, order: pub(C.orders[id]), lostDisc: !!(x.disc && x.disc.amt), data: cashierData(u) };
+          });
+        });
+      });
+    },
     cashierSetting: function (tok, key, val, ap) {
       return me().then(function (u) {
         return approve(u, ap).then(function (ok) {
@@ -618,7 +651,7 @@
             (o.items || []).forEach(function (i) { var it = items[i.n] || (items[i.n] = { n: i.n, g: i.g, q: 0, a: 0 }); it.q += i.q; it.a += i.p * i.q - (i.da || 0); });
             var h = hhOf(o.paidAt), hh = hours[h] || (hours[h] = { h: h, orders: 0, revenue: 0 }); hh.orders++; hh.revenue += o.total;
           });
-          var cancels = all.filter(function (o) { return o.status === 'Đã hủy' && (o.refundAt ? o.paidDate === date : o.date === date); }).map(function (o) {
+          var cancels = all.filter(function (o) { return o.status === 'Đã hủy' && !o.mergedInto && (o.refundAt ? o.paidDate === date : o.date === date); }).map(function (o) {
             var l = (o.log || []).filter(function (x) { return x.a === 'huy' || x.a === 'hoan'; }).pop() || {};
             return { code: o.code, name: o.name, total: o.total, src: o.refundAt ? 'Hoàn tiền (' + (o.pay || '') + ')' : o.src, by: l.by || (o.src === 'QR' ? 'Khách tự hủy' : ''), at: l.at || 0, x: l.x || '' };
           }).filter(function (c) { return mgr || byCode(c.by, u.c); });
