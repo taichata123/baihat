@@ -906,7 +906,7 @@
     $('orders').innerHTML = list.length ? list.map(function(o){
       var qr = o.src !== 'Quầy';
       return '<div class="oc' + (qr ? ' qr' : '') + (qr && !o.ack ? ' qnew' : '') + (Date.now() - o.created > 30 * 60000 ? ' late' : '') + '" data-open="' + o.id + '">' +
-        '<div class="h"><span class="src">' + (qr ? (o.ack ? 'QR ✓' : 'QR · chưa xác nhận') : 'Tại quầy') + (o.togo ? ' · 🥡 Mang đi' : '') + '</span><span>⏱ ' + ago(o.created) + '</span></div>' +
+        '<div class="h"><span class="src">' + (qr ? (o.ack ? 'QR ✓' : 'QR · chưa xác nhận') + (o.pager ? ' · trả khi lấy món' : '') : 'Tại quầy') + (o.togo ? ' · 🥡 Mang đi' : '') + '</span><span>⏱ ' + ago(o.created) + '</span></div>' +
         '<div class="c">#' + esc(o.code) + (o.pager ? ' <small style="font-size:13px;color:#0A8F5F">· Bàn ' + esc(o.pager) + '</small>' : '') + '</div><div class="n">' + esc(o.name) + '</div>' +
         '<div class="it">' + o.items.map(function(i){ return i.q + '× ' + esc(i.n); }).join(', ') + '</div>' +
         '<div class="f"><span>' + o.items.reduce(function(s, i){ return s + i.q; }, 0) + ' món</span><b class="num">' + money(o.total) + 'đ</b></div>' +
@@ -1397,11 +1397,15 @@
   /* Xác nhận đơn QR: báo cho khách biết quầy đã nhận đơn (trang gọi món của khách tự cập nhật) */
   function doAck(){
     if (!O || !O.id || O.src === 'Quầy' || $('ackBar').hidden) return;
+    /* khách nhập số thẻ rung lúc gọi món: trùng thẻ đơn khác đang chờ thì cảnh báo, sửa rồi xác nhận lại */
+    var pg = $('cPager').value.trim(), np = norm(pg).toUpperCase();
+    var dup = pg && D && D.pending.filter(function(x){ return x.id !== O.id && x.pager && norm(x.pager).toUpperCase() === np; })[0];
+    if (dup) { toast('⚠️ Thẻ ' + pg + ' đang dùng cho đơn #' + dup.code + ' (' + dup.name + '). Sửa số thẻ ở ô "Thẻ rung" rồi xác nhận lại.', 6000); $('cPager').focus(); $('cPager').select(); return; }
     var id = O.id; $('ackBtn').disabled = true;
-    call('cashierAck', [PIN, id]).then(function(r){
+    call('cashierAck', [PIN, id, pg]).then(function(r){
       $('ackBtn').disabled = false;
       if (!r.ok) return toast(r.msg, 4000);
-      if (O && O.id === id) { O.ack = r.order.ack; $('ackBar').hidden = true; }
+      if (O && O.id === id) { O.ack = r.order.ack; O.pager = r.order.pager; $('ackBar').hidden = true; }
       apply(r.data); toast('✓ Đã xác nhận đơn #' + r.order.code + ' – khách đã thấy "Quầy đã nhận đơn"'); back();
     }, function(e){ $('ackBtn').disabled = false; toast('⚠️ ' + e.message, 4000); });
   }

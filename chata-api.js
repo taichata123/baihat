@@ -386,7 +386,7 @@
         return newCode().then(function (c) {
           var id = uid('D'), token = rand(16), now = Date.now();
           var o = { code: c.code, date: c.date, created: now, name: name, phone: phone, items: L.items, total: L.total, note: clean(d.note, 200),
-            status: 'Chờ thanh toán', pay: '', pager: '', paidAt: 0, paidDate: '', mode: mode === 'night' ? 'Đêm nhạc' : 'Thường', token: token, src: 'QR', cashier: '', log: [],
+            status: 'Chờ thanh toán', pay: '', pager: clean(d.pager, 10), paidAt: 0, paidDate: '', mode: mode === 'night' ? 'Đêm nhạc' : 'Thường', token: token, src: 'QR', cashier: '', log: [],
             uid: auth.currentUser ? auth.currentUser.uid : '' };
           return db.collection('posOrders').doc(id).set(o).then(function () { return { ok: true, id: id, token: token, code: c.code, total: L.total }; });
         });
@@ -548,7 +548,7 @@
     },
     /* Gộp đơn (Tài yêu cầu 19/11): chuyển hết món của đơn chờ srcId vào đơn chờ id; đơn srcId chuyển "Đã hủy" ghi "gộp vào #mã" */
     /* Xác nhận đơn QR (19/11/2026): thu ngân mở đơn, kiểm tra rồi bấm Xác nhận → trang của khách hiện "Quầy đã nhận đơn" */
-    cashierAck: function (tok, id) {
+    cashierAck: function (tok, id, pager) {
       return me().then(function (u) {
         return posReady().then(function () {
           var c = C.orders[id] || (C.pend || {})[id] || C.keep[id];
@@ -557,7 +557,8 @@
             if (!o) return { ok: false, msg: 'Không tìm thấy đơn.' };
             if (o.status !== 'Chờ thanh toán') return { ok: false, msg: 'Đơn này không còn chờ thanh toán.' };
             if (o.ack && o.ack.at) return { ok: true, order: pub(o), data: cashierData(u) };
-            delete o.id; o.ack = { at: Date.now(), by: u.n }; act(o, u, 'xn');
+            /* thẻ rung thu ngân sửa trên đầu đơn trước khi xác nhận */
+            delete o.id; o.ack = { at: Date.now(), by: u.n }; if (pager != null) o.pager = clean(pager, 10); act(o, u, 'xn', o.pager ? 'thẻ ' + o.pager : '');
             C.orders[id] = C.keep[id] = Object.assign({ id: id }, o);
             save(db.doc('posOrders/' + id), o);
             return { ok: true, order: pub(C.orders[id]), data: cashierData(u) };

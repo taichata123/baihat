@@ -173,6 +173,8 @@
     <form id="ckForm" novalidate autocomplete="on">
       <label for="cName">Tên bạn * <span class="opt">(để thu ngân gọi)</span></label>
       <input id="cName" maxlength="30" autocomplete="given-name" placeholder="VD: Minh">
+      <label for="cPager">Số thẻ rung <span class="opt">(nếu bạn đã lấy thẻ ở quầy)</span></label>
+      <input id="cPager" inputmode="numeric" maxlength="10" placeholder="VD: 12">
       <label for="cPhone">Số điện thoại <span class="opt">(tuỳ chọn)</span></label>
       <input id="cPhone" type="tel" inputmode="tel" maxlength="15" autocomplete="tel" placeholder="VD: 0912 345 678">
       <label for="cNote">Ghi chú chung cho đơn <span class="opt">(tuỳ chọn)</span></label>
@@ -359,12 +361,12 @@
     if (phone && (dg.length < 9 || dg.length > 12)) { ckErr('Số điện thoại chưa đúng, bạn kiểm tra lại hoặc để trống nhé.'); return; }
     var items = CART.map(function(c){ var o = { n: c.n, q: c.q }; if (c.t) o.t = c.t; return o; });
     var btn = $('ckSend'); btn.disabled = true; btn.textContent = 'Đang gửi…';
-    call('submitOrder', [{ name: name, phone: phone, note: $('cNote').value, items: items }]).then(function(r){
+    call('submitOrder', [{ name: name, phone: phone, pager: $('cPager').value.trim(), note: $('cNote').value, items: items }]).then(function(r){
       btn.disabled = false; btn.textContent = 'Gửi đơn & nhận mã số';
       if (!r.ok) { ckErr(r.msg || 'Có lỗi, bạn thử lại nhé.'); if (/order trực tiếp/.test(r.msg || '')) { closeCk(); show('closed'); } return; }
       try { localStorage.setItem('chata_me', JSON.stringify({ n: name, p: phone })); } catch(err){}
       setSaved({ id: r.id, token: r.token });
-      CART = []; saveCart(); $('cNote').value = ''; closeCk();
+      CART = []; saveCart(); $('cNote').value = ''; $('cPager').value = ''; closeCk();
       loadTicket();
     }).catch(function(){ btn.disabled = false; btn.textContent = 'Gửi đơn & nhận mã số'; ckErr('Mạng đang chập chờn, bạn bấm gửi lại nhé.'); });
   });
@@ -386,9 +388,12 @@
       /* Thu ngân bấm "Xác nhận đơn" → khách thấy quầy đã nhận đơn (19/11/2026) */
       var ack = pend && o.ack;
       $('tSt').className = 'st' + (paid || ack ? ' ok' : pend ? '' : ' no');
-      $('tSt').textContent = paid ? '✓ Đã thanh toán' + (o.pager ? ' · thẻ rung số ' + o.pager : '') : ack ? '✓ Quầy đã nhận đơn' : pend ? '⏳ Chờ quầy xác nhận' : o.status;
+      $('tSt').textContent = paid ? '✓ Đã thanh toán' + (o.pager ? ' · thẻ rung số ' + o.pager : '') : ack ? '✓ Quầy đã nhận đơn' + (o.pager ? ' · thẻ rung số ' + o.pager : '') : pend ? '⏳ Chờ quầy xác nhận' : o.status;
       $('tGuide').innerHTML = paid ? '🎉 Cảm ơn bạn! Món đang được chuẩn bị' + (o.pager ? ', thẻ rung số <b>' + esc(o.pager) + '</b> rung là món xong nhé.' : '.')
+        /* có thẻ rung: làm món trước, khách thanh toán lúc ra lấy món (Tài chốt 19/11) */
+        : ack && o.pager ? '👍 Quầy đã nhận đơn, món đang được chuẩn bị. Khi <b>thẻ rung số ' + esc(o.pager) + '</b> rung, bạn ra quầy <b>lấy món và thanh toán</b> nhé.'
         : ack ? '👍 Quầy đã nhận đơn của bạn. Mời bạn ra <b>quầy thu ngân</b>, đọc <b>mã số #' + esc(o.code) + '</b> để thanh toán.'
+        : pend && o.pager ? '👉 Đơn đã gửi tới quầy, thu ngân sẽ xác nhận trong ít phút. Bạn giữ <b>thẻ rung số ' + esc(o.pager) + '</b>, thẻ rung thì ra quầy lấy món và thanh toán.'
         : pend ? '👉 Đơn đã gửi tới quầy, thu ngân sẽ xác nhận trong ít phút. Bạn có thể ra <b>quầy thu ngân</b> luôn, đọc <b>mã số</b> và <b>tên</b> ở trên để thanh toán.'
         : 'Đơn này đã hủy. Bạn có thể gọi đơn mới.';
       $('tCancel').hidden = !pend; $('tNew').hidden = pend;
