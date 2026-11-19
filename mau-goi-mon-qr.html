@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chata – Gọi món (bản phác)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Lora:wght@700&display=swap">
+<style>
+  :root{--bg:#F4F6F1;--card:#fff;--sunk:#E9EEE7;--ink:#1A2926;--muted:#5A6B65;--line:#DCE4DD;
+    --ac:#0D6C68;--ac-d:#0A5552;--ac-s:#D5ECE8;--sun:#F2B544;--sun-s:#FBEFD3;--bad:#B23A2E;
+    --fb:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--fb);font-size:15px;line-height:1.45}
+  button,input{font:inherit;color:inherit}
+  [hidden]{display:none!important}
+  .demo{display:flex;justify-content:center;gap:4px;background:#1A2926;padding:6px}
+  .demo button{border:none;background:none;color:#cfe;padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:700;cursor:pointer}
+  .demo button.on{background:var(--sun);color:#2b2118}
+  /* đầu trang gọn */
+  .top{background:var(--ac);color:#EAF6F4;padding:12px 16px 12px}
+  .top .row{display:flex;align-items:baseline;gap:8px}
+  .brand{font-family:Lora,Georgia,serif;font-weight:700;font-size:21px}
+  .top small{font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.8}
+  .top p{margin:4px 0 0;font-size:13px;opacity:.92}
+  /* thanh nhóm luôn ở trên */
+  .cats{position:sticky;top:0;z-index:20;background:var(--bg);display:flex;gap:6px;overflow-x:auto;padding:10px 12px 8px;scrollbar-width:none;border-bottom:1px solid var(--line)}
+  .cats::-webkit-scrollbar{display:none}
+  .chip{flex:none;border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .chip.on{background:var(--ac);border-color:var(--ac);color:#fff}
+  .sec{padding:4px 12px 0;scroll-margin-top:58px}
+  .sec h2{font-size:17px;font-weight:800;margin:14px 2px 8px;display:flex;align-items:center;gap:6px}
+  .sec h2 small{font-weight:500;color:var(--muted);font-size:13px}
+  /* Bản A: lưới 2 cột */
+  .ga{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .ca{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;position:relative}
+  .ca .im{aspect-ratio:1/1;background:#EEF2EC center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:42px}
+  .ca .tx{padding:8px 10px 10px;display:flex;flex-direction:column;gap:2px;flex:1}
+  .ca .nm{font-weight:700;font-size:14.5px;line-height:1.3}
+  .ca .sb{font-size:12px;color:var(--muted)}
+  .ca .pr{margin-top:auto;padding-top:4px;display:flex;align-items:center;justify-content:space-between}
+  .ca .pr b{font-size:15px;color:var(--ac)}
+  /* Bản B: danh sách hình nhỏ */
+  .gb{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .cb{display:flex;gap:12px;padding:10px;border-top:1px solid var(--line);cursor:pointer;position:relative;align-items:center}
+  .cb:first-child{border-top:none}
+  .cb .im{width:78px;height:78px;flex:none;border-radius:10px;background:#EEF2EC center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:30px}
+  .cb .tx{flex:1;min-width:0}
+  .cb .nm{font-weight:700;font-size:15.5px;line-height:1.3}
+  .cb .sb{font-size:12.5px;color:var(--muted)}
+  .cb .pb{font-weight:700;color:var(--ac);margin-top:3px}
+  .plus{width:36px;height:36px;flex:none;border-radius:50%;border:none;background:var(--ac);color:#fff;font-size:22px;font-weight:700;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .qy{position:absolute;top:8px;left:8px;background:var(--sun);color:#2b2118;font-weight:800;font-size:12.5px;min-width:24px;height:24px;border-radius:12px;display:flex;align-items:center;justify-content:center;padding:0 6px;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+  .cb .qy{top:6px;left:6px}
+  .tag{display:inline-block;font-size:11px;font-weight:700;background:var(--ac-s);color:var(--ac-d);border-radius:6px;padding:1px 6px;margin-left:4px;vertical-align:1px}
+  .pad{height:110px}
+  /* giỏ dưới */
+  .bar{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:8px 12px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--bg) 35%)}
+  .bar button{display:flex;width:100%;max-width:616px;margin:0 auto;align-items:center;gap:10px;background:var(--ac);color:#fff;border:none;border-radius:14px;padding:13px 16px;font-weight:700;font-size:16px;cursor:pointer;box-shadow:0 8px 22px rgba(13,108,104,.3)}
+  .bar button:disabled{background:#9db5b2;box-shadow:none}
+  .bar .ct{background:#fff;color:var(--ac);border-radius:999px;min-width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;padding:0 7px}
+  .bar .go{margin-left:auto}
+  /* bảng chọn trượt lên */
+  .mask{position:fixed;inset:0;z-index:50;background:rgba(15,30,28,.55);display:flex;align-items:flex-end;justify-content:center}
+  .sheet{background:#fff;width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:0 0 calc(14px + env(safe-area-inset-bottom));position:relative;animation:up .18s ease-out}
+  @keyframes up{from{transform:translateY(40px);opacity:.4}}
+  .x{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;border:none;background:rgba(255,255,255,.92);font-size:16px;cursor:pointer;z-index:2;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+  .hero{height:190px;background:#EEF2EC center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:60px}
+  .sh{padding:14px 16px 0}
+  .sh h3{margin:0;font-size:19px;font-weight:800}
+  .sh .pp{color:var(--ac);font-weight:800;font-size:17px;margin-top:2px}
+  .lab{font-size:13.5px;font-weight:700;margin:14px 0 7px;color:var(--ink)}
+  .lab small{font-weight:500;color:var(--muted)}
+  .opts{display:flex;flex-wrap:wrap;gap:8px}
+  .op{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:9px 14px;font-weight:600;cursor:pointer;font-size:14.5px}
+  .op small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+  .op.on{border-color:var(--ac);background:var(--ac-s);color:var(--ac-d)}
+  .qn{border:1px solid var(--line);background:#F7F9F6;border-radius:999px;padding:6px 12px;font-size:13.5px;cursor:pointer}
+  .qn.on{background:var(--ac);border-color:var(--ac);color:#fff}
+  .note{width:100%;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:#FBFCFA;margin-top:8px}
+  .foot{display:flex;gap:10px;align-items:center;padding:16px 16px 0}
+  .stp{display:flex;align-items:center;gap:6px}
+  .stp button{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--line);background:#fff;font-size:20px;font-weight:700;color:var(--ac);cursor:pointer}
+  .stp b{min-width:24px;text-align:center;font-size:17px}
+  .addb{flex:1;border:none;border-radius:12px;background:var(--ac);color:#fff;font-weight:800;font-size:16px;padding:14px 12px;cursor:pointer}
+  /* giỏ */
+  .ci{display:flex;gap:10px;padding:12px 16px;border-top:1px solid var(--line);align-items:flex-start}
+  .ci .im{width:52px;height:52px;flex:none;border-radius:8px;background:#EEF2EC center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:22px}
+  .ci .tx{flex:1;min-width:0}
+  .ci .nm{font-weight:700}
+  .ci .nt{font-size:13px;color:var(--muted)}
+  .ci .ed{font-size:13px;color:var(--ac);font-weight:600;cursor:pointer;margin-top:2px;display:inline-block}
+  .ci .rt{text-align:right}
+  .ci .rt b{display:block;margin-bottom:6px}
+  .ci .stp button{width:32px;height:32px;font-size:17px}
+  .tot{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 0;border-top:1px dashed var(--line);margin-top:4px}
+  .tot b{font-size:21px;color:var(--ac)}
+  .inp{width:100%;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:#FBFCFA}
+  .send{width:calc(100% - 32px);margin:14px 16px 0;padding:15px;border:none;border-radius:12px;background:var(--ac);color:#fff;font-weight:800;font-size:16px;cursor:pointer}
+  .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:#1A2926;color:#fff;padding:9px 16px;border-radius:999px;font-size:14px;z-index:70;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+  .toast.on{opacity:.95}
+  @media(min-width:640px){.ga{grid-template-columns:repeat(3,1fr)}.wrapc{max-width:640px;margin:0 auto}}
+</style>
+</head>
+<body>
+<div class="demo"><button type="button" data-v="A" class="on">Bản A · Lưới</button><button type="button" data-v="B">Bản B · Danh sách</button></div>
+<div class="wrapc">
+<div class="top">
+  <div class="row"><span class="brand">Chata</span><small>Gọi món tại bàn</small></div>
+  <p>Chọn món → gửi đơn → ra quầy đọc mã để thanh toán.</p>
+</div>
+<div class="cats" id="cats"></div>
+<div id="list"></div>
+<div class="pad"></div>
+</div>
+<div class="bar"><button type="button" id="cartBtn" disabled><span class="ct" id="cartN">0</span><span id="cartT">Chưa chọn món</span><span class="go" id="cartS"></span></button></div>
+
+<div class="mask" id="itemM" hidden><div class="sheet">
+  <button class="x" type="button" data-close>✕</button>
+  <div class="hero" id="iHero"></div>
+  <div class="sh">
+    <h3 id="iName"></h3><div class="pp" id="iPrice"></div>
+    <div id="iSizeW"><div class="lab">Chọn size</div><div class="opts" id="iSize"></div></div>
+    <div class="lab" id="iQnL">Ghi chú <small>(chọn nhanh hoặc tự gõ)</small></div>
+    <div class="opts" id="iQn"></div>
+    <input class="note" id="iNote" maxlength="60" placeholder="VD: ít ngọt, cấp 3…">
+  </div>
+  <div class="foot"><div class="stp"><button type="button" id="iMinus">−</button><b id="iQ">1</b><button type="button" id="iPlus">+</button></div><button class="addb" type="button" id="iAdd"></button></div>
+</div></div>
+
+<div class="mask" id="cartM" hidden><div class="sheet" style="padding-top:14px">
+  <button class="x" type="button" data-close>✕</button>
+  <h3 style="margin:4px 16px 10px;font-size:19px;font-weight:800">Đơn của bạn</h3>
+  <div id="cLines"></div>
+  <div class="tot"><span>Tổng cộng</span><b id="cTot"></b></div>
+  <div style="padding:0 16px">
+    <div class="lab">Tên của bạn <small>(để quầy gọi)</small></div><input class="inp" id="cName" placeholder="VD: Lan">
+    <div class="lab">Số thẻ rung / bàn <small>(nếu có)</small></div><input class="inp" id="cTbl" inputmode="numeric" placeholder="VD: 12">
+  </div>
+  <button class="send" type="button" id="cSend">Gửi đơn</button>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+var MENU = (function(){var P='https://fnb.dktcdn.net/media/100/106/921/products/';return [["Trà vải",29000,"Trà - Trà sữa",0,0,"chatgpt-image-sep-25-2026-10-01-44-am.jpg",336],["Trà đào",29000,"Trà - Trà sữa",0,0,"64addd62-0dcd-4d36-b51e-f8d54b0c19b8.jpg",323],["Trà sữa kem trứng (M)",35000,"Trà - Trà sữa","Trà sữa kem trứng","M","chatgpt-image-sep-25-2026-08-55-54-am.jpg",287],["Trà sữa kem trứng (L)",39000,"Trà - Trà sữa","Trà sữa kem trứng","L","chatgpt-image-sep-25-2026-08-55-54-am.jpg",0],["Trà sữa truyền thống (M)",32000,"Trà - Trà sữa","Trà sữa truyền thống","M","chatgpt-image-sep-25-2026-09-02-54-am.jpg",248],["Trà sữa truyền thống (L)",35000,"Trà - Trà sữa","Trà sữa truyền thống","L","chatgpt-image-sep-25-2026-09-02-54-am.jpg",0],["Trà lựu",29000,"Trà - Trà sữa",0,0,"chatgpt-image-sep-25-2026-10-00-54-am.jpg",241],["Trà xoài chanh dây",32000,"Trà - Trà sữa",0,0,"a-nh-chatgpt-10-44-16-29-thg-9-2026.jpg",172],["Trà sữa socola (M)",35000,"Trà - Trà sữa","Trà sữa socola","M","chatgpt-image-sep-25-2026-09-05-27-am.jpg",117],["Trà sữa socola (L)",39000,"Trà - Trà sữa","Trà sữa socola","L","chatgpt-image-sep-25-2026-09-05-27-am.jpg",0],["Latte matcha",35000,"Trà - Trà sữa",0,0,"chatgpt-image-sep-25-2026-11-12-08-am.jpg",107],["Trà thơm hạt đác",35000,"Trà - Trà sữa",0,0,"a-nh-chatgpt-10-26-00-29-thg-9-2026.jpg",104],["Trà Lipton cam thảo",29000,"Trà - Trà sữa",0,0,"screenshot-2026-09-25-at-11-13-19.jpg",69],["Trà sữa chôm chôm (M)",35000,"Trà - Trà sữa","Trà sữa chôm chôm","M","",48],["Trà sữa chôm chôm (L)",39000,"Trà - Trà sữa","Trà sữa chôm chôm","L","",0],["Trà sữa kem muối (M)",35000,"Trà - Trà sữa","Trà sữa kem muối","M","2.jpg",30],["Trà sữa kem muối (L)",39000,"Trà - Trà sữa","Trà sữa kem muối","L","2.jpg",0],["Hạt dưa",15000,"Ăn vặt",0,0,"vn-11134207-7r98o-lrxxc24h5389bd.jpg",477],["Bánh tráng",15000,"Ăn vặt",0,0,"",359],["Hướng dương",15000,"Ăn vặt",0,0,"636b18f3-15ed-4395-bbe7-f3dc8bb89e75.jpg",236],["Bánh que",25000,"Ăn vặt",0,0,"",76],["Bánh gấu",30000,"Ăn vặt",0,0,"ios-2026-09-10t15-18-20-plus-07-00.jpg",53],["Bánh tráng sấy giòn",25000,"Ăn vặt",0,0,"",34],["Bim bim",15000,"Ăn vặt",0,0,"",28],["Mì cay xúc xích cá viên",35000,"Mì cay - Bánh mì chảo",0,0,"mi-cay-xu-c-xi-ch-ca-vie-n.jpg",378],["Mì cay thập cẩm (tôm, mực, bò, xúc xích, cá viên)",49000,"Mì cay - Bánh mì chảo",0,0,"to-mi-tha-p-ca-m-tre-n-di-a-den.jpg",207],["Mì cay tôm (tôm, xúc xích, cá viên)",45000,"Mì cay - Bánh mì chảo",0,0,"mi-cay-ha-i-sa-n-nhie-u-na-m-enoki.jpg",153],["Mì cay bò",45000,"Mì cay - Bánh mì chảo",0,0,"to-mi-tha-p-ca-m-tre-n-di-a-den.jpg",121],["Mì trộn",29000,"Mì cay - Bánh mì chảo",0,0,"",99],["Bánh mì",5000,"Mì cay - Bánh mì chảo",0,0,"ba-nh-ma-vietnamese-baguette-liicu9-1024x1024.jpg",82],["Chảo 1 (bò + 2 trứng)",35000,"Mì cay - Bánh mì chảo",0,0,"bo-cha-o-hai-tru-ng-ha-nh-ngo.jpg",66],["Chảo 2 (bò + trứng + pate + xúc xích)",39000,"Mì cay - Bánh mì chảo",0,0,"bo-cha-o-tru-ng-pate-xu-c-xi-ch-baguette.jpg",64],["Chảo đặc biệt",55000,"Mì cay - Bánh mì chảo",0,0,"a-nh-chatgpt-10-26-16-29-thg-9-2026.jpg",49],["Chảo 3 (2 trứng + xúc xích + pate)",29000,"Mì cay - Bánh mì chảo",0,0,"cha-o-tru-ng-pate-va-xu-c-xi-ch.jpg",24],["Mì cay rau",29000,"Mì cay - Bánh mì chảo",0,0,"mi-cay-rau-cu-phu-ha-nh-la.jpg",17],["Ép cam (M)",29000,"Nước ép - Soda - Nước chai","Ép cam","M","ep-cam-chata.jpg",139],["Ép cam (L)",35000,"Nước ép - Soda - Nước chai","Ép cam","L","ep-cam-chata.jpg",0],["Soda vải (vừa)",25000,"Nước ép - Soda - Nước chai","Soda vải","Vừa","a-nh-chatgpt-10-38-44-29-thg-9-2026-1.jpg",100],["Soda vải (lớn)",30000,"Nước ép - Soda - Nước chai","Soda vải","Lớn","a-nh-chatgpt-10-38-44-29-thg-9-2026-1.jpg",0],["Ép thơm (M)",29000,"Nước ép - Soda - Nước chai","Ép thơm","M","ep-thom-chata.jpg",99],["Ép thơm (L)",35000,"Nước ép - Soda - Nước chai","Ép thơm","L","ep-thom-chata.jpg",0],["Soda việt quất (vừa)",25000,"Nước ép - Soda - Nước chai","Soda việt quất","Vừa","aa52a08f-d277-40c7-8282-42031f354014.jpg",96],["Soda việt quất (lớn)",30000,"Nước ép - Soda - Nước chai","Soda việt quất","Lớn","aa52a08f-d277-40c7-8282-42031f354014.jpg",0],["Bia Tiger cao",23000,"Nước ép - Soda - Nước chai","Bia","Tiger cao","",93],["Bia Tiger lùn",18000,"Nước ép - Soda - Nước chai","Bia","Tiger lùn","",0],["Bia Larue",18000,"Nước ép - Soda - Nước chai","Bia","Larue","",0],["Bia Ken thấp",21000,"Nước ép - Soda - Nước chai","Bia","Ken thấp","",0],["Ép dưa hấu (M)",29000,"Nước ép - Soda - Nước chai","Ép dưa hấu","M","49fd8d3e-f693-4733-a990-b53b7d105d0f.jpg",68],["Ép dưa hấu (L)",35000,"Nước ép - Soda - Nước chai","Ép dưa hấu","L","49fd8d3e-f693-4733-a990-b53b7d105d0f.jpg",0],["Ép ổi (M)",29000,"Nước ép - Soda - Nước chai","Ép ổi","M","ep-oi-chata.jpg",52],["Ép ổi (L)",35000,"Nước ép - Soda - Nước chai","Ép ổi","L","ep-oi-chata.jpg",0],["Ép cà rốt (M)",29000,"Nước ép - Soda - Nước chai","Ép cà rốt","M","chatgpt-image-aug-10-2026-11-28-05-am-d04818b4-3753-4da7-aecb-260f834815bd.jpg",48],["Ép cà rốt (L)",35000,"Nước ép - Soda - Nước chai","Ép cà rốt","L","chatgpt-image-aug-10-2026-11-28-05-am-d04818b4-3753-4da7-aecb-260f834815bd.jpg",0],["Soda lựu (vừa)",25000,"Nước ép - Soda - Nước chai","Soda lựu","Vừa","6e8c8ee6-b8b3-4bc3-bb47-3aa22d3d13b3.jpg",45],["Soda lựu (lớn)",30000,"Nước ép - Soda - Nước chai","Soda lựu","Lớn","6e8c8ee6-b8b3-4bc3-bb47-3aa22d3d13b3.jpg",0],["Monster hồng",28000,"Nước ép - Soda - Nước chai","Monster","Hồng","n-c-t-ng-l-c-monster-energy-v-d-a-h-ng-lon-355ml-37f215ca7f3e4220848aaee5ce1b1e37.jpg",34],["Monster xanh",28000,"Nước ép - Soda - Nước chai","Monster","Xanh","n-c-t-ng-l-c-monster-energy-v-d-a-h-ng-lon-355ml-37f215ca7f3e4220848aaee5ce1b1e37.jpg",0],["Monster đen",28000,"Nước ép - Soda - Nước chai","Monster","Đen","n-c-t-ng-l-c-monster-energy-v-d-a-h-ng-lon-355ml-37f215ca7f3e4220848aaee5ce1b1e37.jpg",0],["Soda đào (vừa)",25000,"Nước ép - Soda - Nước chai","Soda đào","Vừa","64addd62-0dcd-4d36-b51e-f8d54b0c19b8.jpg",26],["Soda đào (lớn)",30000,"Nước ép - Soda - Nước chai","Soda đào","Lớn","64addd62-0dcd-4d36-b51e-f8d54b0c19b8.jpg",0],["Fanta cam",15000,"Nước ép - Soda - Nước chai","Fanta","Cam","nuoc-ngot-fanta-vi-cam-lon-330ml-201812281420358633.jpg",0],["Fanta đỏ",15000,"Nước ép - Soda - Nước chai","Fanta","Đỏ","nuoc-ngot-fanta-vi-cam-lon-330ml-201812281420358633.jpg",0],["Nutri cam",15000,"Nước ép - Soda - Nước chai","Nutri","Cam","m88xbbpqnpzav.jpg",0],["Nutri dâu",15000,"Nước ép - Soda - Nước chai","Nutri","Dâu","m88xbbpqnpzav.jpg",0],["Aquarius",15000,"Nước ép - Soda - Nước chai",0,0,"8935049510802.jpg",0],["Charged dâu rừng",15000,"Nước ép - Soda - Nước chai",0,0,"8935049500247-1-jpg.jpg",0],["Cà phê sữa Sài Gòn",25000,"Cà phê - Món nóng",0,0,"chatgpt-image-sep-25-2026-09-04-27-am.jpg",127],["Cà phê muối",30000,"Cà phê - Món nóng",0,0,"chatgpt-image-sep-25-2026-09-55-44-am.jpg",95],["Bạc xỉu",30000,"Cà phê - Món nóng",0,0,"chatgpt-image-sep-25-2026-09-04-27-am.jpg",92],["Cà phê sữa máy",22000,"Cà phê - Món nóng",0,0,"chatgpt-image-sep-25-2026-09-04-27-am.jpg",75],["Cacao nóng",29000,"Cà phê - Món nóng",0,0,"cacao-nong.jpg",70],["Cà phê kem trứng",30000,"Cà phê - Món nóng",0,0,"chatgpt-image-sep-25-2026-09-07-27-am.jpg",33],["Cà phê đen máy",22000,"Cà phê - Món nóng",0,0,"chatgpt-image-sep-25-2026-09-55-44-am.jpg",27],["Cà phê đen Sài Gòn",25000,"Cà phê - Món nóng",0,0,"chatgpt-image-sep-25-2026-09-55-44-am.jpg",24],["Cà phê sữa phin",18000,"Cà phê - Món nóng",0,0,"",18],["Cà phê đen phin",18000,"Cà phê - Món nóng",0,0,"",8],["Sữa nóng",35000,"Cà phê - Món nóng",0,0,"",0],["Sữa chua việt quất",35000,"Sữa chua - Đá xay",0,0,"chatgpt-image-sep-25-2026-10-49-39-am.jpg",157],["Matcha đá xay kem trứng",35000,"Sữa chua - Đá xay","Matcha đá xay","Kem trứng","chatgpt-image-sep-25-2026-10-36-07-am.jpg",109],["Matcha đá xay kem muối",35000,"Sữa chua - Đá xay","Matcha đá xay","Kem muối","chatgpt-image-sep-25-2026-10-36-07-am.jpg",0],["Matcha đá xay kem phô mai",35000,"Sữa chua - Đá xay","Matcha đá xay","Kem phô mai","chatgpt-image-sep-25-2026-10-36-07-am.jpg",0],["Sữa chua hạt đác",35000,"Sữa chua - Đá xay",0,0,"b84323af-c630-48d5-a834-7c39c9b07aeb.jpg",82],["Sữa chua đá",30000,"Sữa chua - Đá xay",0,0,"chatgpt-image-sep-25-2026-10-54-15-am.jpg",53],["Oreo đá xay",35000,"Sữa chua - Đá xay",0,0,"chatgpt-image-sep-25-2026-10-43-05-am.jpg",45],["Ca cao đá xay",35000,"Sữa chua - Đá xay",0,0,"chatgpt-image-sep-25-2026-10-38-19-am.jpg",45],["Sữa chua xoài chanh dây",35000,"Sữa chua - Đá xay",0,0,"",38],["Sữa chua phúc bồn tử",35000,"Sữa chua - Đá xay",0,0,"chatgpt-image-sep-25-2026-10-58-06-am.jpg",37],["Gà rán",35000,"Đồ chiên",0,0,"53e6cceb-f381-410c-894a-564748550a70.jpg",81],["Cá viên",25000,"Đồ chiên",0,0,"ca-vien-chien.jpg",64],["Mẹt Lai Rai",49000,"Đồ chiên",0,0,"bfa8a8fe-2c4b-4bb1-bc96-e9da8f39a20f.jpg",55],["Mẹt Đặc Biệt",69000,"Đồ chiên",0,0,"53e6cceb-f381-410c-894a-564748550a70.jpg",49],["Khoai tây chiên",35000,"Đồ chiên",0,0,"download-0d820270-db3a-416c-951d-5c1df3141bfd.jpg",48],["Phô mai que (3 que)",35000,"Đồ chiên",0,0,"bfa8a8fe-2c4b-4bb1-bc96-e9da8f39a20f.jpg",40],["Xúc xích Đức (3 cây)",35000,"Đồ chiên",0,0,"anh-xuc-xich-chien-041848723.jpg",30],["Nem chua rán (7 que)",35000,"Đồ chiên",0,0,"bfa8a8fe-2c4b-4bb1-bc96-e9da8f39a20f.jpg",20],["Hồ lô",25000,"Đồ chiên",0,0,"ca-vien-chien.jpg",13],["Gà viên mayo",35000,"Đồ chiên",0,0,"",8],["Tôm viên",25000,"Đồ chiên",0,0,"tom.jpg",7],["Bò viên",25000,"Đồ chiên",0,0,"cach-lam-bo-vien-chien-6.jpg",6],["Cánh gà",35000,"Đồ chiên",0,0,"",4],["Chả giò hải sản",35000,"Đồ chiên",0,0,"",0],["Bánh bao chiên (5 cái)",32000,"Đồ chiên",0,0,"",0],["Thức ăn cho thỏ",5000,"Khác",0,0,"",39],["Kem kool đậu xanh sầu riêng",15000,"Kem",0,0,"vn-11134207-81ztc-mncz0kv3i9l428.jpeg",61],["Kem que dâu bubble gum",12000,"Kem",0,0,"merino-kem-merino-dau-bubble-gum.png",38],["Kem que socola cốm cacao",12000,"Kem",0,0,"merino-kem-socola-com-cacao.png",31],["Kem mochi đậu xanh",10000,"Kem",0,0,"merino-kem-mochi-merino-dau-xanh-1.png",14],["Kem ốc quế vani socola",20000,"Kem",0,0,"images.jpg",13],["Kem que dừa lưới",12000,"Kem",0,0,"merino-kem-dua-luoi-merino.png",13],["Kem que ngũ cốc",12000,"Kem",0,0,"merino-kem-dau-com-ngu-coc-merino-40g.png",9],["Kem que nho vải",12000,"Kem",0,0,"merino-kem-trai-cay-nho-vai-merino.png",9],["Kem kool dưa hấu",15000,"Kem",0,0,"kem-que-dua-hau-merino-kool-62g-202210072049525777.jpg",6],["Kem kool vani chanh muối",15000,"Kem",0,0,"merino-kem-chanh-muoi-merino-kool.png",6],["Kem que dâu cam",12000,"Kem",0,0,"merino-kem-trai-cay-dau-cam.png",4],["Kem mochi khoai môn",10000,"Kem",0,0,"merino-kem-mochi-merino-khoai-mon.png",2],["Kem mochi đậu đỏ",10000,"Kem",0,0,"merino-kem-mochi-merino-dau-do.png",2],["Kem Cutie Bear gấu socola sữa",20000,"Kem",0,0,"merino-kem-gau-socola-sua-merino-cutie-bear.jpg",0]].map(function(a){return {n:a[0],p:a[1],dg:a[2],b:a[3]||a[0],s:a[4]||null,img:a[5]?P+a[5]:'',r:a[6]};});})();
+var ORDER = ['Trà - Trà sữa','Cà phê - Món nóng','Nước ép - Soda - Nước chai','Sữa chua - Đá xay','Mì cay - Bánh mì chảo','Đồ chiên','Ăn vặt','Kem','Khác'];
+var ICO = {'Trà - Trà sữa':'🧋','Ăn vặt':'🍿','Mì cay - Bánh mì chảo':'🍜','Nước ép - Soda - Nước chai':'🍹','Cà phê - Món nóng':'☕','Sữa chua - Đá xay':'🥤','Đồ chiên':'🍗','Kem':'🍦','Khác':'🐰'};
+var SHORT = {'Trà - Trà sữa':'Trà · Trà sữa','Mì cay - Bánh mì chảo':'Mì cay · Bánh mì chảo','Nước ép - Soda - Nước chai':'Nước ép · Soda','Cà phê - Món nóng':'Cà phê','Sữa chua - Đá xay':'Sữa chua · Đá xay'};
+var QN_DRINK = ['Ít đá','Không đá','Nhiều đá','Ít ngọt','Không đường'], QN_HOT = ['Ít ngọt','Không đường'],
+    QN_MI = ['Cấp 0','Cấp 1','Cấp 2','Cấp 3','Cấp 4','Cấp 5','Cấp 7'], QN_FRY = ['Ít cay','Không cay','Thêm tương ớt'];
+function qnFor(dg, n){
+  if (dg === 'Mì cay - Bánh mì chảo') return /^Mì cay/.test(n) ? QN_MI : ['Không hành','Ít cay','Không cay'];
+  if (dg === 'Đồ chiên') return QN_FRY;
+  if (dg === 'Cà phê - Món nóng') return /nóng|Cacao/i.test(n) ? QN_HOT : QN_DRINK;
+  if (/Trà|Nước ép|Sữa chua/.test(dg)) return /^(Bia|Monster|Fanta|Nutri|Aquarius|Charged)/.test(n) ? ['Thêm ly đá'] : QN_DRINK;
+  return [];
+}
+var SZ = /^(M|L|Vừa|Lớn|vừa|lớn)$/;
+function money(n){ return (+n || 0).toLocaleString('vi-VN').replace(/,/g,'.'); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function $(id){ return document.getElementById(id); }
+/* gộp món theo ô (b): các size thành 1 thẻ */
+var GROUPS = [], gi = {};
+MENU.forEach(function(m){
+  var g = gi[m.dg]; if (!g) { g = gi[m.dg] = { dg: m.dg, tiles: [], tb: {} }; GROUPS.push(g); }
+  var t = g.tb[m.b]; if (!t) { t = g.tb[m.b] = { b: m.b, dg: m.dg, items: [], r: 0, img: '' }; g.tiles.push(t); }
+  t.items.push(m); t.r += +m.r || 0; if (!t.img && m.img) t.img = m.img;
+});
+GROUPS.sort(function(a, b){ return ORDER.indexOf(a.dg) - ORDER.indexOf(b.dg); });
+GROUPS.forEach(function(g){ g.tiles.sort(function(a, b){ return b.r - a.r; }); });
+var V = 'A', CART = [], CUR = null;
+function sizes(t){ return t.items.length > 1 && t.items.every(function(m){ return m.s && SZ.test(m.s); }); }
+function kinds(t){ return t.items.length > 1 && !sizes(t); }
+function defItem(t){ return sizes(t) ? (t.items.filter(function(m){ return /^(M|Vừa|vừa)$/.test(m.s); })[0] || t.items[0]) : t.items[0]; }
+function priceLbl(t){ var ps = t.items.map(function(m){ return m.p; }), lo = Math.min.apply(null, ps), hi = Math.max.apply(null, ps); return lo === hi ? money(lo) + 'đ' : 'từ ' + money(lo) + 'đ'; }
+function subLbl(t){ if (sizes(t)) return 'Size ' + t.items.map(function(m){ return m.s.toUpperCase().replace('VỪA','Vừa').replace('LỚN','Lớn'); }).join(' / '); if (kinds(t)) return t.items.length + ' loại'; var x = /\((.*)\)$/.exec(t.items[0].n); return x ? x[1] : ''; }
+function nameLbl(t){ return t.items.length > 1 ? t.b : t.b.replace(/\s*\(.*\)$/, ''); }
+function qtyT(t){ return CART.filter(function(c){ return t.items.some(function(m){ return m.n === c.n; }); }).reduce(function(s, c){ return s + c.q; }, 0); }
+function img(t, cls){ return '<div class="' + cls + '"' + (t.img ? ' style="background-image:url(\'' + esc(t.img) + '\')"' : '') + '>' + (t.img ? '' : (ICO[t.dg] || '🍽')) + '</div>'; }
+function draw(){
+  $('cats').innerHTML = GROUPS.map(function(g, i){ return '<button class="chip' + (i ? '' : ' on') + '" type="button" data-g="' + i + '">' + (ICO[g.dg] || '') + ' ' + esc(SHORT[g.dg] || g.dg) + '</button>'; }).join('');
+  $('list').innerHTML = GROUPS.map(function(g, i){
+    var body = g.tiles.map(function(t, j){
+      var q = qtyT(t), k = i + ':' + j, sb = subLbl(t);
+      if (V === 'A') return '<div class="ca" data-t="' + k + '">' + img(t, 'im') + (q ? '<span class="qy">' + q + '</span>' : '') + '<div class="tx"><div class="nm">' + esc(nameLbl(t)) + '</div>' + (sb ? '<div class="sb">' + esc(sb) + '</div>' : '') + '<div class="pr"><b>' + priceLbl(t) + '</b><button class="plus" type="button" data-p="' + k + '" aria-label="Thêm">+</button></div></div></div>';
+      return '<div class="cb" data-t="' + k + '">' + img(t, 'im') + (q ? '<span class="qy">' + q + '</span>' : '') + '<div class="tx"><div class="nm">' + esc(nameLbl(t)) + '</div>' + (sb ? '<div class="sb">' + esc(sb) + '</div>' : '') + '<div class="pb">' + priceLbl(t) + '</div></div><button class="plus" type="button" data-p="' + k + '" aria-label="Thêm">+</button></div>';
+    }).join('');
+    return '<section class="sec" id="g' + i + '"><h2>' + (ICO[g.dg] || '') + ' ' + esc(SHORT[g.dg] || g.dg) + ' <small>' + g.tiles.length + ' món</small></h2><div class="' + (V === 'A' ? 'ga' : 'gb') + '">' + body + '</div></section>';
+  }).join('');
+  markCat();
+}
+function tileOf(k){ var a = k.split(':'); return GROUPS[+a[0]].tiles[+a[1]]; }
+function toast(s){ var t = $('toast'); t.textContent = s; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(function(){ t.classList.remove('on'); }, 1400); }
+function addCart(m, q, note){
+  var c = CART.filter(function(c){ return c.n === m.n && (c.t || '') === (note || ''); })[0];
+  if (c) c.q += q; else CART.push({ n: m.n, p: m.p, q: q, t: note || '', dg: m.dg, img: m.img });
+  drawBar(); draw(); toast('Đã thêm ' + q + ' × ' + m.n);
+}
+function drawBar(){
+  var n = CART.reduce(function(s, c){ return s + c.q; }, 0), tot = CART.reduce(function(s, c){ return s + c.q * c.p; }, 0);
+  $('cartBtn').disabled = !n; $('cartN').textContent = n; $('cartT').textContent = n ? 'Xem đơn & gửi' : 'Chưa chọn món'; $('cartS').textContent = n ? money(tot) + 'đ' : '';
+}
+/* bảng chọn món */
+var SEL = null, Q = 1, QN = [];
+function openItem(t){
+  CUR = t; SEL = defItem(t); Q = 1; QN = [];
+  $('iHero').style.backgroundImage = t.img ? 'url(\'' + t.img + '\')' : ''; $('iHero').textContent = t.img ? '' : (ICO[t.dg] || '🍽');
+  $('iName').textContent = nameLbl(t);
+  $('iSizeW').hidden = t.items.length < 2;
+  $('iSizeW').querySelector('.lab').textContent = sizes(t) ? 'Chọn size' : 'Chọn loại';
+  var qn = qnFor(t.dg, t.b); $('iQn').innerHTML = qn.map(function(x){ return '<button class="qn" type="button" data-qn="' + esc(x) + '">' + esc(x) + '</button>'; }).join('');
+  $('iQn').hidden = !qn.length; $('iNote').value = '';
+  $('iQnL').innerHTML = /^Mì cay/.test(t.b) ? 'Cấp độ cay &amp; ghi chú <small>(chọn hoặc tự gõ)</small>' : 'Ghi chú <small>(chọn nhanh hoặc tự gõ)</small>';
+  drawItem(); $('itemM').hidden = false;
+}
+function drawItem(){
+  var t = CUR;
+  $('iSize').innerHTML = t.items.map(function(m, k){ return '<button class="op' + (m === SEL ? ' on' : '') + '" type="button" data-s="' + k + '">' + esc(m.s || m.n) + '<small>' + money(m.p) + 'đ</small></button>'; }).join('');
+  $('iPrice').textContent = money(SEL.p) + 'đ'; $('iQ').textContent = Q; $('iAdd').textContent = 'Thêm vào đơn · ' + money(SEL.p * Q) + 'đ';
+  Array.prototype.forEach.call($('iQn').children, function(b){ b.classList.toggle('on', QN.indexOf(b.getAttribute('data-qn')) >= 0); });
+}
+function noteText(){ var free = $('iNote').value.trim(); return QN.concat(free ? [free] : []).join(', '); }
+$('iSize').onclick = function(e){ var b = e.target.closest('[data-s]'); if (b) { SEL = CUR.items[+b.getAttribute('data-s')]; drawItem(); } };
+$('iQn').onclick = function(e){ var b = e.target.closest('[data-qn]'); if (!b) return; var x = b.getAttribute('data-qn'), i = QN.indexOf(x);
+  if (i >= 0) QN.splice(i, 1); else { if (/^Cấp /.test(x)) QN = QN.filter(function(y){ return !/^Cấp /.test(y); }); if (/đá$/.test(x)) QN = QN.filter(function(y){ return !/đá$/.test(y); }); QN.push(x); } drawItem(); };
+$('iMinus').onclick = function(){ if (Q > 1) { Q--; drawItem(); } };
+$('iPlus').onclick = function(){ Q++; drawItem(); };
+$('iAdd').onclick = function(){ addCart(SEL, Q, noteText()); $('itemM').hidden = true; };
+/* giỏ */
+function drawCart(){
+  $('cLines').innerHTML = CART.map(function(c, k){
+    return '<div class="ci"><div class="im"' + (c.img ? ' style="background-image:url(\'' + esc(c.img) + '\')"' : '') + '>' + (c.img ? '' : (ICO[c.dg] || '🍽')) + '</div><div class="tx"><div class="nm">' + esc(c.n) + '</div>' + (c.t ? '<div class="nt">✎ ' + esc(c.t) + '</div>' : '') +
+      '<span class="ed" data-ed="' + k + '">' + (c.t ? 'Sửa ghi chú' : '+ Ghi chú') + '</span></div><div class="rt"><b>' + money(c.p * c.q) + 'đ</b><div class="stp"><button type="button" data-m="' + k + '">−</button><b>' + c.q + '</b><button type="button" data-a="' + k + '">+</button></div></div></div>';
+  }).join('');
+  $('cTot').textContent = money(CART.reduce(function(s, c){ return s + c.q * c.p; }, 0)) + 'đ';
+}
+$('cLines').onclick = function(e){
+  var b;
+  if ((b = e.target.closest('[data-m]'))) { var k = +b.getAttribute('data-m'); if (--CART[k].q <= 0) CART.splice(k, 1); }
+  else if ((b = e.target.closest('[data-a]'))) CART[+b.getAttribute('data-a')].q++;
+  else if ((b = e.target.closest('[data-ed]'))) { var c = CART[+b.getAttribute('data-ed')], v = prompt('Ghi chú cho ' + c.n, c.t); if (v != null) c.t = v.trim().slice(0, 60); }
+  else return;
+  drawBar(); draw(); if (!CART.length) $('cartM').hidden = true; else drawCart();
+};
+$('cartBtn').onclick = function(){ drawCart(); $('cartM').hidden = false; };
+$('cSend').onclick = function(){ toast('Bản phác: chưa gửi đơn thật'); };
+document.querySelectorAll('[data-close]').forEach(function(b){ b.onclick = function(){ b.closest('.mask').hidden = true; }; });
+document.querySelectorAll('.mask').forEach(function(m){ m.addEventListener('click', function(e){ if (e.target === m) m.hidden = true; }); });
+/* bấm thẻ = mở bảng chọn; bấm + : món 1 loại / món chỉ khác size thì thêm ngay (size M), món nhiều loại thì mở bảng */
+$('list').onclick = function(e){
+  var p = e.target.closest('[data-p]'), t;
+  if (p) { t = tileOf(p.getAttribute('data-p')); if (kinds(t)) return openItem(t); return addCart(defItem(t), 1, ''); }
+  var c = e.target.closest('[data-t]'); if (c) openItem(tileOf(c.getAttribute('data-t')));
+};
+$('cats').onclick = function(e){ var b = e.target.closest('[data-g]'); if (!b) return; var s = $('g' + b.getAttribute('data-g')); window.scrollTo({ top: s.offsetTop - $('cats').offsetHeight + 2, behavior: 'smooth' }); };
+function markCat(){
+  var y = window.scrollY + $('cats').offsetHeight + 20, on = 0;
+  GROUPS.forEach(function(g, i){ var s = $('g' + i); if (s && s.offsetTop <= y) on = i; });
+  Array.prototype.forEach.call($('cats').children, function(c, i){ var o = i === on; if (o !== c.classList.contains('on')) { c.classList.toggle('on', o); if (o) c.scrollIntoView({ inline: 'center', block: 'nearest' }); } });
+}
+window.addEventListener('scroll', markCat, { passive: true });
+document.querySelector('.demo').onclick = function(e){ var b = e.target.closest('[data-v]'); if (!b) return; V = b.getAttribute('data-v'); document.querySelectorAll('.demo button').forEach(function(x){ x.classList.toggle('on', x === b); }); draw(); };
+draw(); drawBar();
+</script>
+</body>
+</html>
