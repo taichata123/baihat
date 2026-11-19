@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chata – Màn hình khách</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Lora:wght@700&display=swap">
+<style>
+  /* Màn hình phụ quay ra khách – mở từ app thu ngân (nút 🖥 Khách). Nhận dữ liệu đơn qua BroadcastChannel 'chata_khach' (Tài duyệt 19/11/2026) */
+  :root{--bg:#F4F6F1;--ink:#14231F;--muted:#5A6B65;--line:#DCE4DD;--ac:#0D6C68;--ac-d:#0A4F4C;--ac-s:#D5ECE8;--sun:#F2B544;--sun-s:#FBEFD3}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#0D2F2D;font-family:"Be Vietnam Pro",system-ui,sans-serif;color:var(--ink);overflow:hidden;cursor:none;user-select:none}
+  [hidden]{display:none!important}
+  .stage{position:absolute;inset:0;display:grid;grid-template-columns:1fr 31vw;background:var(--bg)}
+  .main{position:relative;display:flex;flex-direction:column;min-width:0}
+  .hdr{display:flex;align-items:center;justify-content:space-between;padding:2.2vh 3vw;border-bottom:1px solid var(--line);background:#fff}
+  .brand{font-family:Lora,Georgia,serif;font-weight:700;font-size:4.2vh;color:var(--ac)}
+  .brand small{font-family:"Be Vietnam Pro";font-size:1.7vh;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-left:1vw;font-weight:600}
+  .clock{font-size:2.6vh;font-weight:600;color:var(--muted)}
+  .body{flex:1;position:relative;overflow:hidden}
+  .view{position:absolute;inset:0;display:none}
+  .view.on{display:flex}
+  .idle{flex-direction:column;background:linear-gradient(135deg,#0D6C68,#0A4F4C)}
+  .slide{position:absolute;inset:0;background:#0A4F4C center/cover no-repeat;opacity:0;transition:opacity 1s}
+  .slide.on{opacity:1}
+  .slide .cap{position:absolute;left:0;right:0;bottom:0;padding:6vh 3vw 4vh;background:linear-gradient(transparent,rgba(0,0,0,.72));color:#fff}
+  .slide .cap small{display:block;font-size:2.2vh;letter-spacing:.14em;text-transform:uppercase;color:var(--sun);font-weight:700}
+  .slide .cap b{display:block;font-size:6vh;line-height:1.15;margin-top:.6vh}
+  .slide .cap span{font-size:3.6vh;font-weight:700}
+  .welcome{position:absolute;top:3vh;left:3vw;background:rgba(255,255,255,.92);border-radius:999px;padding:1.2vh 2vw;font-size:2.6vh;font-weight:700;color:var(--ac-d);z-index:2}
+  .order{flex-direction:column;padding:3vh 3vw 0}
+  .order h2{margin:0 0 1.5vh;font-size:3.4vh;font-weight:800;display:flex;justify-content:space-between;align-items:baseline}
+  .order h2 small{font-size:2.2vh;font-weight:600;color:var(--muted)}
+  .togo{display:inline-block;margin-left:1vw;background:var(--sun);color:#2b2118;border-radius:999px;padding:.3vh 1vw;font-size:2.2vh;vertical-align:middle}
+  .rows{flex:1;overflow:hidden;display:flex;flex-direction:column}
+  .row{display:grid;grid-template-columns:7vh 1fr auto;gap:1.6vw;align-items:center;padding:1.5vh 0;border-top:1px solid var(--line);font-size:3vh}
+  .row .q{width:6vh;height:6vh;border-radius:1.2vh;background:var(--ac-s);color:var(--ac-d);font-weight:800;display:flex;align-items:center;justify-content:center;font-size:3vh}
+  .row .n{font-weight:700;line-height:1.25}
+  .row .n small{display:block;font-weight:500;color:var(--muted);font-size:2.2vh}
+  .row .p{font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+  .row .p s{display:block;font-size:2vh;color:var(--muted);font-weight:500}
+  .row.new{animation:hi 1.6s ease-out}
+  @keyframes hi{from{background:var(--sun-s)}to{background:transparent}}
+  .more{font-size:2.2vh;color:var(--muted);padding:1vh 0;border-top:1px solid var(--line)}
+  .sum{margin:0 -3vw;padding:2.4vh 3vw;background:#fff;border-top:2px solid var(--line);display:grid;grid-template-columns:1fr auto;row-gap:.6vh;font-size:2.6vh}
+  .sum .lb{color:var(--muted)}.sum .v{text-align:right;font-variant-numeric:tabular-nums}
+  .sum .tot{font-size:5.2vh;font-weight:800;color:var(--ac);line-height:1.1}
+  .sum .tl{font-size:3vh;font-weight:700;align-self:end}
+  .pay{align-items:center;justify-content:center;gap:4vw;padding:3vh 3vw}
+  .pay .qr{background:#fff;border-radius:2vh;padding:2vh;box-shadow:0 1vh 4vh rgba(0,0,0,.12)}
+  .pay .qr img{display:block;width:52vh;height:52vh;object-fit:contain}
+  .pay .info{max-width:36vw}
+  .pay .info small{font-size:2.4vh;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .pay .amt{font-size:8vh;font-weight:800;color:var(--ac);line-height:1.1;margin:1vh 0 2vh;font-variant-numeric:tabular-nums}
+  .pay .ln{font-size:2.6vh;margin:.8vh 0}
+  .pay .tip{margin-top:3vh;background:var(--sun-s);border-radius:1.4vh;padding:1.8vh 1.6vw;font-size:2.5vh;line-height:1.4}
+  .done{flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .done .ok{width:16vh;height:16vh;border-radius:50%;background:var(--ac);color:#fff;font-size:9vh;display:flex;align-items:center;justify-content:center}
+  .done h2{font-size:6vh;margin:3vh 0 1vh}
+  .done p{font-size:3vh;color:var(--muted);margin:0}
+  .done .code{margin-top:3vh;display:flex;gap:3vw}
+  .done .code div{background:#fff;border:1px solid var(--line);border-radius:2vh;padding:2vh 3vw}
+  .done .code small{display:block;font-size:2vh;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;font-weight:700}
+  .done .code b{font-size:7vh;color:var(--ac);font-family:Lora,serif}
+  .side{background:var(--ac);color:#EAF6F4;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4vh 2.4vw;gap:2.4vh}
+  .side .t{font-size:2.2vh;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--sun)}
+  .side h1{margin:0;font-size:4.6vh;line-height:1.2;font-weight:800;color:#fff}
+  .side .code{background:#fff;border-radius:2.4vh;padding:2.2vh;width:min(26vw,44vh)}
+  .side .code img{display:block;width:100%;height:auto;aspect-ratio:1}
+  .side .steps{display:flex;flex-direction:column;gap:1.2vh;font-size:2.4vh;text-align:left;width:min(26vw,44vh)}
+  .side .steps span{display:flex;gap:1vw;align-items:center}
+  .side .steps i{font-style:normal;flex:none;width:4vh;height:4vh;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;font-weight:800}
+  .side .note{font-size:2vh;opacity:.85}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="main">
+    <div class="hdr"><div class="brand">Chata<small>Cà phê · Hồ bơi · Vui chơi</small></div><div class="clock" id="clock"></div></div>
+    <div class="body">
+      <div class="view idle on" id="vIdle"><div class="welcome">👋 Chào bạn! Bạn order tại quầy hoặc quét mã bên phải</div><div id="slides"></div></div>
+      <div class="view order" id="vOrder">
+        <h2><span>Đơn của bạn<span class="togo" id="oTogo" hidden>🥡 Mang đi</span></span><small id="oMeta"></small></h2>
+        <div class="rows" id="rows"></div>
+        <div class="sum" id="sum"></div>
+      </div>
+      <div class="view pay" id="vPay">
+        <div class="qr"><img id="vqr" alt="Mã VietQR"></div>
+        <div class="info">
+          <small>Quét mã để chuyển khoản</small>
+          <div class="amt" id="pAmt"></div>
+          <div class="ln">Nội dung: <b id="pNote"></b></div>
+          <div class="ln" id="pBank"></div>
+          <div class="tip">📱 Mở app ngân hàng → <b>Quét QR</b>. Số tiền và nội dung đã có sẵn, bạn chỉ cần xác nhận.</div>
+        </div>
+      </div>
+      <div class="view done" id="vDone">
+        <div class="ok">✓</div>
+        <h2>Cảm ơn bạn!</h2>
+        <p id="dMsg">Món đang được chuẩn bị, thẻ rung báo là món xong nhé.</p>
+        <div class="code"><div><small>Mã đơn</small><b id="dCode"></b></div><div id="dPgW"><small>Thẻ rung</small><b id="dPg"></b></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="side">
+    <div class="t">Gọi món tại bàn</div>
+    <h1>Quét mã để gọi món,<br>không cần xếp hàng</h1>
+    <div class="code"><img alt="Mã QR gọi món" src="https://api.qrserver.com/v1/create-qr-code/?size=600x600&amp;margin=0&amp;color=0D2F2D&amp;data=https%3A%2F%2Ftaichata123.github.io%2Fbaihat%2Fgoimon.html"></div>
+    <div class="steps"><span><i>1</i>Chọn món trên điện thoại</span><span><i>2</i>Gửi đơn, nhận mã số</span><span><i>3</i>Ra quầy đọc mã &amp; thanh toán</span></div>
+    <div class="note">Hoặc order trực tiếp tại quầy</div>
+  </div>
+</div>
+<script src="chata-api.js"></script>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  function money(n){ return (+n || 0).toLocaleString('vi-VN').replace(/,/g, '.') + 'đ'; }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function tick(){ var d = new Date(); $('clock').textContent = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' · ' + d.toLocaleDateString('vi-VN'); }
+  tick(); setInterval(tick, 20000);
+
+  /* Ảnh món bán chạy lúc chờ khách (lấy từ menu, mỗi giờ làm mới) */
+  var si = 0;
+  function loadSlides(){
+    if (!window.ChataAPI) return;
+    ChataAPI.call('getOrderMenu', []).then(function(d){
+      var seen = {}, list = [];
+      (d.menu || []).slice().sort(function(a, b){ return (+b.r || 0) - (+a.r || 0); }).forEach(function(m){
+        var g = m.dg || m.g, b = m.b || m.n.replace(/\s*\(.*\)$/, '');
+        if (!m.img || seen[b] || seen[m.img] || /Ăn vặt|Kem|Khác/.test(g) || list.length >= 8) return;
+        seen[b] = seen[m.img] = 1;
+        var p = Math.min.apply(null, (d.menu || []).filter(function(x){ return (x.b || x.n) === (m.b || m.n); }).map(function(x){ return x.p; }));
+        list.push({ n: b, p: p, img: m.img });
+      });
+      if (!list.length) return;
+      si = 0;
+      $('slides').innerHTML = list.map(function(s, i){ return '<div class="slide' + (i ? '' : ' on') + '" style="background-image:url(\'' + esc(s.img) + '\')"><div class="cap"><small>Món được gọi nhiều</small><b>' + esc(s.n) + '</b><span>từ ' + money(s.p) + '</span></div></div>'; }).join('');
+    }).catch(function(){});
+  }
+  setInterval(function(){ var ss = document.querySelectorAll('.slide'); if (ss.length < 2) return; ss[si % ss.length].classList.remove('on'); si = (si + 1) % ss.length; ss[si].classList.add('on'); }, 5000);
+  loadSlides(); setInterval(loadSlides, 3600000);
+
+  /* Nhận trạng thái từ app thu ngân */
+  var lastN = 0, doneT = null;
+  function view(v){ ['Idle','Order','Pay','Done'].forEach(function(x){ $('v' + x).classList.toggle('on', x === v); }); }
+  function show(st){
+    if (st && st.t === 'ping') { try { bc.postMessage({ t: 'pong' }); } catch (e) {} return; }
+    if (st && st.t === 'close') { window.close(); return; }
+    if (st && (st.t === 'hello' || st.t === 'pong')) return;
+    clearTimeout(doneT);
+    if (!st || st.t === 'idle' || (st.t === 'order' && !(st.items || []).length)) { lastN = 0; return view('Idle'); }
+    if (st.t === 'done') {
+      $('dCode').textContent = '#' + (st.code || ''); $('dPg').textContent = st.pager || ''; $('dPgW').hidden = !st.pager;
+      $('dMsg').textContent = st.pager ? 'Món đang được chuẩn bị, thẻ rung báo là món xong nhé.' : 'Món đang được chuẩn bị, Chata mang ra cho bạn nhé.';
+      view('Done'); lastN = 0; doneT = setTimeout(function(){ view('Idle'); }, 10000); return;
+    }
+    if (st.t === 'pay') {
+      $('pAmt').textContent = money(st.total); $('pNote').textContent = st.note || ''; $('pBank').innerHTML = st.bank ? 'Tài khoản: <b>' + esc(st.bank) + '</b>' : '';
+      if ($('vqr').getAttribute('src') !== st.qr) $('vqr').src = st.qr || '';
+      return view('Pay');
+    }
+    var items = st.items || [], max = 8, extra = items.length > max ? items.length - max : 0, list = extra ? items.slice(-max) : items, n = items.length;
+    $('rows').innerHTML = (extra ? '<div class="more">… và ' + extra + ' món phía trên</div>' : '') + list.map(function(i, k){
+      return '<div class="row' + (n > lastN && k === list.length - 1 ? ' new' : '') + '"><span class="q">' + i.q + '</span><span class="n">' + esc(i.n) + (i.t ? '<small>✎ ' + esc(i.t) + '</small>' : '') + '</span><span class="p">' + (i.g && i.g !== i.s ? '<s>' + money(i.g) + '</s>' : '') + money(i.s) + '</span></div>';
+    }).join('');
+    lastN = n;
+    $('oTogo').hidden = !st.togo;
+    $('oMeta').textContent = (st.cashier ? 'Thu ngân: ' + st.cashier + ' · ' : '') + (st.cnt || 0) + ' món';
+    $('sum').innerHTML = (st.disc ? '<span class="lb">Tạm tính</span><span class="v">' + money(st.gross) + '</span><span class="lb">Giảm giá' + (st.dl ? ' (' + esc(st.dl) + ')' : '') + '</span><span class="v">−' + money(st.disc) + '</span>' : '') +
+      '<span class="tl">Tổng cộng</span><span class="v tot">' + money(st.total) + '</span>';
+    view('Order');
+  }
+  var bc = null;
+  try { bc = new BroadcastChannel('chata_khach'); bc.onmessage = function(e){ show(e.data); }; bc.postMessage({ t: 'hello' }); } catch (e) {}
+  window.addEventListener('storage', function(e){ if (e.key === 'chata_khach' && e.newValue) try { show(JSON.parse(e.newValue)); } catch (x) {} });
+  try { var s = JSON.parse(localStorage.getItem('chata_khach') || 'null'); if (s && Date.now() - (s.at || 0) < 1800000 && s.t !== 'done') show(s); } catch (e) {}
+})();
+</script>
+</body>
+</html>

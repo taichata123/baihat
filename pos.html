@@ -28,6 +28,7 @@
   .tright{margin-left:auto;display:flex;align-items:center;gap:8px;padding-right:12px}
   .tsel{background:var(--nav2);color:#fff;border:1px solid #33476A;border-radius:8px;padding:6px 8px;font-size:13.5px}
   .tbtn{background:var(--nav2);color:#fff;border:1px solid #33476A;border-radius:8px;padding:7px 12px;font-size:13.5px;white-space:nowrap}
+  .tbtn.on{background:#13C48A;border-color:#13C48A}
   .tbtn.off{background:#5B2A2A;border-color:#7a3a3a}
   .net{width:10px;height:10px;border-radius:50%;background:var(--green)}
   .net.bad{background:var(--red)}
@@ -263,6 +264,7 @@
       <button class="tbtn" id="qrBtn" type="button">QR: Đang nhận</button>
       <button class="tbtn" id="shiftBtn" type="button" hidden>⏱ Kết ca</button>
       <button class="tbtn" id="updBtn" type="button" hidden style="background:#13C48A;color:#fff;border-color:#13C48A">⬆ Cập nhật app</button>
+      <button class="tbtn" id="khBtn" type="button" title="Mở / tắt màn hình phụ quay ra khách">🖥 Màn hình khách</button>
       <button class="tbtn" id="setBtn" type="button">🖨 Máy in</button>
       <button class="tbtn" id="lockBtn" type="button" title="Khóa máy / đổi người">🔒 Khóa</button>
       <button class="tbtn" id="outBtn" type="button">Đăng xuất</button>
@@ -1102,7 +1104,7 @@
     drawGrid(); drawTogo();
     var sl = document.querySelector('#lines .ln.sel'); if (sl && sl.scrollIntoView) sl.scrollIntoView({ block: 'nearest' });
   }
-  function drawTogo(){ var b = $('togoBtn'); b.classList.toggle('on', !!O.togo); b.textContent = O.togo ? '🥡 MANG ĐI ✓' : '🥡 Mang đi (F8)'; }
+  function drawTogo(){ var b = $('togoBtn'); b.classList.toggle('on', !!O.togo); b.textContent = O.togo ? '🥡 MANG ĐI ✓' : '🥡 Mang đi (F8)'; khPush(); }
   $('togoBtn').addEventListener('click', function(){ if (!O) return; O.togo = !O.togo; drawTogo(); toast(O.togo ? 'Đơn mang đi – tem ly sẽ in chữ MANG ĐI' : 'Đã bỏ mang đi'); back(); });
   var dType = '%', dPromo = '';
   function openDisc(){
@@ -1328,7 +1330,7 @@
   /* gõ 100 = 100.000đ (số dưới 1.000 tự nhân 1.000) */
   function givenVal(){ var g = +($('given').value.replace(/\D/g, '')) || 0; return g > 0 && g < 1000 ? g * 1000 : g; }
   function calcChange(){ var g = givenVal(); $('change').textContent = !g ? '0đ' : g < O.total ? 'chưa đủ (' + money(g) + 'đ)' : money(g - O.total) + 'đ'; }
-  function setMethod(m){ METHOD = m; Array.prototype.forEach.call(document.querySelectorAll('.meth'), function(x){ x.classList.toggle('on', x.getAttribute('data-m') === m); }); $('givenBox').hidden = m !== 'Tiền mặt'; $('ckBox').hidden = m !== 'Chuyển khoản'; if (m === 'Chuyển khoản') showQR(); if (m === 'Tiền mặt') $('given').focus(); }
+  function setMethod(m){ METHOD = m; Array.prototype.forEach.call(document.querySelectorAll('.meth'), function(x){ x.classList.toggle('on', x.getAttribute('data-m') === m); }); $('givenBox').hidden = m !== 'Tiền mặt'; $('ckBox').hidden = m !== 'Chuyển khoản'; if (m === 'Chuyển khoản') showQR(); if (m === 'Tiền mặt') $('given').focus(); khPush(); }
   /* Mã VietQR có sẵn số tiền + nội dung; nhân viên tự xác nhận khi thấy tiền về */
   function ckNote(){ return 'CHATA ' + (O.code ? O.code : O.pager ? 'THE' + norm(O.pager).toUpperCase().replace(/[^A-Z0-9]/g, '') : ''); }
   function showQR(){
@@ -1358,10 +1360,52 @@
       paying = false; busy(false); $('payModal').hidden = true;
       if (o) printOrder(o, { bill: wantBill, bep: wantTem && S.bep_on, tem: wantTem && S.tem_on }, { given: given }, o._k || []);
       toast('✓ Đã thanh toán #' + (o ? o.code : '') + (given > O.total ? ' · Thối ' + money(given - O.total) + 'đ' : ''), 4000);
-      closeOrder();
+      khDone(o); closeOrder();
     }, function(e){ paying = false; busy(false); if (e.message !== 'empty') { $('payErr').textContent = e.message; $('payErr').hidden = false; } });
   }
   $('payOk').addEventListener('click', doPay);
+
+  /* ===== Màn hình phụ cho khách (khach.html) – Tài duyệt 19/11/2026 =====
+     App thu ngân gửi trạng thái đơn qua BroadcastChannel 'chata_khach' (+ localStorage để cửa sổ mới mở đọc được).
+     Từ app 1.2.0: cửa sổ khách tự mở toàn màn hình trên màn thứ hai, không lấy bàn phím của thu ngân. */
+  var KH = null, khBc = null, khT = null, khHold = 0, khPong = 0;
+  try { khBc = new BroadcastChannel('chata_khach'); khBc.onmessage = function(e){ var d = e.data || {}; if (d.t === 'hello') khPush(); if (d.t === 'pong') khPong = Date.now(); }; } catch (e) {}
+  function khState(){
+    if (!O || $('ordView').hidden) return { t: 'idle' };
+    calcO();
+    if (!$('payModal').hidden && METHOD === 'Chuyển khoản' && S.qr_acc && $('ckImg').src) {
+      var bk = $('s_qr_bank').querySelector('option[value="' + S.qr_bank + '"]');
+      return { t: 'pay', total: O.total, note: ckNote().trim(), qr: $('ckImg').src, bank: (bk ? bk.textContent + ' · ' : '') + (S.qr_name || S.qr_acc) };
+    }
+    return { t: 'order', togo: !!O.togo, cnt: O.cnt, gross: O.gross, disc: O.discAmt, dl: O.disc ? discLabel(O.disc) : '', total: O.total, cashier: D && D.me ? D.me.name : '',
+      items: O.items.map(function(i){ var da = lineDisc(i); return { q: i.q, n: i.n, t: i.t || '', g: i.p * i.q, s: i.p * i.q - da }; }) };
+  }
+  function khSend(st){ st.at = Date.now(); try { if (khBc) khBc.postMessage(st); } catch (e) {} try { localStorage.setItem('chata_khach', JSON.stringify(st)); } catch (e) {} }
+  function khPush(){ clearTimeout(khT); khT = setTimeout(function(){ var st = khState(); if ((st.t === 'idle' || (st.t === 'order' && !st.items.length)) && khHold > Date.now()) return; khHold = 0; khSend(st); }, 60); }
+  /* thanh toán xong: hiện Cảm ơn + mã đơn 10 giây (mở đơn mới thì hiện đơn mới ngay) */
+  function khDone(o){ khHold = Date.now() + 10000; khSend({ t: 'done', code: o ? o.code : '', pager: o ? o.pager : '' }); }
+  function khAlive(cb){ var t0 = Date.now(); khPong = 0; try { khBc && khBc.postMessage({ t: 'ping' }); } catch (e) {} setTimeout(function(){ cb(khPong >= t0); }, 700); }
+  function khDraw(){ khAlive(function(on){ $('khBtn').classList.toggle('on', on || !!(KH && !KH.closed)); $('khBtn').textContent = on || (KH && !KH.closed) ? '🖥 Màn hình khách ✓' : '🖥 Màn hình khách'; }); }
+  function khOpen(auto){
+    khAlive(function(on){
+      if (on || (KH && !KH.closed)) {
+        if (auto) return khPush();
+        try { khBc && khBc.postMessage({ t: 'close' }); } catch (e) {} try { if (KH && !KH.closed) KH.close(); } catch (e) {}
+        KH = null; try { localStorage.removeItem('chata_khach_on'); } catch (e) {} $('khBtn').classList.remove('on'); $('khBtn').textContent = '🖥 Màn hình khách'; return;
+      }
+      if (NATIVE && !NATIVE.displays) { if (!auto) toast('Cần cập nhật app Chata Thu ngân lên bản 1.2.0 mới mở được màn hình khách. Tắt app rồi mở lại để app tự cập nhật.', 7000); return; }
+      KH = window.open('khach.html', 'chata_khach', 'popup=yes,width=1280,height=720');
+      if (!KH && !NATIVE) { if (!auto) toast('Trình duyệt đang chặn cửa sổ bật lên – cho phép rồi bấm lại.', 5000); return; }
+      try { localStorage.setItem('chata_khach_on', '1'); } catch (e) {}
+      if (!auto && NATIVE && NATIVE.displays && NATIVE.displays() < 2) toast('Không thấy màn hình thứ 2: màn hình khách mở thành cửa sổ, kéo sang màn kia rồi bấm F11.', 7000);
+      setTimeout(function(){ khPush(); khDraw(); back(); }, 1500);
+    });
+  }
+  $('khBtn').addEventListener('click', function(){ khOpen(false); });
+  try { var khMo = new MutationObserver(khPush); khMo.observe($('payModal'), { attributes: true, attributeFilter: ['hidden'] }); khMo.observe($('ordView'), { attributes: true, attributeFilter: ['hidden'] }); khMo.observe($('ckImg'), { attributes: true, attributeFilter: ['src'] }); } catch (e) {}
+  setInterval(khDraw, 15000); setTimeout(khDraw, 1200);
+  /* trong app: lần trước đang bật thì tự mở lại */
+  try { if (NATIVE && NATIVE.displays && localStorage.getItem('chata_khach_on') === '1') setTimeout(function(){ khOpen(true); }, 2500); } catch (e) {}
 
   /* Hủy đơn chờ: nút "Hủy đơn" trong màn hình đơn, hoặc chuột phải trên thẻ đơn */
   function cancelPending(o){
