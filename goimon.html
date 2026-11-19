@@ -115,6 +115,7 @@
   .lines .ci div{border:0;padding:0;justify-content:flex-start}.lines .ci .tx,.lines .ci .tx div{display:block}.lines .ci .rt{display:block}.lines .ci .im{justify-content:center}.lines .ci .stp{gap:6px}
   .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:#1A2926;color:#fff;padding:9px 16px;border-radius:999px;font-size:14px;z-index:70;opacity:0;transition:opacity .2s;pointer-events:none;max-width:92vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .toast.on{opacity:.95}
+  .mixn{margin:10px 0;background:#FFF3C4;border:1.5px solid #F2B544;color:#6B4A00;border-radius:10px;padding:9px 12px;font-size:14px;font-weight:700;line-height:1.4}
   .evb{display:flex;align-items:center;gap:12px;text-decoration:none;color:#fff;background:linear-gradient(135deg,#0A3B39,#0D6C68 65%,#14807A);border-radius:14px;padding:12px 14px;box-shadow:0 6px 18px rgba(13,108,104,.22)}
   .evb .evi{font-size:28px;flex:none}
   .evb .evt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
@@ -151,6 +152,7 @@
     <div class="code" id="tCode">#000</div>
     <div class="who" id="tName"></div>
     <div class="st" id="tSt">Chờ thanh toán</div>
+    <div class="mixn" id="tMix" hidden>⚠️ Quý khách lưu ý: chỉ trả thẻ rung khi nhận đủ món. Xin cảm ơn!</div>
     <div class="guide" id="tGuide">👉 Ra <b>quầy thu ngân</b>, đọc <b>mã số</b> và <b>tên</b> ở trên. Thu ngân kiểm tra lại món với bạn rồi thanh toán.</div>
     <div class="lines" id="tLines"></div>
     <div class="tot"><span>Tổng tạm tính</span><b id="tTot">0đ</b></div>
@@ -190,6 +192,7 @@
       <input id="cPhone" type="tel" inputmode="tel" maxlength="15" autocomplete="tel" placeholder="VD: 0912 345 678">
       <label for="cNote">Ghi chú chung cho đơn <span class="opt">(tuỳ chọn)</span></label>
       <textarea id="cNote" maxlength="200" placeholder="VD: mang ra bàn gần sân khấu, ra món cùng lúc…"></textarea>
+      <div class="mixn" id="ckMix" hidden>⚠️ Quý khách lưu ý: chỉ trả thẻ rung khi nhận đủ món. Xin cảm ơn!</div>
       <button class="send" id="ckSend" type="submit">Gửi đơn &amp; nhận mã số</button>
       <div class="msg" id="ckMsg" hidden></div>
     </form>
@@ -278,10 +281,13 @@
   }
   function tileOf(k){ var a = k.split(':'); return GROUPS[+a[0]] && GROUPS[+a[0]].tiles[+a[1]]; }
   function toast(s){ var el = $('toast'); el.textContent = s; el.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(function(){ el.classList.remove('on'); }, 1500); }
+  /* Đơn có cả đồ ăn (bếp) và đồ uống (bar) → nhắc chỉ trả thẻ rung khi nhận đủ món (Tài 19/11) */
+  function kindOf(g){ if (/^(Ăn vặt|Khác|Nước chai|Kem|Bia)$/i.test(g || '')) return ''; return /ăn|mì|chiên|lai rai|mẹt/i.test(g || '') ? 'bep' : 'bar'; }
+  function hasMix(list){ var k = {}; (list || []).forEach(function(i){ var g = i.g; if (!g) { var m = MENU.filter(function(x){ return x.n === i.n; })[0]; g = m && m.g; } k[kindOf(g)] = 1; }); return !!(k.bep && k.bar); }
   function addCart(m, q, note){
     note = String(note || '').slice(0, 60);
     var c = CART.filter(function(c){ return c.n === m.n && (c.t || '') === note; })[0];
-    if (c) c.q = Math.min(50, c.q + q); else CART.push({ n: m.n, p: m.p, q: q, t: note, img: m.img || '', g: m.dg || m.g });
+    if (c) c.q = Math.min(50, c.q + q); else CART.push({ n: m.n, p: m.p, q: q, t: note, img: m.img || '', g: m.g, dg: m.dg || m.g });
     saveCart(); draw(); toast('Đã thêm ' + q + ' × ' + m.n);
   }
   $('menu').addEventListener('click', function(e){
@@ -338,12 +344,12 @@
     var tot = 0;
     $('ckLines').innerHTML = CART.map(function(c, k){
       tot += c.q * c.p;
-      return '<div class="ci">' + imgBox(c.img, c.g, 'im') + '<div class="tx"><div class="nm">' + esc(c.n) + '</div>' +
+      return '<div class="ci">' + imgBox(c.img, c.dg || c.g, 'im') + '<div class="tx"><div class="nm">' + esc(c.n) + '</div>' +
         (EDIT === k ? '<input class="ein" id="eIn" maxlength="60" value="' + esc(c.t) + '" placeholder="VD: ít đá, cấp 3…"><span class="ed" data-sv="' + k + '">Lưu ghi chú</span>'
           : (c.t ? '<div class="nt">✎ ' + esc(c.t) + '</div>' : '') + '<span class="ed" data-ed="' + k + '">' + (c.t ? 'Sửa ghi chú' : '+ Ghi chú') + '</span>') +
         '</div><div class="rt"><b>' + money(c.p * c.q) + '</b><div class="stp"><button type="button" data-m="' + k + '" aria-label="Bớt">−</button><b>' + c.q + '</b><button type="button" data-a="' + k + '" aria-label="Thêm">+</button></div></div></div>';
     }).join('');
-    $('ckTot').textContent = money(tot);
+    $('ckTot').textContent = money(tot); $('ckMix').hidden = !hasMix(CART);
     if (!CART.length) closeCk();
   }
   function saveEdit(){ if (EDIT >= 0 && $('eIn') && CART[EDIT]) { CART[EDIT].t = $('eIn').value.trim().slice(0, 60); saveCart(); } EDIT = -1; }
@@ -401,6 +407,7 @@
       var pend = o.status === 'Chờ thanh toán', paid = o.status === 'Đã thanh toán';
       /* Thu ngân bấm "Xác nhận đơn" → khách thấy quầy đã nhận đơn (19/11/2026) */
       var ack = pend && o.ack;
+      $('tMix').hidden = !(o.pager && (pend || paid) && hasMix(o.items));
       $('tSt').className = 'st' + (paid || ack ? ' ok' : pend ? '' : ' no');
       $('tSt').textContent = paid ? '✓ Đã thanh toán' + (o.pager ? ' · thẻ rung số ' + o.pager : '') : ack ? '✓ Quầy đã nhận đơn' + (o.pager ? ' · thẻ rung số ' + o.pager : '') : pend ? '⏳ Chờ quầy xác nhận' : o.status;
       $('tGuide').innerHTML = paid ? '🎉 Cảm ơn bạn! Món đang được chuẩn bị' + (o.pager ? ', thẻ rung số <b>' + esc(o.pager) + '</b> rung là món xong nhé.' : '.')

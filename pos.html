@@ -640,6 +640,9 @@
     box._in.addEventListener('keydown', function(e){ if (/^[1-9]$/.test(e.key) && !e.ctrlKey && !e.altKey && box._list.length && rPick(box, +e.key - 1)) e.preventDefault(); });
   }
   function where(g){ return S.groups[g] || DEF.groups[g] || (/ăn|mì|chiên|lai rai|mẹt/i.test(g) ? 'bep' : 'bar'); }
+  /* Đơn có cả món bếp và món bar → nhắc khách chỉ trả thẻ rung khi nhận đủ món (Tài 19/11) */
+  var MIXNOTE = 'Quý khách lưu ý: chỉ trả thẻ rung khi nhận đủ món. Xin cảm ơn!';
+  function hasMix(items){ var k = {}; (items || []).forEach(function(i){ k[where(i.g)] = 1; }); return !!(k.bep && k.bar); }
 
   /* ================= Mẫu in ================= */
   var CSS = 'body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000}*{box-sizing:border-box}';
@@ -674,6 +677,7 @@
       (extra.check ? '<div style="text-align:center;margin-top:1mm">(Chưa thanh toán)</div>' : '<div style="display:flex;justify-content:space-between"><span>Thanh toán</span><span>' + esc(o.pay || '') + '</span></div>') +
       (extra.given ? '<div style="display:flex;justify-content:space-between"><span>Khách đưa</span><span>' + money(extra.given) + 'đ</span></div><div style="display:flex;justify-content:space-between"><span>Tiền thừa</span><span>' + money(extra.given - o.total) + 'đ</span></div>' : '') +
       (o.note ? '<div style="margin-top:1.5mm">Ghi chú: ' + esc(o.note) + '</div>' : '') +
+      (o.pager && hasMix(o.items) ? '<div style="margin-top:2mm;border:.4mm solid #000;padding:1.2mm;text-align:center;font-weight:800">' + esc(MIXNOTE) + '</div>' : '') +
       '<div style="text-align:center;margin-top:3mm">' + esc(S.foot) + '</div></div>';
     return { html: h, w: w, h: null, copies: +S.bill_c };
   }
@@ -1398,7 +1402,7 @@
       paying = false; busy(false); $('payModal').hidden = true;
       if (o) printOrder(o, { bill: wantBill, bep: wantTem && S.bep_on, tem: wantTem && S.tem_on }, { given: given }, o._k || []);
       toast('✓ Đã thanh toán #' + (o ? o.code : '') + (given > O.total ? ' · Thối ' + money(given - O.total) + 'đ' : ''), 4000);
-      khDone(o); closeOrder();
+      khDone(o, hasMix(O.items)); closeOrder();
     }, function(e){ paying = false; busy(false); if (e.message !== 'empty') { $('payErr').textContent = e.message; $('payErr').hidden = false; } });
   }
   $('payOk').addEventListener('click', doPay);
@@ -1432,13 +1436,13 @@
       var bk = $('s_qr_bank').querySelector('option[value="' + S.qr_bank + '"]');
       return { t: 'pay', total: O.total, note: ckNote().trim(), qr: $('ckImg').src, bank: (bk ? bk.textContent + ' · ' : '') + (S.qr_name || S.qr_acc) };
     }
-    return { t: 'order', togo: !!O.togo, cnt: O.cnt, gross: O.gross, disc: O.discAmt, dl: O.disc ? discLabel(O.disc) : '', total: O.total, cashier: D && D.me ? D.me.name : '',
+    return { t: 'order', mix: hasMix(O.items), togo: !!O.togo, cnt: O.cnt, gross: O.gross, disc: O.discAmt, dl: O.disc ? discLabel(O.disc) : '', total: O.total, cashier: D && D.me ? D.me.name : '',
       items: O.items.map(function(i){ var da = lineDisc(i); return { q: i.q, n: i.n, t: i.t || '', g: i.p * i.q, s: i.p * i.q - da }; }) };
   }
   function khSend(st){ st.at = Date.now(); try { if (khBc) khBc.postMessage(st); } catch (e) {} try { localStorage.setItem('chata_khach', JSON.stringify(st)); } catch (e) {} }
   function khPush(){ clearTimeout(khT); khT = setTimeout(function(){ var st = khState(); if ((st.t === 'idle' || (st.t === 'order' && !st.items.length)) && khHold > Date.now()) return; khHold = 0; khSend(st); }, 60); }
   /* thanh toán xong: hiện Cảm ơn + mã đơn 10 giây (mở đơn mới thì hiện đơn mới ngay) */
-  function khDone(o){ khHold = Date.now() + 10000; khSend({ t: 'done', code: o ? o.code : '', pager: o ? o.pager : '' }); }
+  function khDone(o, mix){ khHold = Date.now() + 10000; khSend({ t: 'done', code: o ? o.code : '', pager: o ? o.pager : '', mix: !!mix }); }
   function khAlive(cb){ var t0 = Date.now(); khPong = 0; try { khBc && khBc.postMessage({ t: 'ping' }); } catch (e) {} setTimeout(function(){ cb(khPong >= t0); }, 700); }
   function khDraw(){ khAlive(function(on){ $('khBtn').classList.toggle('on', on || !!(KH && !KH.closed)); $('khBtn').textContent = on || (KH && !KH.closed) ? '🖥 Màn hình khách ✓' : '🖥 Màn hình khách'; }); }
   function khOpen(auto){

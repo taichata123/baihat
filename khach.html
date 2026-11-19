@@ -80,6 +80,8 @@
   .done .code div{background:#fff;border:1px solid var(--line);border-radius:2vh;padding:2vh 3vw}
   .done .code small{display:block;font-size:2vh;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;font-weight:700}
   .done .code b{font-size:7vh;color:var(--ac);font-family:Lora,serif}
+  .mixn{margin:1.2vh 0 0;background:#FFF3C4;border:2px solid #F2B544;color:#6B4A00;border-radius:1.4vh;padding:1.4vh 1.6vw;font-size:2.8vh;font-weight:800;text-align:center}
+  .done .mixn{max-width:70%;margin-top:3vh}
   .side{background:var(--ac);color:#EAF6F4;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4vh 2.4vw;gap:2.4vh}
   .side .t{font-size:2.2vh;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--sun)}
   .side h1{margin:0;font-size:4.6vh;line-height:1.2;font-weight:800;color:#fff}
@@ -100,6 +102,7 @@
       <div class="view order" id="vOrder">
         <h2><span>Đơn của bạn<span class="togo" id="oTogo" hidden>🥡 Mang đi</span></span><small id="oMeta"></small></h2>
         <div class="rows" id="rows"></div>
+        <div class="mixn" id="oMix" hidden>⚠️ Quý khách lưu ý: chỉ trả thẻ rung khi nhận đủ món. Xin cảm ơn!</div>
         <div class="sum" id="sum"></div>
       </div>
       <div class="view pay" id="vPay">
@@ -117,6 +120,7 @@
         <h2>Cảm ơn bạn!</h2>
         <p id="dMsg">Món đang được chuẩn bị, thẻ rung báo là món xong nhé.</p>
         <div class="code"><div><small>Mã đơn</small><b id="dCode"></b></div><div id="dPgW"><small>Thẻ rung</small><b id="dPg"></b></div></div>
+        <div class="mixn" id="dMix" hidden>⚠️ Quý khách lưu ý: chỉ trả thẻ rung khi nhận đủ món. Xin cảm ơn!</div>
       </div>
     </div>
   </div>
@@ -191,6 +195,7 @@
     if (st.t === 'done') {
       $('dCode').textContent = '#' + (st.code || ''); $('dPg').textContent = st.pager || ''; $('dPgW').hidden = !st.pager;
       $('dMsg').textContent = st.pager ? 'Món đang được chuẩn bị, thẻ rung báo là món xong nhé.' : 'Món đang được chuẩn bị, Chata mang ra cho bạn nhé.';
+      $('dMix').hidden = !(st.mix && st.pager);
       view('Done'); lastN = 0; doneT = setTimeout(function(){ view('Idle'); }, 10000); return;
     }
     if (st.t === 'pay') {
@@ -203,7 +208,7 @@
       return '<div class="row' + (n > lastN && k === list.length - 1 ? ' new' : '') + '"><span class="q">' + i.q + '</span><span class="n">' + esc(i.n) + (i.t ? '<small>✎ ' + esc(i.t) + '</small>' : '') + '</span><span class="p">' + (i.g && i.g !== i.s ? '<s>' + money(i.g) + '</s>' : '') + money(i.s) + '</span></div>';
     }).join('');
     lastN = n;
-    $('oTogo').hidden = !st.togo;
+    $('oTogo').hidden = !st.togo; $('oMix').hidden = !st.mix;
     $('oMeta').textContent = (st.cashier ? 'Thu ngân: ' + st.cashier + ' · ' : '') + (st.cnt || 0) + ' món';
     $('sum').innerHTML = (st.disc ? '<span class="lb">Tạm tính</span><span class="v">' + money(st.gross) + '</span><span class="lb">Giảm giá' + (st.dl ? ' (' + esc(st.dl) + ')' : '') + '</span><span class="v">−' + money(st.disc) + '</span>' : '') +
       '<span class="tl">Tổng cộng</span><span class="v tot">' + money(st.total) + '</span>';
