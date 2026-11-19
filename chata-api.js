@@ -138,9 +138,11 @@
     var s = modeSetting(); if (s === 'Đêm nhạc') return 'night'; if (s === 'Thường') return 'normal';
     var p = vnParts(Date.now()); return p.dow === 2 && p.hour >= 16 ? 'night' : 'normal';
   }
+  /* Trường thêm của món (19/11/2026): dg nhóm hiển thị, b tên ô, s size/loại, img ảnh, vid mã biến thể Sapo (định lượng), r số bán, nq không hiện ở trang gọi món QR */
+  var XF = ['dg', 'b', 's', 'img', 'vid', 'r', 'nq'];
   function menuList(k) {
     return (C.menu[k] || []).filter(function (m) { return m && m.n && Number(m.p) > 0 && m.on !== false; })
-      .map(function (m) { return { g: String(m.g || 'Khác'), n: String(m.n).trim(), p: Number(m.p) }; });
+      .map(function (m) { var o = { g: String(m.g || 'Khác'), n: String(m.n).trim(), p: Number(m.p) }; XF.forEach(function (k) { if (m[k] != null && m[k] !== '') o[k] = m[k]; }); return o; });
   }
   function menuFor(mode) { return menuList(mode === 'night' ? 'night' : 'normal'); }
   function defTables() { var t = []; for (var i = 1; i <= 20; i++) t.push(String(i)); return [{ a: 'Thẻ rung', t: t }]; }
@@ -164,7 +166,7 @@
   function lines(items, menu, extra) {
     var price = {};
     (extra || []).forEach(function (x) { price[x.n] = { g: x.g || '', p: x.p }; });
-    menu.forEach(function (m) { if (!price[m.n]) price[m.n] = { g: m.g, p: m.p }; });
+    menu.forEach(function (m) { if (!price[m.n]) price[m.n] = { g: m.g, p: m.p, vid: m.vid }; });
     var out = [], total = 0, gross = 0, idisc = 0;
     (Array.isArray(items) ? items : []).slice(0, 60).forEach(function (it) {
       var n = String(it && it.n || ''), q = Math.round(Number(it && it.q) || 0), m = price[n], t = clean(it && it.t, 60);
@@ -172,7 +174,7 @@
       if (!m || q < 1 || q > 50) return;
       var ex = out.filter(function (o) { return o.n === n && (o.t || '') === t && (o.dt || '') === dt && (o.dv || 0) === dv; })[0];
       if (ex) ex.q = Math.min(50, ex.q + q);
-      else { var L = { n: n, g: m.g, p: m.p, q: q }; if (t) L.t = t; if (dt) { L.dt = dt; L.dv = dv; } out.push(L); }
+      else { var L = { n: n, g: m.g, p: m.p, q: q }; if (m.vid) L.vid = m.vid; if (t) L.t = t; if (dt) { L.dt = dt; L.dv = dv; } out.push(L); }
     });
     out.forEach(function (o) { var da = lineDisc(o); if (da) o.da = da; else delete o.da; gross += o.p * o.q; idisc += da; });
     total = gross - idisc;
@@ -371,14 +373,14 @@
 
   var API = {
     /* ===== Khách gọi món QR ===== */
-    getOrderMenu: function () { return wantCfg().then(function () { var mode = orderMode(); return { mode: mode, open: orderOpen(), menu: menuFor(mode) }; }); },
+    getOrderMenu: function () { return wantCfg().then(function () { var mode = orderMode(); return { mode: mode, open: orderOpen(), menu: menuFor(mode).filter(function (m) { return !m.nq; }) }; }); },
     submitOrder: function (d) {
       d = d || {};
       return wantCfg().then(function () {
         if (!orderOpen()) return { ok: false, msg: 'Quầy đang nhận order trực tiếp, bạn ghé quầy giúp Chata nhé.' };
         var name = clean(d.name, 30); if (!name) return { ok: false, msg: 'Bạn cho Chata xin tên để gọi khi tới quầy nhé.' };
         var phone = phoneOf(d.phone); if (phone === null) return { ok: false, msg: 'Số điện thoại chưa đúng, bạn kiểm tra lại hoặc để trống nhé.' };
-        var mode = orderMode(), L = lines(d.items, menuFor(mode));
+        var mode = orderMode(), L = lines(d.items, menuFor(mode).filter(function (m) { return !m.nq; }));
         if (!L.items.length) return { ok: false, msg: 'Bạn chọn ít nhất 1 món nhé.' };
         return newCode().then(function (c) {
           var id = uid('D'), token = rand(16), now = Date.now();
@@ -653,7 +655,11 @@
           (Array.isArray(items) ? items : []).slice(0, 300).forEach(function (m) {
             var n = clean(m && m.n, 80), p = Math.round(Number(m && m.p) || 0), g = clean(m && m.g, 40) || 'Khác';
             if (!n || seen[n.toLowerCase()]) return; seen[n.toLowerCase()] = 1;
-            out.push({ g: g, n: n, p: Math.max(0, p), on: m.on !== false });
+            var o = { g: g, n: n, p: Math.max(0, p), on: m.on !== false };
+            if (m.dg) o.dg = clean(m.dg, 40); if (m.b) o.b = clean(m.b, 80); if (m.s) o.s = clean(m.s, 40);
+            if (m.img && /^https:\/\//.test(m.img)) o.img = String(m.img).slice(0, 300); if (m.vid) o.vid = clean(m.vid, 60);
+            if (+m.r > 0) o.r = Math.round(+m.r); if (m.nq) o.nq = true;
+            out.push(o);
           });
           C.menu[key] = out;
           return db.doc('posMenu/' + key).set({ items: out, updatedBy: ok.by, updatedAt: Date.now() }).then(function () { return { ok: true, count: out.length }; });
