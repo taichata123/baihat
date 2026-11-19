@@ -963,8 +963,8 @@
   var COLORS = ['#3E7CB1','#7A5BB5','#2E9D8F','#C0692B','#B2453E','#5A7D2B','#8A5A44','#2F6690','#9A4C95','#3B8D5A'];
   function color(g){ var h = 0; for (var i = 0; i < g.length; i++) h = (h * 31 + g.charCodeAt(i)) >>> 0; return COLORS[h % COLORS.length]; }
   /* Nhóm hiển thị (dg) chỉ để xếp màn chọn món; nhóm in (g) giữ nguyên để định tuyến bếp/bar */
-  var GCOL = { 'Trà - Trà sữa':'#7A5BB5', 'Ăn vặt':'#C0692B', 'Mì cay - Bánh mì chảo':'#B2453E', 'Nước ép - Soda - Nước chai':'#2E9D8F', 'Cà phê - Món nóng':'#6B4A2E', 'Sữa chua - Đá xay':'#2F6690', 'Đồ chiên':'#A0522D', 'Khác':'#5A7D2B' };
-  var GICO = { 'Trà - Trà sữa':'🧋', 'Ăn vặt':'🍿', 'Mì cay - Bánh mì chảo':'🍜', 'Nước ép - Soda - Nước chai':'🍹', 'Cà phê - Món nóng':'☕', 'Sữa chua - Đá xay':'🥤', 'Đồ chiên':'🍗', 'Khác':'🏊' };
+  var GCOL = { 'Trà - Trà sữa':'#7A5BB5', 'Ăn vặt':'#C0692B', 'Mì cay - Bánh mì chảo':'#B2453E', 'Nước ép - Soda - Nước chai':'#2E9D8F', 'Cà phê - Món nóng':'#6B4A2E', 'Sữa chua - Đá xay':'#2F6690', 'Đồ chiên':'#A0522D', 'Kem':'#C2477E', 'Khác':'#5A7D2B' };
+  var GICO = { 'Trà - Trà sữa':'🧋', 'Ăn vặt':'🍿', 'Mì cay - Bánh mì chảo':'🍜', 'Nước ép - Soda - Nước chai':'🍹', 'Cà phê - Món nóng':'☕', 'Sữa chua - Đá xay':'🥤', 'Đồ chiên':'🍗', 'Kem':'🍦', 'Khác':'🏊' };
   function gcol(g){ return GCOL[g] || color(g); }
   var BANDS = [], VAR = null;
   function makeBands(){
