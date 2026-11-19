@@ -679,6 +679,7 @@
       '<div style="text-align:center;font-size:' + (fs * 2.4) + 'mm;font-weight:900;line-height:1.05">#' + esc(o.code) + '</div>' +
       '<div style="display:flex;justify-content:space-between;font-weight:700"><span>' + esc(o.name) + '</span><span>' + (o.pager ? 'Thẻ rung ' + esc(o.pager) : '') + '</span></div>' +
       '<div style="display:flex;justify-content:space-between"><span>' + hhmm(o.paidAt || o.created || Date.now()) + ' ' + dmy(o.paidAt || o.created || Date.now()).slice(0,5) + '</span><span>' + (o.src === 'QR' ? 'Đơn QR' : 'Tại quầy') + (o.mode === 'Đêm nhạc' ? ' · Đêm nhạc' : '') + '</span></div>' +
+      (o.src && o.src !== 'Quầy' ? '<div style="text-align:center;font-weight:900;font-size:' + (fs * 1.5) + 'mm;border:.5mm solid #000;margin-top:1mm">QR ORDER</div>' : '') +
       (o.togo ? '<div style="text-align:center;font-weight:900;font-size:' + (fs * 1.5) + 'mm;background:#000;color:#fff;margin-top:1mm">★ MANG ĐI ★</div>' : '') +
       '<div style="border-top:.4mm dashed #000;margin:1.5mm 0"></div>' +
       items.map(function(i){ return '<div style="display:flex;gap:2mm;font-weight:800;font-size:' + (fs * 1.3) + 'mm;line-height:1.2;margin:1mm 0"><b style="min-width:9mm">' + i.q + ' x</b><span>' + esc(i.n) + (i.t ? '<br><span style="font-weight:700;font-size:' + fs + 'mm">→ ' + esc(i.t) + '</span>' : '') + '</span></div>'; }).join('') +
@@ -708,7 +709,9 @@
     }
     // Dòng đầu: (Bàn) TẠI QUÁN - 12 / MANG ĐI - 12 | 1/2
     font(hfs, true); var kk = k + '/' + total, kw = g.measureText(kk).width;
-    var head = (o.togo ? 'MANG ĐI' : '(Bàn) TẠI QUÁN') + (o.pager ? ' - ' + o.pager : '');
+    /* đơn khách gọi qua QR: in QR ORDER / QR · MANG ĐI (Tài chốt 19/11) */
+    var qr = o.src && o.src !== 'Quầy';
+    var head = (qr ? (o.togo ? 'QR · MANG ĐI' : 'QR ORDER') : (o.togo ? 'MANG ĐI' : '(Bàn) TẠI QUÁN')) + (o.pager ? ' - ' + o.pager : '');
     g.textAlign = 'right'; g.fillText(kk, cw - px, py); g.textAlign = 'left';
     font(hfs, false); g.fillText(fit(head, iw - kw - D), px, py);
     var y = py + Math.round(hfs * 1.25); g.fillRect(px, y, iw, Math.max(2, Math.round(.25 * D))); y += Math.round(.8 * D);
