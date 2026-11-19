@@ -613,8 +613,9 @@
     var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cw, ch); g.fillStyle = '#000'; g.textBaseline = 'top';
     var FONT = 'Arial, "Segoe UI", sans-serif';
     var px = Math.round(1.8 * D), py = Math.round(1.2 * D), iw = cw - 2 * px;
-    var fs = Math.round(Math.max(2.3, Math.min(3.4, H / 9)) * D);
-    var nfs = Math.round(Math.max(3, Math.min(5, H / 6.4)) * D);
+    /* Bố cục theo tem Sapo cũ (Tài chốt 19/11): cùng một cỡ chữ cho dòng đầu, ghi chú, dòng cuối; tên món đậm, nhỉnh hơn một chút */
+    var fs = Math.round(Math.max(2.2, Math.min(3, H / 10.5)) * D);
+    var nfs = Math.round(fs * 1.15);
     function font(sz, b){ g.font = (b ? 'bold ' : '') + sz + 'px ' + FONT; }
     function fit(t, w){ if (g.measureText(t).width <= w) return t; while (t.length > 1 && g.measureText(t + '…').width > w) t = t.slice(0, -1); return t + '…'; }
     function wrap(t, w){
@@ -622,32 +623,29 @@
       words.forEach(function(wd){ var tr = cur ? cur + ' ' + wd : wd; if (g.measureText(tr).width <= w || !cur) cur = tr; else { lines.push(cur); cur = wd; } });
       if (cur) lines.push(cur); return lines;
     }
-    // Dòng trên: mã đơn + tên khách | giờ
-    font(fs, true); var tm = hhmm(o.paidAt || Date.now()); var tw = g.measureText(tm).width;
-    g.fillText(fit('#' + o.code + ' ' + (o.name || ''), iw - tw - D), px, py);
-    g.textAlign = 'right'; g.fillText(tm, cw - px, py); g.textAlign = 'left';
-    var y = py + Math.round(fs * 1.15); g.fillRect(px, y, iw, Math.max(2, Math.round(.3 * D))); y += Math.round(.9 * D);
-    // Dòng dưới (đặt trước để biết chỗ còn lại)
+    // Dòng đầu: (Bàn) TẠI QUÁN - 12 / MANG ĐI - 12 | 1/2
+    font(fs, false); var kk = k + '/' + total, kw = g.measureText(kk).width;
+    var head = (o.togo ? 'MANG ĐI' : '(Bàn) TẠI QUÁN') + (o.pager ? ' - ' + o.pager : '');
+    g.fillText(fit(head, iw - kw - D), px, py);
+    g.textAlign = 'right'; g.fillText(kk, cw - px, py); g.textAlign = 'left';
+    var y = py + Math.round(fs * 1.2); g.fillRect(px, y, iw, Math.max(2, Math.round(.25 * D))); y += Math.round(.8 * D);
     var footY = ch - py - fs;
-    // Tên món: tự thu nhỏ để vừa tối đa 2 dòng
-    var nl, sz = nfs;
-    for (; sz > fs; sz -= 2) { font(sz, true); nl = wrap(i.n, iw); if (nl.length <= 2 && nl.every(function(l){ return g.measureText(l).width <= iw; })) break; }
-    font(sz, true); nl = wrap(i.n, iw).slice(0, 2);
-    nl.forEach(function(l){ g.fillText(fit(l, iw), px, y); y += Math.round(sz * 1.12); });
-    // Ghi chú món / đơn
+    // Tên món: đậm, tối đa 3 dòng
+    font(nfs, true); var nl = wrap(i.n, iw).slice(0, 3);
+    nl.forEach(function(l){ g.fillText(fit(l, iw), px, y); y += Math.round(nfs * 1.18); });
+    // Ghi chú món / đơn: cùng cỡ chữ dòng đầu
     var note = (i.t || '') + (o.note ? (i.t ? ' · ' : '') + o.note : '');
     if (note) {
-      y += Math.round(.4 * D); font(fs, false);
-      var lh = Math.round(fs * 1.15), max = Math.max(0, Math.floor((footY - Math.round(.5 * D) - y) / lh));
+      y += Math.round(.3 * D); font(fs, false);
+      var lh = Math.round(fs * 1.18), max = Math.max(0, Math.floor((footY - Math.round(.5 * D) - y) / lh));
       var ln = wrap(note, iw); if (ln.length > max) { ln = ln.slice(0, max); if (max) ln[max - 1] = fit(ln[max - 1] + '…', iw); }
       ln.forEach(function(l){ g.fillText(fit(l, iw), px, y); y += lh; });
     }
-    font(fs, true);
-    g.fillText(k + '/' + total + (o.pager ? ' · Thẻ ' + o.pager : ''), px, footY);
-    if (o.togo) {
-      var tl = 'MANG ĐI', tw2 = g.measureText(tl).width + Math.round(1.6 * D), bx = cw - px - tw2, by = footY - Math.round(.5 * D), bh = fs + Math.round(.9 * D);
-      g.fillRect(bx, by, tw2, bh); g.fillStyle = '#fff'; g.textAlign = 'right'; g.fillText(tl, cw - px - Math.round(.8 * D), footY); g.fillStyle = '#000'; g.textAlign = 'left';
-    } else { g.textAlign = 'right'; g.fillText(money(i.p) + 'đ', cw - px, footY); g.textAlign = 'left'; }
+    // Dòng cuối: giờ ngày · mã đơn | giá
+    var tt = o.paidAt || o.created || Date.now();
+    font(fs, true); var pr = money(i.p) + 'đ', pw = g.measureText(pr).width;
+    g.textAlign = 'right'; g.fillText(pr, cw - px, footY); g.textAlign = 'left';
+    font(fs, false); g.fillText(fit(hhmm(tt) + ' ' + dmy(tt).slice(0, 5) + (o.code ? ' · #' + o.code : ''), iw - pw - D), px, footY);
     // Đen–trắng tuyệt đối
     var th = TEM_INK[S.tem_ink] || TEM_INK['Vừa'], img = g.getImageData(0, 0, cw, ch), d = img.data;
     for (var p = 0; p < d.length; p += 4) { var v = (d[p] * 299 + d[p + 1] * 587 + d[p + 2] * 114) / 1000 < 255 - th ? 0 : 255; d[p] = d[p + 1] = d[p + 2] = v; d[p + 3] = 255; }
