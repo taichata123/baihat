@@ -347,12 +347,14 @@
     var b;
     if ((b = e.target.closest('[data-m]'))) { saveEdit(); var k = +b.getAttribute('data-m'); if (--CART[k].q <= 0) CART.splice(k, 1); }
     else if ((b = e.target.closest('[data-a]'))) { saveEdit(); var a = CART[+b.getAttribute('data-a')]; a.q = Math.min(50, a.q + 1); }
-    else if ((b = e.target.closest('[data-ed]'))) { saveEdit(); EDIT = +b.getAttribute('data-ed'); drawCk(); var el = $('eIn'); if (el) el.focus(); return; }
+    else if ((b = e.target.closest('[data-ed]'))) { saveEdit(); EDIT = +b.getAttribute('data-ed'); drawCk(); var el = $('eIn'); if (el) { el.focus(); var L = el.value.length; try { el.setSelectionRange(L, L); } catch (x) {} } return; }
     else if ((b = e.target.closest('[data-sv]'))) saveEdit();
     else return;
     saveCart(); drawCk();
   });
   $('ckLines').addEventListener('keydown', function(e){ if (e.target.id === 'eIn' && e.key === 'Enter') { e.preventDefault(); saveEdit(); saveCart(); drawCk(); } });
+  /* rời ô ghi chú (bấm chỗ khác) thì tự lưu, không cần bấm "Lưu ghi chú" */
+  $('ckLines').addEventListener('focusout', function(e){ if (e.target.id === 'eIn') setTimeout(function(){ if (EDIT >= 0 && document.activeElement !== $('eIn')) { saveEdit(); saveCart(); drawCk(); } }, 150); });
   function ckErr(t){ $('ckMsg').textContent = t; $('ckMsg').hidden = false; }
   $('ckForm').addEventListener('submit', function(e){
     e.preventDefault(); saveEdit();
