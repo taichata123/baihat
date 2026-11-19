@@ -1128,6 +1128,8 @@
   $('saveBtn').addEventListener('click', doSave);
   function doSave(){
     if (!O.items.length) return toast('Đơn chưa có món nào.');
+    /* Đơn đã gắn bàn/thẻ thì lưu luôn, không hỏi lại (đổi bàn: sửa ô Thẻ rung trên đầu đơn) – Tài chốt 19/11 */
+    readHead(); if (O.pager) return saveNow();
     openTables();
   }
   function saveNow(){
