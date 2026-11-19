@@ -307,6 +307,11 @@
       <div class="kh">Để trống = khách đưa vừa đủ · Enter = xác nhận · phím C = chuyển khoản</div>
       <div class="change"><span>Tiền thừa</span><b class="num" id="change">0đ</b></div>
     </div>
+    <div id="ckBox" hidden style="text-align:center;margin:4px 0 8px">
+      <img id="ckImg" alt="Mã QR chuyển khoản" style="width:230px;height:230px;object-fit:contain;border:1px solid var(--line);border-radius:10px;background:#fff">
+      <div id="ckInfo" style="font-size:14px;margin-top:6px;line-height:1.45"></div>
+      <div class="kh" style="color:#B36B00;font-weight:600">Mời khách quét mã. Chỉ bấm Enter khi đã thấy / nghe tiền về.</div>
+    </div>
     <label class="chk"><input type="checkbox" id="pBill"> In hóa đơn</label>
     <label class="chk"><input type="checkbox" id="pTem" checked> In tem ly & phiếu bếp</label>
     <div class="err" id="payErr" hidden></div>
@@ -391,6 +396,9 @@
         <label>Tên quán<input id="s_shop" maxlength="40"></label>
         <label>Địa chỉ / SĐT<input id="s_addr" maxlength="80"></label>
         <label>Lời chào cuối bill<input id="s_foot" maxlength="80"></label>
+        <label>Ngân hàng nhận chuyển khoản<select id="s_qr_bank"><option value="970426">MSB</option><option value="970436">Vietcombank</option><option value="970418">BIDV</option><option value="970415">VietinBank</option><option value="970405">Agribank</option><option value="970407">Techcombank</option><option value="970422">MB</option><option value="970416">ACB</option><option value="970432">VPBank</option><option value="970423">TPBank</option><option value="970403">Sacombank</option><option value="970448">OCB</option></select></label>
+        <label>Số tài khoản<input id="s_qr_acc" maxlength="20" inputmode="numeric"></label>
+        <label>Tên chủ tài khoản<input id="s_qr_name" maxlength="50" placeholder="VIẾT HOA KHÔNG DẤU"></label>
         <label>Tự khóa máy khi để không<select id="s_lock_min"><option value="0">Không tự khóa</option><option value="5">Sau 5 phút</option><option value="10">Sau 10 phút</option><option value="15">Sau 15 phút</option><option value="30">Sau 30 phút</option></select></label>
       </div>
     </div>
@@ -528,7 +536,7 @@
     rs_disc:'Khách quen\nBù món lỗi / chờ lâu\nNhân viên quán\nNgười quen quản lý\nKhác',
     rs_cancel:'Khách đổi ý\nNhập trùng đơn\nBấm nhầm món\nKhách QR không ra quầy\nHết món\nKhác',
     rs_refund:'Thu nhầm món\nLàm sai món\nHết nguyên liệu\nKhách đổi ý\nKhác',
-    lock_min:'0', shop:'CHATA COFFEE', addr:'Bàu Cạn, Gia Lai', foot:'Cảm ơn quý khách – Hẹn gặp lại!' };
+    qr_bank:'970426', qr_acc:'', qr_name:'', lock_min:'0', shop:'CHATA COFFEE', addr:'Bàu Cạn, Gia Lai', foot:'Cảm ơn quý khách – Hẹn gặp lại!' };
   var S = {}; try { S = JSON.parse(ls('chata_pos_set') || '{}'); } catch(e){}
   Object.keys(DEF).forEach(function(k){ if (S[k] === undefined) S[k] = DEF[k]; });
   function saveS(){ ls('chata_pos_set', JSON.stringify(S)); }
@@ -1164,14 +1172,25 @@
     [10000, 20000, 50000, 100000, 200000, 500000].forEach(function(b){ var v = Math.ceil(t / b) * b; if (v > t && opts.indexOf(v) < 0 && opts.length < 5) opts.push(v); });
     $('quick').innerHTML = opts.map(function(v){ return '<button type="button" data-g="' + v + '">' + money(v) + '</button>'; }).join('');
     $('pBill').checked = !!S.bill_on; $('pTem').checked = !!(S.bep_on || S.tem_on);
-    $('givenBox').hidden = false; $('payErr').hidden = true;
+    $('givenBox').hidden = false; $('ckBox').hidden = true; $('payErr').hidden = true;
     $('payModal').hidden = false;
     setTimeout(function(){ $('given').focus(); }, 30);
   }
   /* gõ 100 = 100.000đ (số dưới 1.000 tự nhân 1.000) */
   function givenVal(){ var g = +($('given').value.replace(/\D/g, '')) || 0; return g > 0 && g < 1000 ? g * 1000 : g; }
   function calcChange(){ var g = givenVal(); $('change').textContent = !g ? '0đ' : g < O.total ? 'chưa đủ (' + money(g) + 'đ)' : money(g - O.total) + 'đ'; }
-  function setMethod(m){ METHOD = m; Array.prototype.forEach.call(document.querySelectorAll('.meth'), function(x){ x.classList.toggle('on', x.getAttribute('data-m') === m); }); $('givenBox').hidden = m !== 'Tiền mặt'; if (m === 'Tiền mặt') $('given').focus(); }
+  function setMethod(m){ METHOD = m; Array.prototype.forEach.call(document.querySelectorAll('.meth'), function(x){ x.classList.toggle('on', x.getAttribute('data-m') === m); }); $('givenBox').hidden = m !== 'Tiền mặt'; $('ckBox').hidden = m !== 'Chuyển khoản'; if (m === 'Chuyển khoản') showQR(); if (m === 'Tiền mặt') $('given').focus(); }
+  /* Mã VietQR có sẵn số tiền + nội dung; nhân viên tự xác nhận khi thấy tiền về */
+  function ckNote(){ return 'CHATA ' + (O.code ? O.code : O.pager ? 'THE' + norm(O.pager).toUpperCase().replace(/[^A-Z0-9]/g, '') : ''); }
+  function showQR(){
+    if (!S.qr_acc) { $('ckImg').hidden = true; $('ckInfo').innerHTML = '<b style="color:var(--red)">Chưa cài tài khoản nhận tiền.</b><br>Quản lý vào 🖨 Máy in → Thông tin trên hóa đơn → nhập Số tài khoản.'; return; }
+    var note = ckNote().trim();
+    $('ckImg').hidden = false;
+    $('ckImg').onerror = function(){ this.hidden = true; $('ckInfo').insertAdjacentHTML('afterbegin', '<b style="color:var(--red)">Không tải được mã QR (kiểm tra mạng).</b><br>'); };
+    $('ckImg').src = 'https://img.vietqr.io/image/' + S.qr_bank + '-' + S.qr_acc + '-compact2.png?amount=' + O.total + '&addInfo=' + encodeURIComponent(note) + '&accountName=' + encodeURIComponent(S.qr_name || '');
+    var bk = $('s_qr_bank').querySelector('option[value="' + S.qr_bank + '"]');
+    $('ckInfo').innerHTML = '<b>' + (bk ? bk.textContent : '') + ' · ' + esc(S.qr_acc) + '</b>' + (S.qr_name ? '<br>' + esc(S.qr_name) : '') + '<br>Số tiền: <b>' + money(O.total) + 'đ</b> · Nội dung: <b>' + esc(note) + '</b>';
+  }
   $('given').addEventListener('input', function(){ var v = this.value.replace(/\D/g, ''); this.value = v ? money(+v) : ''; calcChange(); });
   $('quick').addEventListener('click', function(e){ var b = e.target.closest('[data-g]'); if (!b) return; $('given').value = money(+b.getAttribute('data-g')); calcChange(); });
   document.querySelector('.methods').addEventListener('click', function(e){
@@ -1269,6 +1288,7 @@
     ['bill_on','bep_on','tem_on'].forEach(function(k){ $('s_' + k).checked = !!S[k]; });
     ['bill_w','bill_c','bep_w','bep_c','tem_s','tem_ink'].forEach(function(k){ $('s_' + k).value = S[k]; });
     ['disc', 'cancel', 'refund'].forEach(function(k){ $('s_rs_' + k).value = S['rs_' + k] || ''; });
+    $('s_qr_bank').value = S.qr_bank || '970426'; $('s_qr_acc').value = S.qr_acc || ''; $('s_qr_name').value = S.qr_name || '';
     $('s_shop').value = S.shop; $('s_addr').value = S.addr; $('s_foot').value = S.foot; $('s_lock_min').value = String(S.lock_min || '0');
     $('s_tables').value = tablesText(tablesOf());
     $('s_promos').value = ((D && D.promos) || []).map(function(x){ return x.n + ': ' + (x.t === '%' ? x.v + '%' : x.v + 'đ'); }).join('\n');
@@ -1283,6 +1303,7 @@
     ['bill_on','bep_on','tem_on'].forEach(function(k){ S[k] = $('s_' + k).checked; });
     ['bill_w','bill_c','bep_w','bep_c','tem_s','tem_ink','bill_p','bep_p','tem_p'].forEach(function(k){ S[k] = $('s_' + k).value; });
     ['disc', 'cancel', 'refund'].forEach(function(k){ var v = $('s_rs_' + k).value.split(/\n/).map(function(x){ return x.trim(); }).filter(Boolean).slice(0, 9).join('\n'); S['rs_' + k] = v || DEF['rs_' + k]; });
+    S.qr_bank = $('s_qr_bank').value; S.qr_acc = $('s_qr_acc').value.replace(/\D/g, ''); S.qr_name = norm($('s_qr_name').value).toUpperCase().replace(/[^A-Z0-9 ]/g, '').trim();
     S.shop = $('s_shop').value.trim() || DEF.shop; S.addr = $('s_addr').value.trim(); S.foot = $('s_foot').value.trim(); S.lock_min = $('s_lock_min').value;
     Array.prototype.forEach.call(document.querySelectorAll('#s_grp select'), function(s){ S.groups[s.getAttribute('data-g')] = s.value; });
     saveS(); drawPrintState();
