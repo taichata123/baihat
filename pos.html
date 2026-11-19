@@ -655,9 +655,14 @@
       '<div style="text-align:center;font-weight:800;font-size:' + (fs * 1.5) + 'mm">' + esc(S.shop) + '</div>' +
       (S.addr ? '<div style="text-align:center">' + esc(S.addr) + '</div>' : '') +
       '<div style="text-align:center;font-weight:800;font-size:' + (fs * 1.25) + 'mm;margin-top:2mm">' + (extra.check ? 'PHIẾU KIỂM ĐỒ' : 'HÓA ĐƠN THANH TOÁN') + '</div>' +
-      '<div style="text-align:center;font-size:' + (fs * 2) + 'mm;font-weight:900">#' + esc(o.code) + '</div>' +
-      '<div style="display:flex;justify-content:space-between"><span>' + dmy(o.paidAt || Date.now()) + ' ' + hhmm(o.paidAt || Date.now()) + '</span><span>' + (o.pager ? 'Thẻ rung: ' + esc(o.pager) : '') + '</span></div>' +
-      '<div>Khách: ' + esc(o.name) + (o.phone ? ' · ' + esc(o.phone) : '') + (o.togo ? ' · <b>MANG ĐI</b>' : '') + '</div>' +
+      /* Số bàn / thẻ rung in to, đóng khung cạnh mã đơn (Tài 19/11) */
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:2mm;margin:1.5mm 0">' +
+        '<div><div style="font-size:' + (fs * .9) + 'mm">Mã đơn</div><div style="font-size:' + (fs * 2) + 'mm;font-weight:900;line-height:1">#' + esc(o.code) + '</div></div>' +
+        (o.pager ? '<div style="border:.6mm solid #000;border-radius:1.5mm;padding:.8mm 3mm;text-align:center;min-width:22mm"><div style="font-size:' + (fs * .9) + 'mm;font-weight:800">' + (o.togo ? 'MANG ĐI · THẺ' : 'BÀN') + '</div><div style="font-size:' + (fs * 3) + 'mm;font-weight:900;line-height:1">' + esc(o.pager) + '</div></div>'
+          : '<div style="border:.6mm solid #000;border-radius:1.5mm;padding:1.5mm 3mm;font-weight:900;font-size:' + (fs * 1.3) + 'mm">' + (o.togo ? 'MANG ĐI' : 'TẠI QUẦY') + '</div>') +
+      '</div>' +
+      '<div>' + dmy(o.paidAt || Date.now()) + ' ' + hhmm(o.paidAt || Date.now()) + (o.src && o.src !== 'Quầy' ? ' · QR order' : '') + '</div>' +
+      '<div>Khách: ' + esc(o.name) + (o.phone ? ' · ' + esc(o.phone) : '') + '</div>' +
       (o.cashier || (D && D.me) ? '<div>Thu ngân: ' + esc(String(o.cashier || D.me.name).replace(/ \(.*\)$/, '')) + '</div>' : '') +
       '<div style="border-top:.3mm dashed #000;margin:1.5mm 0"></div>' +
       '<table style="width:100%;border-collapse:collapse;font-size:inherit">' + rows + '</table>' +
