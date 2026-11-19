@@ -228,7 +228,7 @@
       <button class="tbtn" id="shiftBtn" type="button" hidden>⏱ Kết ca</button>
       <button class="tbtn" id="updBtn" type="button" hidden style="background:#13C48A;color:#fff;border-color:#13C48A">⬆ Cập nhật app</button>
       <button class="tbtn" id="setBtn" type="button">🖨 Máy in</button>
-      <button class="tbtn" id="lockBtn" type="button" title="Khóa máy / đổi người (F10)">🔒 Khóa</button>
+      <button class="tbtn" id="lockBtn" type="button" title="Khóa máy / đổi người">🔒 Khóa</button>
       <button class="tbtn" id="outBtn" type="button">Đăng xuất</button>
     </div>
   </div>
@@ -285,7 +285,7 @@
       <button class="a-save" id="saveBtn" type="button">Lưu đơn<small>(F3)</small></button>
       <button class="a-cancel" id="cancelBtn" type="button">Hủy đơn<small>ghi lại cho QL</small></button>
       <button class="a-more" id="moreBtn" type="button">Báo bếp<small>in trước (F7)</small></button>
-      <button class="a-pay" id="payBtn" type="button">Thanh toán<small>(F9)</small></button>
+      <button class="a-pay" id="payBtn" type="button">Thanh toán<small>F9 tiền mặt · F10 CK</small></button>
     </div>
   </div>
 </div>
@@ -298,13 +298,13 @@
     <div id="payDisc" style="text-align:center;color:#B36B00;font-weight:600;margin:-4px 0 8px" hidden></div>
     <div class="plist" id="payList"></div>
     <div class="methods">
-      <button class="meth on" data-m="Tiền mặt" type="button">💵 Tiền mặt (T)</button>
-      <button class="meth" data-m="Chuyển khoản" type="button">🏦 Chuyển khoản (C)</button>
+      <button class="meth on" data-m="Tiền mặt" type="button">💵 Tiền mặt (F9)</button>
+      <button class="meth" data-m="Chuyển khoản" type="button">🏦 Chuyển khoản (F10)</button>
     </div>
     <div class="given" id="givenBox">
       <input id="given" class="num" inputmode="numeric" placeholder="Tiền khách đưa (gõ 100 = 100.000)">
       <div class="quick" id="quick"></div>
-      <div class="kh">Để trống = khách đưa vừa đủ · Enter = xác nhận · phím C = chuyển khoản</div>
+      <div class="kh">Để trống = khách đưa vừa đủ · Enter = xác nhận · F10 = chuyển khoản</div>
       <div class="change"><span>Tiền thừa</span><b class="num" id="change">0đ</b></div>
     </div>
     <div id="ckBox" hidden style="text-align:center;margin:4px 0 8px">
@@ -1174,8 +1174,10 @@
     $('pBill').checked = !!S.bill_on; $('pTem').checked = !!(S.bep_on || S.tem_on);
     $('givenBox').hidden = false; $('ckBox').hidden = true; $('payErr').hidden = true;
     $('payModal').hidden = false;
-    setTimeout(function(){ $('given').focus(); }, 30);
+    var pm = PAYM; PAYM = 'Tiền mặt';
+    if (pm === 'Chuyển khoản') setMethod(pm); else setTimeout(function(){ $('given').focus(); }, 30);
   }
+  var PAYM = 'Tiền mặt';
   /* gõ 100 = 100.000đ (số dưới 1.000 tự nhân 1.000) */
   function givenVal(){ var g = +($('given').value.replace(/\D/g, '')) || 0; return g > 0 && g < 1000 ? g * 1000 : g; }
   function calcChange(){ var g = givenVal(); $('change').textContent = !g ? '0đ' : g < O.total ? 'chưa đủ (' + money(g) + 'đ)' : money(g - O.total) + 'đ'; }
@@ -1196,7 +1198,7 @@
   document.querySelector('.methods').addEventListener('click', function(e){
     var b = e.target.closest('[data-m]'); if (!b) return; setMethod(b.getAttribute('data-m'));
   });
-  $('payBtn').addEventListener('click', openPay);
+  $('payBtn').addEventListener('click', function(){ PAYM = 'Tiền mặt'; openPay(); });
   $('payCancel').addEventListener('click', function(){ $('payModal').hidden = true; back(); });
   var paying = false;
   function doPay(){
@@ -1234,20 +1236,22 @@
     if (!$('payModal').hidden) {
       if (e.key === 'Enter') { e.preventDefault(); doPay(); }
       else if (e.key === 'Escape') { $('payModal').hidden = true; back(); }
+      else if (e.key === 'F10' || e.key === 'F9') { e.preventDefault(); setMethod(e.key === 'F10' ? 'Chuyển khoản' : 'Tiền mặt'); }
       else if (!e.ctrlKey && !e.altKey && /^[cCtT]$/.test(e.key)) { e.preventDefault(); setMethod(/[cC]/.test(e.key) ? 'Chuyển khoản' : 'Tiền mặt'); }
       return;
     }
     if (!$('noteModal').hidden) { if (e.key === 'Escape') { $('noteModal').hidden = true; back(); } return; }
     if (!$('discModal').hidden) { if (e.key === 'Escape') { e.preventDefault(); $('discModal').hidden = true; back(); } else if (e.key === 'Enter') { e.preventDefault(); $('dOk').click(); } return; }
     if (!$('rfModal').hidden) { if (e.key === 'Escape') { e.preventDefault(); $('rfCancel').click(); } return; }
-    if (!$('tblModal').hidden) { if (e.key === 'Escape') { e.preventDefault(); $('tblModal').hidden = true; } return; }
+    if (!$('tblModal').hidden) { if (e.key === 'Escape') { e.preventDefault(); $('tblModal').hidden = true; PAYM = 'Tiền mặt'; } return; }
     if (!$('setModal').hidden) return;
     if (!$('ordView').hidden) {
-      if (e.key === 'F9') { e.preventDefault(); openPay(); }
+      if (e.key === 'F9') { e.preventDefault(); PAYM = 'Tiền mặt'; openPay(); }
+      else if (e.key === 'F10') { e.preventDefault(); PAYM = 'Chuyển khoản'; openPay(); }
       else if (e.key === 'F3') { e.preventDefault(); doSave(); }
       else if (e.key === 'F6') { e.preventDefault(); openDisc(); }
       else if (e.key === 'F2') { e.preventDefault(); $('search').focus(); $('search').select(); }
-      else if (e.key === 'F1' || e.key === 'F10') { e.preventDefault(); }
+      else if (e.key === 'F1') { e.preventDefault(); }
       else if (e.key === 'F7') { e.preventDefault(); if (!$('moreBtn').hidden) $('moreBtn').click(); else toast('Lưu đơn trước (F3) rồi mới báo bếp riêng.'); }
       else if (e.key === 'F8') { e.preventDefault(); $('togoBtn').click(); }
       else if (e.key === 'Escape') { e.preventDefault(); $('exitBtn').click(); }
@@ -1255,7 +1259,7 @@
         if (!cartKey(e) && e.key.length === 1 && !e.ctrlKey && !e.altKey) $('search').focus();
       }
     } else if (e.key === 'F1') { e.preventDefault(); openOrder(null); }
-    else if (e.key === 'F10') { e.preventDefault(); lockNow(); }
+    else if (e.key === 'F10') { e.preventDefault(); }
     else if (!/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && !document.querySelector('.mask:not([hidden])') && $('ordView').hidden && /^[0-9a-zA-Z]$/.test(e.key) && !e.ctrlKey && !e.altKey && TAB !== 'rep' && TAB !== 'paid') $('findOrd').focus();
   });
   $('newBtn').addEventListener('click', function(){ openOrder(null); });
@@ -1368,7 +1372,7 @@
   }
   $('tblAreas').addEventListener('click', function(e){ var b = e.target.closest('[data-tb]'); if (b) pickTable(b.getAttribute('data-tb')); });
   $('tblNone').addEventListener('click', function(){ pickTable(''); });
-  $('tblCancel').addEventListener('click', function(){ $('tblModal').hidden = true; back(); });
+  $('tblCancel').addEventListener('click', function(){ $('tblModal').hidden = true; PAYM = 'Tiền mặt'; back(); });
   $('tblFind').addEventListener('keydown', function(e){
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); $('tblModal').hidden = true; return; }
     if (e.key !== 'Enter') return;
