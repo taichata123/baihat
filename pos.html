@@ -613,9 +613,9 @@
     var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cw, ch); g.fillStyle = '#000'; g.textBaseline = 'top';
     var FONT = 'Arial, "Segoe UI", sans-serif';
     var px = Math.round(1.8 * D), py = Math.round(1.2 * D), iw = cw - 2 * px;
-    /* Bố cục theo tem Sapo cũ (Tài chốt 19/11): cùng một cỡ chữ cho dòng đầu, ghi chú, dòng cuối; tên món đậm, nhỉnh hơn một chút */
+    /* Bố cục theo tem Sapo cũ (Tài chốt 19/11): mọi dòng cùng một cỡ chữ; tên món chỉ in đậm (bằng cỡ Sapo) */
     var fs = Math.round(Math.max(2.2, Math.min(3, H / 10.5)) * D);
-    var nfs = Math.round(fs * 1.15);
+    var nfs = fs;
     function font(sz, b){ g.font = (b ? 'bold ' : '') + sz + 'px ' + FONT; }
     function fit(t, w){ if (g.measureText(t).width <= w) return t; while (t.length > 1 && g.measureText(t + '…').width > w) t = t.slice(0, -1); return t + '…'; }
     function wrap(t, w){
