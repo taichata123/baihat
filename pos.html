@@ -154,6 +154,16 @@
   .cempty{color:var(--muted);text-align:center;padding:40px 10px}
   .tile.hl{outline:4px solid #FFD54A;outline-offset:-4px}
   .ln.sel{background:#EEF5FF;box-shadow:inset 4px 0 0 var(--blue)}
+  .kebab{margin-left:auto;border:1px solid var(--line);background:#F4F6F9;border-radius:6px;width:40px;font-size:22px;font-weight:900;line-height:1;cursor:pointer;color:var(--ink)}
+  .mask.ops{background:transparent;align-items:flex-start;justify-content:flex-end}
+  .opsp{margin:46px 8px 0 0;width:340px;background:#fff;border-radius:8px;box-shadow:0 8px 30px rgba(0,0,0,.35);overflow:hidden}
+  .opsp button{display:flex;align-items:center;gap:12px;width:100%;border:none;border-bottom:1px solid var(--line);background:#fff;padding:12px 14px;font-size:15.5px;text-align:left;color:var(--ink);cursor:pointer}
+  .opsp button:hover{background:#EEF4FF}.opsp button i{font-style:normal;width:24px;height:24px;border-radius:12px;background:var(--blue);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+  .opsp button.red{color:#C0392B}.opsp button small{margin-left:auto;color:var(--muted)}
+  .opsp .ft{padding:9px 14px;font-size:13px;color:var(--muted);background:#F7F9FC}.opsp .ft div{display:flex;justify-content:space-between;padding:2px 0}
+  #rpList label{display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid var(--line);font-size:15.5px;cursor:pointer}
+  #rpList label i{font-style:normal;color:var(--muted);font-size:12.5px;width:18px}#rpList label span{flex:1}#rpList input[type=checkbox]{width:20px;height:20px}
+  #rpList input[type=number]{width:56px;padding:5px;font-size:15px;border:1px solid var(--line);border-radius:5px;text-align:center}
   .togo{border:1px solid var(--line);background:#F4F6F9;border-radius:6px;padding:6px 10px;font-weight:700;cursor:pointer;color:var(--ink)}
   .togo.on{background:#14213A;color:#fff;border-color:#14213A}
   .rchips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}.rchips button{border:1px solid var(--line);background:#F4F6F9;border-radius:16px;padding:6px 11px;font-weight:600;color:var(--ink)}.rchips button b{color:var(--blue);margin-right:5px}
@@ -297,6 +307,7 @@
       <input class="ph" id="cPhone" placeholder="SĐT" inputmode="tel" maxlength="15">
       <input class="pg" id="cPager" placeholder="Thẻ rung" maxlength="10">
       <button type="button" class="togo" id="togoBtn">🥡 Mang đi (F8)</button>
+      <button type="button" class="kebab" id="opsBtn" title="Thao tác đơn: in lại tem / phiếu bếp, đổi bàn, hủy đơn">⋮</button>
     </div>
     <div class="lines" id="lines"></div>
     <div class="cnote"><input id="cNote" placeholder="Ghi chú đơn" maxlength="200"></div>
@@ -447,6 +458,26 @@
 </div>
 
 <!-- Chọn bàn khi lưu đơn -->
+<div class="mask ops" id="opsMenu" hidden>
+  <div class="opsp">
+    <button type="button" data-op="send"><i>1</i>Gửi món mới tới bar / bếp<small>F7</small></button>
+    <button type="button" data-op="tem"><i>2</i>In lại tem ly</button>
+    <button type="button" data-op="bep"><i>3</i>In lại phiếu bếp</button>
+    <button type="button" data-op="check"><i>4</i>In phiếu kiểm đồ</button>
+    <button type="button" data-op="table"><i>5</i>Thay đổi bàn / thẻ rung</button>
+    <button type="button" data-op="cancel" class="red"><i>6</i>Hủy đơn</button>
+    <div class="ft" id="opsFt"></div>
+  </div>
+</div>
+<div class="mask" id="rpModal" hidden>
+  <div class="modal" style="width:min(520px,94vw)">
+    <h3 id="rpTitle" style="margin:0 0 4px"></h3>
+    <p class="hint" style="margin:0 0 6px">Phím 1–9 chọn/bỏ món · A = chọn tất cả · Enter = in · Esc = thôi</p>
+    <label style="display:flex;align-items:center;gap:10px;padding:6px;font-weight:700;cursor:pointer"><input type="checkbox" id="rpAll" style="width:20px;height:20px"> Chọn tất cả</label>
+    <div id="rpList"></div>
+    <div class="mbtns"><button type="button" id="rpCancel">Thôi (Esc)</button><button type="button" class="p" id="rpOk">In (Enter)</button></div>
+  </div>
+</div>
 <div class="mask" id="varModal" hidden>
   <div class="modal" style="width:min(460px,94vw)">
     <h3 id="varTitle" style="margin:0 0 6px"></h3>
@@ -600,7 +631,7 @@
     var h = '<div style="width:' + w + 'mm;padding:' + pad + 'mm ' + pad + 'mm 5mm;font-size:' + fs + 'mm">' +
       '<div style="text-align:center;font-weight:800;font-size:' + (fs * 1.5) + 'mm">' + esc(S.shop) + '</div>' +
       (S.addr ? '<div style="text-align:center">' + esc(S.addr) + '</div>' : '') +
-      '<div style="text-align:center;font-weight:800;font-size:' + (fs * 1.25) + 'mm;margin-top:2mm">HÓA ĐƠN THANH TOÁN</div>' +
+      '<div style="text-align:center;font-weight:800;font-size:' + (fs * 1.25) + 'mm;margin-top:2mm">' + (extra.check ? 'PHIẾU KIỂM ĐỒ' : 'HÓA ĐƠN THANH TOÁN') + '</div>' +
       '<div style="text-align:center;font-size:' + (fs * 2) + 'mm;font-weight:900">#' + esc(o.code) + '</div>' +
       '<div style="display:flex;justify-content:space-between"><span>' + dmy(o.paidAt || Date.now()) + ' ' + hhmm(o.paidAt || Date.now()) + '</span><span>' + (o.pager ? 'Thẻ rung: ' + esc(o.pager) : '') + '</span></div>' +
       '<div>Khách: ' + esc(o.name) + (o.phone ? ' · ' + esc(o.phone) : '') + (o.togo ? ' · <b>MANG ĐI</b>' : '') + '</div>' +
@@ -612,7 +643,7 @@
         (o.discAmt - (o.disc ? o.disc.amt : 0) ? '<div style="display:flex;justify-content:space-between"><span>Giảm giá món</span><span>-' + money(o.discAmt - (o.disc ? o.disc.amt : 0)) + 'đ</span></div>' : '') +
         (o.disc ? '<div style="display:flex;justify-content:space-between"><span>' + esc(o.disc.promo ? 'KM: ' + o.disc.promo : 'Giảm giá' + (o.disc.t === '%' ? ' ' + o.disc.v + '%' : '')) + '</span><span>-' + money(o.disc.amt) + 'đ</span></div>' : '') : '') +
       '<div style="display:flex;justify-content:space-between;font-weight:800;font-size:' + (fs * 1.3) + 'mm"><span>TỔNG CỘNG</span><span>' + money(o.total) + 'đ</span></div>' +
-      '<div style="display:flex;justify-content:space-between"><span>Thanh toán</span><span>' + esc(o.pay || '') + '</span></div>' +
+      (extra.check ? '<div style="text-align:center;margin-top:1mm">(Chưa thanh toán)</div>' : '<div style="display:flex;justify-content:space-between"><span>Thanh toán</span><span>' + esc(o.pay || '') + '</span></div>') +
       (extra.given ? '<div style="display:flex;justify-content:space-between"><span>Khách đưa</span><span>' + money(extra.given) + 'đ</span></div><div style="display:flex;justify-content:space-between"><span>Tiền thừa</span><span>' + money(extra.given - o.total) + 'đ</span></div>' : '') +
       (o.note ? '<div style="margin-top:1.5mm">Ghi chú: ' + esc(o.note) + '</div>' : '') +
       '<div style="text-align:center;margin-top:3mm">' + esc(S.foot) + '</div></div>';
@@ -1102,7 +1133,7 @@
     $('cName').value = O.name === 'Khách lẻ' ? '' : O.name; $('cPhone').value = O.phone || ''; $('cPager').value = O.pager || ''; $('cNote').value = O.note || '';
     $('search').value = ''; $('menuPick').value = 'cur'; $('menuPick').hidden = !(D && D.other && D.other.length);
     $('menuPick').options[1].textContent = D && D.mode === 'night' ? 'Menu thường' : 'Menu đêm nhạc';
-    $('moreBtn').hidden = !ord; $('cancelBtn').hidden = !ord;
+    $('moreBtn').hidden = true; $('cancelBtn').hidden = true; $('opsBtn').hidden = !ord;
     $('ordView').hidden = false; drawCats(); drawCart(); O0 = snap();
     setTimeout(function(){ if ($('payModal').hidden) $('search').focus(); }, 30);
   }
@@ -1307,6 +1338,66 @@
     });
   }
   $('cancelBtn').addEventListener('click', function(){ if (!O || !O.id) return; cancelPending(D.pending.find(function(x){ return x.id === O.id; }) || O); });
+  /* ⋮ Thao tác đơn đã lưu (theo menu của Sapo, Tài chốt 19/11): gửi bếp, in lại tem / phiếu bếp (chọn món), phiếu kiểm đồ, đổi bàn, hủy */
+  function savedOrd(){ return O && O.id ? (D.pending.find(function(x){ return x.id === O.id; }) || null) : null; }
+  $('opsBtn').addEventListener('click', function(){
+    var o = savedOrd(); if (!o) return toast('Lưu đơn trước (F3).');
+    var by = o.by || o.cashier || '';
+    $('opsFt').innerHTML = '<div><span>Mã đơn</span><b>#' + esc(o.code) + '</b></div><div><span>Tạo đơn</span><span>' + esc(String(by).replace(/ \(.*\)$/, '')) + ' · ' + hhmm(o.created) + ' ' + dmy(o.created).slice(0, 5) + '</span></div>' +
+      (o.pager ? '<div><span>Bàn / thẻ</span><span>' + esc(o.pager) + (o.togo ? ' · Mang đi' : '') + '</span></div>' : '');
+    $('opsMenu').hidden = false;
+  });
+  $('opsMenu').addEventListener('click', function(e){ var b = e.target.closest('[data-op]'); $('opsMenu').hidden = true; if (b) doOp(b.getAttribute('data-op')); else back(); });
+  function doOp(k){
+    var o = savedOrd(); if (!o) return;
+    if (k === 'send') return $('moreBtn').click();
+    if (k === 'cancel') return $('cancelBtn').click();
+    if (k === 'tem' || k === 'bep') return openReprint(o, k);
+    if (k === 'check') {
+      if (dirty()) toast('Đơn có thay đổi chưa lưu – phiếu in theo bản đã lưu.', 3500);
+      sendPrint('bill', billHtml(o, { check: true })); toast('Đã gửi in phiếu kiểm đồ'); return back();
+    }
+    if (k === 'table') return openTables(function(){
+      busy(true, 'Đang đổi bàn…');
+      save('').then(function(){ busy(false); O0 = snap(); toast('Đã đổi sang ' + (O.pager ? 'bàn / thẻ ' + O.pager : 'không gắn bàn')); back(); },
+        function(e){ busy(false); if (e.message !== 'empty') toast('⚠️ ' + e.message, 4000); });
+    }, 'Đổi bàn / thẻ rung · đơn #' + o.code);
+  }
+  var RP = null;
+  function openReprint(o, k){
+    var L = split(o)[k === 'bep' ? 'bep' : 'bar'];
+    if (!L.length) return toast('Đơn này không có món cần in ' + (k === 'bep' ? 'phiếu bếp' : 'tem ly') + '.');
+    if (dirty()) toast('Đơn có thay đổi chưa lưu – chỉ in lại các món đã lưu.', 3500);
+    RP = { o: o, k: k, L: L };
+    $('rpTitle').textContent = (k === 'bep' ? 'In lại phiếu bếp' : 'In lại tem ly') + ' · đơn #' + o.code;
+    $('rpList').innerHTML = L.map(function(i, x){
+      return '<label><i>' + (x < 9 ? x + 1 : '') + '</i><input type="checkbox" data-rc="' + x + '"><span>' + esc(i.n) + (i.t ? ' <small style="color:var(--muted)">(' + esc(i.t) + ')</small>' : '') + '</span>' +
+        '<input type="number" min="1" max="' + i.q + '" value="' + i.q + '" data-rq="' + x + '" title="Số ' + (k === 'bep' ? 'phần' : 'tem') + '"> / ' + i.q + '</label>';
+    }).join('');
+    $('rpAll').checked = false; $('rpModal').hidden = false;
+  }
+  function rpSync(){ var c = $('rpList').querySelectorAll('[data-rc]'); $('rpAll').checked = c.length && Array.prototype.every.call(c, function(x){ return x.checked; }); }
+  function rpToggle(x){ var c = $('rpList').querySelector('[data-rc="' + x + '"]'); if (c) { c.checked = !c.checked; rpSync(); } }
+  function rpSetAll(v){ Array.prototype.forEach.call($('rpList').querySelectorAll('[data-rc]'), function(c){ c.checked = v; }); $('rpAll').checked = v; }
+  $('rpAll').addEventListener('change', function(){ rpSetAll(this.checked); });
+  $('rpList').addEventListener('change', function(e){ if (e.target.hasAttribute('data-rc')) rpSync(); });
+  function rpClose(){ $('rpModal').hidden = true; RP = null; back(); }
+  function rpPrint(){
+    if (!RP) return;
+    var sel = [];
+    RP.L.forEach(function(i, x){
+      if (!$('rpList').querySelector('[data-rc="' + x + '"]').checked) return;
+      var q = Math.max(1, Math.min(i.q, Math.round(+$('rpList').querySelector('[data-rq="' + x + '"]').value || i.q)));
+      var c = JSON.parse(JSON.stringify(i)); c.q = q; sel.push(c);
+    });
+    if (!sel.length) return toast('Chọn ít nhất 1 món (bấm số hoặc A = tất cả).');
+    var w = {}; w[RP.k === 'bep' ? 'bep' : 'tem'] = true;
+    printOrder(RP.o, w, null, sel);
+    toast('Đã gửi in lại ' + sel.reduce(function(s, i){ return s + i.q; }, 0) + (RP.k === 'bep' ? ' món (phiếu bếp)' : ' tem ly'));
+    rpClose();
+  }
+  $('rpOk').addEventListener('click', rpPrint);
+  $('rpCancel').addEventListener('click', rpClose);
   $('orders').addEventListener('contextmenu', function(e){
     var c = e.target.closest('.oc'); if (!c) return; e.preventDefault();
     cancelPending(D.pending.find(function(x){ return x.id === c.getAttribute('data-open'); }));
@@ -1320,6 +1411,19 @@
       else if (e.key === 'Escape') { $('payModal').hidden = true; back(); }
       else if (e.key === 'F10' || e.key === 'F9') { e.preventDefault(); setMethod(e.key === 'F10' ? 'Chuyển khoản' : 'Tiền mặt'); }
       else if (!e.ctrlKey && !e.altKey && /^[cCtT]$/.test(e.key)) { e.preventDefault(); setMethod(/[cC]/.test(e.key) ? 'Chuyển khoản' : 'Tiền mặt'); }
+      return;
+    }
+    if (!$('opsMenu').hidden) {
+      e.preventDefault(); var ob = $('opsMenu').querySelectorAll('[data-op]');
+      if (/^[1-9]$/.test(e.key) && ob[+e.key - 1]) ob[+e.key - 1].click(); else if (e.key === 'Escape') { $('opsMenu').hidden = true; back(); }
+      return;
+    }
+    if (!$('rpModal').hidden) {
+      if (e.target.tagName === 'INPUT' && e.target.type === 'number' && /^[0-9]$/.test(e.key)) return;
+      if (/^[1-9]$/.test(e.key)) { e.preventDefault(); rpToggle(+e.key - 1); }
+      else if (e.key === 'a' || e.key === 'A') { e.preventDefault(); rpSetAll(!$('rpAll').checked); }
+      else if (e.key === 'Enter') { e.preventDefault(); rpPrint(); }
+      else if (e.key === 'Escape') { e.preventDefault(); rpClose(); }
       return;
     }
     if (!$('varModal').hidden) {
@@ -1339,7 +1443,7 @@
       else if (e.key === 'F6') { e.preventDefault(); openDisc(); }
       else if (e.key === 'F2') { e.preventDefault(); $('search').focus(); $('search').select(); }
       else if (e.key === 'F1') { e.preventDefault(); }
-      else if (e.key === 'F7') { e.preventDefault(); if (!$('moreBtn').hidden) $('moreBtn').click(); else toast('Lưu đơn trước (F3) rồi mới báo bếp riêng.'); }
+      else if (e.key === 'F7') { e.preventDefault(); if (O && O.id) $('moreBtn').click(); else toast('Lưu đơn trước (F3) rồi mới báo bếp riêng.'); }
       else if (e.key === 'F8') { e.preventDefault(); $('togoBtn').click(); }
       else if (e.altKey && /^[1-9]$/.test(e.key)) { e.preventDefault(); goBand(+e.key - 1); back(); }
       else if (e.key === 'Escape') { e.preventDefault(); $('exitBtn').click(); }
@@ -1434,10 +1538,10 @@
   }
   function tablesOf(){ return (D && D.tables && D.tables.length) ? D.tables : [{ a: 'Thẻ rung', t: ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20'] }]; }
   var tblNext = null;
-  function openTables(next){
+  function openTables(next, title){
     readHead();
     tblNext = next || saveNow;
-    $('tblTitle').textContent = next ? 'Thanh toán · chọn bàn / thẻ rung' : 'Lưu đơn · chọn bàn / thẻ rung';
+    $('tblTitle').textContent = title || (next ? 'Thanh toán · chọn bàn / thẻ rung' : 'Lưu đơn · chọn bàn / thẻ rung');
     $('tblNone').textContent = (next ? 'Thanh toán, không gắn bàn' : 'Lưu, không gắn bàn') + (O.pager ? '' : ' (Enter)');
     var used = {};
     pagerBusy().forEach(function(o){ (used[o.pager] = used[o.pager] || []).push('#' + o.code); });

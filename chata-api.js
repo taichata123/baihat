@@ -236,7 +236,7 @@
     var log = Array.isArray(o.log) ? o.log : [];
     return { id: o.id, code: o.code, name: o.name, phone: o.phone || '', items: o.items || [], total: o.total || 0, note: o.note || '',
       status: o.status, pay: o.pay || '', pager: o.pager || '', created: o.created || 0, paidAt: o.paidAt || 0, mode: o.mode || '',
-      src: o.src || 'QR', cashier: o.cashier || '', by: log.length ? log[0].by : '',
+      src: o.src || 'QR', cashier: o.cashier || '', by: o.createdBy || (log.length ? log[0].by : ''),
       gross: o.gross || o.total || 0, discAmt: o.discAmt || 0, disc: o.disc || null, togo: !!o.togo };
   }
   function save(ref, data, merge) {
@@ -474,7 +474,7 @@
             var o = { code: c.code, date: c.date, created: now, name: clean(d.name, 30) || 'Khách lẻ', phone: phone, items: L.items, total: A.total,
               gross: A.gross, itemDisc: A.itemDisc, disc: A.disc, discAmt: A.discAmt,
               note: clean(d.note, 200), status: pay ? 'Đã thanh toán' : 'Chờ thanh toán', pay: pay, pager: clean(d.pager, 10), paidAt: pay ? now : 0,
-              paidDate: pay ? today() : '', mode: mode === 'night' ? 'Đêm nhạc' : 'Thường', token: '', src: 'Quầy', cashier: pay ? who(u) : '', cashierCode: pay ? u.c : '', log: [] };
+              paidDate: pay ? today() : '', mode: mode === 'night' ? 'Đêm nhạc' : 'Thường', token: '', src: 'Quầy', cashier: pay ? who(u) : '', cashierCode: pay ? u.c : '', createdBy: who(u), log: [] };
             if (d.togo) o.togo = true;
             act(o, u, 'tao'); if (pay) act(o, u, 'thu', pay);
             if (c.temp) o.tempCode = true;
