@@ -446,9 +446,35 @@
       return db.collection('posOrders').where('date', '==', d).get().then(function (q2) {
         q2.forEach(function (x) { var o = x.data(); if (o.status === 'Đã hủy' && !o.mergedInto) { r.cancel++; r.cancelAmt += o.total || 0; } });
         r.items = Object.keys(it).map(function (k) { return it[k]; }).sort(function (a, b) { return b.a - a.a; });
-        return db.doc('revenuePos/' + d).set(r);
+        return db.doc('revenuePos/' + d).set(r).then(function () { return mirrorRev(d, r); });
       });
     }).catch(function (e) { console.error('rebuildDay', e); });
+  }
+  /* Doanh thu cho thưởng tuần, sổ quỹ, lãi lỗ của Web vận hành (đọc revenue/{ngày}) – Tài chốt 19/11/2026 khi ngưng Sapo:
+     revenue/{ngày} = phần Sapo (giữ nguyên bản chụp ở revenueSapo/{ngày}, chụp 1 lần) + phần app thu ngân. */
+  function mergeRev(a, b) {
+    var m = { date: b.date, total: 0, orders: 0, gross: 0, disc: 0, cancel: 0, cancelAmt: 0, pay: {}, hours: {}, cat: {}, items: [], src: a ? 'sapo+app' : 'app', at: Date.now(), salesAt: Date.now(), payAt: Date.now() }, it = {};
+    [a, b].forEach(function (r) {
+      if (!r) return;
+      ['total', 'orders', 'gross', 'disc', 'cancel', 'cancelAmt'].forEach(function (k) { m[k] += Number(r[k]) || 0; });
+      Object.keys(r.pay || {}).forEach(function (k) { m.pay[k] = (m.pay[k] || 0) + (Number(r.pay[k]) || 0); });
+      Object.keys(r.hours || {}).forEach(function (h) { var v = r.hours[h] || [], x = m.hours[h] || (m.hours[h] = [0, 0]); x[0] += Number(v[0]) || 0; x[1] += Number(v[1]) || 0; });
+      Object.keys(r.cat || {}).forEach(function (k) { m.cat[k] = (m.cat[k] || 0) + (Number(r.cat[k]) || 0); });
+      (r.items || []).forEach(function (i) { var k = i.n + '|' + (i.c || ''), x = it[k] || (it[k] = { n: i.n, c: i.c || '', q: 0, a: 0 }); x.q += Number(i.q) || 0; x.a += Number(i.a) || 0; });
+    });
+    (b.items || []).forEach(function (i) { var k = i.c || 'Khác'; m.cat[k] = (m.cat[k] || 0) + (Number(i.a) || 0); });
+    m.items = Object.keys(it).map(function (k) { return it[k]; }).sort(function (x, y) { return y.a - x.a; });
+    return m;
+  }
+  function mirrorRev(d, r) {
+    var sref = db.doc('revenueSapo/' + d), rref = db.doc('revenue/' + d);
+    return sref.get().then(function (s) {
+      if (s.exists) return s.data().none ? null : s.data();
+      return rref.get().then(function (x) {
+        var sp = x.exists && x.data().src === 'sapo-orders' ? x.data() : null;
+        return sref.set(sp ? Object.assign({}, sp, { copiedAt: Date.now() }) : { none: true, date: d, copiedAt: Date.now() }).then(function () { return sp; });
+      });
+    }).then(function (sp) { return rref.set(mergeRev(sp, r)); });
   }
   function act(o, u, a, x) { var it = { a: a, by: typeof u === 'string' ? u : who(u), at: Date.now() }; if (x) it.x = x; o.log = (o.log || []).concat([it]).slice(-30); }
 
