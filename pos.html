@@ -365,7 +365,7 @@
     <h3 id="noteTitle">Ghi chú món</h3>
     <input id="noteIn" maxlength="60" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font-size:16px" placeholder="VD: ít đá, ít ngọt, không cay">
     <div class="quick" id="noteQuick"></div>
-    <div class="kh">Ô trống: bấm phím số 1–9 để chọn nhanh. Đang gõ chữ thì số gõ bình thường.</div>
+    <div class="kh">Bấm chuột vào ô có sẵn để thêm nhanh, hoặc gõ tự do (gõ số được, VD cấp 3).</div>
     <label style="display:block;margin-top:12px;font-size:14px;color:var(--muted)">Giảm giá món này</label>
     <div style="display:flex;gap:6px;margin-top:4px"><input id="ndVal" class="num" inputmode="numeric" placeholder="0" style="flex:1;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:16px"><div class="dtog" id="ndType" style="width:130px"><button type="button" data-t="%" class="on">%</button><button type="button" data-t="đ">đ/món</button></div></div>
     <div class="mbtns"><button type="button" id="noteCancel">Hủy</button><button type="button" id="noteAll" hidden>Cả 2 ly</button><button type="button" class="ok" id="noteOk">Lưu (Enter)</button></div>
@@ -1210,7 +1210,7 @@
 
   // Ghi chú món
   var noteK = -1, QUICK_NOTES = ['Ít đá', 'Không đá', 'Ít ngọt', 'Không đường', 'Nhiều đá', 'Ít cay', 'Không cay', 'Cay nhiều', 'Mang về'];
-  $('noteQuick').innerHTML = QUICK_NOTES.map(function(n, k){ return '<button type="button" tabindex="-1" data-qn="' + n + '"><b style="color:var(--blue);margin-right:4px">' + (k + 1) + '</b>' + n + '</button>'; }).join('');
+  $('noteQuick').innerHTML = QUICK_NOTES.map(function(n, k){ return '<button type="button" tabindex="-1" data-qn="' + n + '">' + n + '</button>'; }).join('');
   var ndType = '%';
   function drawNdType(){ Array.prototype.forEach.call(document.querySelectorAll('#ndType button'), function(b){ b.classList.toggle('on', b.getAttribute('data-t') === ndType); }); }
   $('ndType').addEventListener('click', function(e){ var b = e.target.closest('[data-t]'); if (!b) return; ndType = b.getAttribute('data-t'); $('ndVal').value = ''; drawNdType(); });
@@ -1250,15 +1250,8 @@
   $('noteCancel').addEventListener('click', function(){ $('noteModal').hidden = true; back(); });
   $('noteIn').addEventListener('keydown', function(e){
     if (e.key === 'Enter') { e.preventDefault(); saveNote(e.ctrlKey); }
-    else if (/^[1-9]$/.test(e.key) && !e.ctrlKey && !e.altKey && QUICK_NOTES[+e.key - 1] && quickMode(this)) { e.preventDefault(); addQuick(QUICK_NOTES[+e.key - 1]); }
   });
-  /* Phím số chỉ chọn ghi chú nhanh khi ô trống hoặc vừa chọn nhanh xong; đang gõ chữ thì số gõ bình thường (VD "50% đường", kiểu gõ VNI) – sửa 19/11 */
-  function quickMode(el){
-    var v = el.value, end = el.selectionStart === v.length && el.selectionEnd === v.length;
-    if (!v.trim()) return true; if (!end) return false;
-    var lv = v.toLowerCase().trim();
-    return QUICK_NOTES.some(function(q){ q = q.toLowerCase(); return lv === q || lv.slice(-(q.length + 2)) === ', ' + q; });
-  }
+  /* Bỏ chọn nhanh bằng phím số (Tài chốt 19/11): số gõ bình thường, VD cấp độ mì cay; chọn nhanh bằng chuột */
   $('ndVal').addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); saveNote(e.ctrlKey); } });
 
   function payload(pay){
