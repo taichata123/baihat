@@ -2104,16 +2104,24 @@
     g.textAlign = 'right'; g.fillText(kk, cw - px, py); g.textAlign = 'left';
     font(hfs, false); g.fillText(fit(head, iw - kw - D8), px, py);
     var y = py + Math.round(hfs * 1.25); g.fillRect(px, y, iw, Math.max(2, Math.round(.25 * D8))); y += Math.round(.8 * D8);
-    /* Ngày làm + HSD chữ rất to để nhìn xa (Tài 20/11 09:25): ~1,8 lần, tự thu nhỏ nếu không vừa bề ngang */
-    var bfs = Math.round(fs * 1.8); font(bfs, true);
-    while (bfs > pfs && Math.max(g.measureText(lam).width, g.measureText(hsd + (i.raw || i.exp ? '' : ' 00:00 00/00')).width) > iw) { bfs--; font(bfs, true); }
-    var footY = ch - py - bfs, lh = Math.round(ffs * 1.18), lamY = lam ? footY - Math.round(bfs * 1.12) : footY;
-    var room = Math.floor((lamY - Math.round(.4 * D8) - y - info.length * lh) / Math.round(nfs * 1.18));
-    font(nfs, true); var nl = wrap(i.name, iw).slice(0, Math.max(1, Math.min(3, room)));
-    nl.forEach(function(l){ g.fillText(fit(l, iw), px, y); y += Math.round(nfs * 1.18); });
+    /* Tài 20/11 09:28: số NGÀY làm thật to; giờ và tháng giữ cỡ ~1,8; HSD nhỏ lại */
+    var bfs = Math.round(fs * 1.8), hsfs = Math.round(fs * 1.15), lh = Math.round(ffs * 1.18), nlh = Math.round(nfs * 1.18);
+    var footY = ch - py - hsfs, dd = '', la = '', lb = '';
+    if (lam) { var t0 = new Date(i.at); la = 'Làm: ' + hhmm(i.at) + ' '; dd = ('0' + t0.getDate()).slice(-2); lb = '/' + ('0' + (t0.getMonth() + 1)).slice(-2); }
+    font(nfs, true); var nl = wrap(i.name, iw).slice(0, lam ? 2 : 3);
+    var top = y + nl.length * nlh + info.length * lh + Math.round(.3 * D8);
+    var base = footY - Math.round(.9 * D8); /* chân chữ dòng Làm */
+    var dfs = lam ? Math.max(bfs, Math.min(Math.round(bfs * 2.2), Math.floor((base - top) / .76))) : 0;
+    function wl(){ font(bfs, true); var w = g.measureText(la).width + g.measureText(lb).width; font(dfs, true); return w + g.measureText(dd).width; }
+    if (lam) while (wl() > iw && bfs > pfs) { if (dfs > Math.round(bfs * 1.3)) dfs--; else { bfs--; dfs = Math.max(bfs, dfs - 1); } }
+    var lamTop = lam ? base - Math.round(dfs * .76) : footY;
+    var room = Math.floor((lamTop - Math.round(.3 * D8) - y - info.length * lh) / nlh);
+    nl = nl.slice(0, Math.max(1, room)); font(nfs, true);
+    nl.forEach(function(l){ g.fillText(fit(l, iw), px, y); y += nlh; });
     font(ffs, false);
-    info.forEach(function(l){ if (y + ffs <= lamY - Math.round(.3 * D8)) { g.fillText(fit(l, iw), px, y); y += lh; } });
-    font(bfs, true); if (lam) g.fillText(fit(lam, iw), px, lamY); g.fillText(fit(hsd, iw), px, footY);
+    info.forEach(function(l){ if (y + ffs <= lamTop - Math.round(.3 * D8)) { g.fillText(fit(l, iw), px, y); y += lh; } });
+    if (lam) { g.textBaseline = 'alphabetic'; var lx = px; font(bfs, true); g.fillText(la, lx, base); lx += g.measureText(la).width; font(dfs, true); g.fillText(dd, lx, base); lx += g.measureText(dd).width; font(bfs, true); g.fillText(lb, lx, base); g.textBaseline = 'top'; }
+    font(hsfs, true); g.fillText(fit(hsd, iw), px, footY);
     var img = g.getImageData(0, 0, cw, ch), d = img.data, th = TEM_INK[S.tem_ink] || TEM_INK['Vừa'];
     for (var p = 0; p < d.length; p += 4) { var v = (d[p] * 299 + d[p + 1] * 587 + d[p + 2] * 114) / 1000 < 255 - th ? 0 : 255; d[p] = d[p + 1] = d[p + 2] = v; d[p + 3] = 255; }
     g.putImageData(img, 0, 0);
