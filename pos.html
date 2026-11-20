@@ -214,7 +214,10 @@
   .modal{background:#fff;border-radius:10px;width:min(560px,94vw);max-height:92vh;overflow:auto;padding:18px 20px}
   .modal h3{margin:0 0 12px}
   .paytot{font-size:34px;font-weight:800;color:var(--red);text-align:center;margin:4px 0 12px}
-  .methods{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .methods{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  #spBox{margin:8px 0}.sprow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0;font-weight:600}
+  .sprow input{width:200px;font-size:22px;padding:8px 10px;border:2px solid var(--line);border-radius:8px;text-align:right}
+  .sprow b{font-size:22px;color:var(--blue)}
   .meth{border:2px solid var(--line);background:#fff;border-radius:8px;padding:14px;font-size:16px;font-weight:700}
   .meth.on{border-color:var(--blue);background:#E8F1FD;color:var(--blue)}
   .given{margin-top:12px}
@@ -373,6 +376,12 @@
     <div class="methods">
       <button class="meth on" data-m="Tiền mặt" type="button">💵 Tiền mặt (F9)</button>
       <button class="meth" data-m="Chuyển khoản" type="button">🏦 Chuyển khoản (F10)</button>
+      <button class="meth" data-m="Tiền mặt + CK" type="button">🔀 TM + CK (S)</button>
+    </div>
+    <div id="spBox" hidden>
+      <div class="sprow"><span>💵 Tiền mặt khách đưa</span><input id="spCash" class="num" inputmode="numeric" placeholder="gõ 50 = 50.000"></div>
+      <div class="sprow"><span>🏦 Chuyển khoản phần còn lại</span><b class="num" id="spCk">0đ</b></div>
+      <div class="kh">Mã QR bên dưới là số tiền chuyển khoản còn lại. Chỉ bấm Enter khi đã nhận đủ tiền mặt và thấy tiền chuyển khoản về.</div>
     </div>
     <div class="given" id="givenBox">
       <input id="given" class="num" inputmode="numeric" placeholder="Tiền khách đưa (gõ 100 = 100.000)">
@@ -627,7 +636,7 @@
 <div class="toast" id="toast" hidden></div>
 <iframe id="printFrame" title="in"></iframe>
 
-<script src="chata-api.js?v=nv3"></script>
+<script src="chata-api.js?v=sp1"></script>
 <script>
 (function(){
   var API = 'https://script.google.com/macros/s/AKfycbxvRhb0Jjbrokyew1RBqWwBTCiqSIsvciWx_Vns9LeOs9LLCvTJcxOk71-7CMKuI1I/exec';
@@ -726,7 +735,7 @@
         (o.discAmt - (o.disc ? o.disc.amt : 0) ? '<div style="display:flex;justify-content:space-between"><span>Giảm giá món</span><span>-' + money(o.discAmt - (o.disc ? o.disc.amt : 0)) + 'đ</span></div>' : '') +
         (o.disc ? '<div style="display:flex;justify-content:space-between"><span>' + esc(o.disc.promo ? 'KM: ' + o.disc.promo : 'Giảm giá' + (o.disc.t === '%' ? ' ' + o.disc.v + '%' : '')) + '</span><span>-' + money(o.disc.amt) + 'đ</span></div>' : '') : '') +
       '<div style="display:flex;justify-content:space-between;font-weight:800;font-size:' + (fs * 1.3) + 'mm"><span>TỔNG CỘNG</span><span>' + money(o.total) + 'đ</span></div>' +
-      (extra.check ? '<div style="text-align:center;margin-top:1mm">(Chưa thanh toán)</div>' : '<div style="display:flex;justify-content:space-between"><span>Thanh toán</span><span>' + esc(o.pay || '') + '</span></div>') +
+      (extra.check ? '<div style="text-align:center;margin-top:1mm">(Chưa thanh toán)</div>' : '<div style="display:flex;justify-content:space-between"><span>Thanh toán</span><span>' + esc(o.pay === PAY_SPLIT && o.split ? 'Tiền mặt + Chuyển khoản' : (o.pay || '')) + '</span></div>' + (o.pay === PAY_SPLIT && o.split ? '<div style="display:flex;justify-content:space-between"><span>· Tiền mặt</span><span>' + money(o.split.cash) + '</span></div><div style="display:flex;justify-content:space-between"><span>· Chuyển khoản</span><span>' + money(o.split.ck) + '</span></div>' : '')) +
       (extra.given ? '<div style="display:flex;justify-content:space-between"><span>Khách đưa</span><span>' + money(extra.given) + 'đ</span></div><div style="display:flex;justify-content:space-between"><span>Tiền thừa</span><span>' + money(extra.given - o.total) + 'đ</span></div>' : '') +
       (o.note ? '<div style="margin-top:1.5mm">Ghi chú: ' + esc(o.note) + '</div>' : '') +
       (o.pager && hasMix(o.items) ? '<div style="margin-top:2mm;border:.4mm solid #000;padding:1.2mm;text-align:center;font-weight:800">' + esc(MIXNOTE) + '</div>' : '') +
@@ -1032,7 +1041,7 @@
     var W = D.waiting || [];
     if (W.length) $('orders').innerHTML += '<div class="whd">Đơn QR đã thu · chờ báo món xong (' + W.length + ')</div>' + W.map(function(o){
       return '<div class="oc qr" data-wid="' + o.id + '">' +
-        '<div class="h"><span class="src">QR · đã thu ' + esc(o.pay === 'Chuyển khoản' ? 'CK' : 'TM') + (o.togo ? ' · 🥡 Mang đi' : '') + '</span><span>⏱ ' + ago(o.paidAt) + '</span></div>' +
+        '<div class="h"><span class="src">QR · đã thu ' + esc(o.pay === 'Chuyển khoản' ? 'CK' : o.pay === PAY_SPLIT ? 'TM+CK' : 'TM') + (o.togo ? ' · 🥡 Mang đi' : '') + '</span><span>⏱ ' + ago(o.paidAt) + '</span></div>' +
         '<div class="c">#' + esc(o.code) + (o.pager ? ' <small style="font-size:13px;color:#0A8F5F">· Bàn ' + esc(o.pager) + '</small>' : '') + '</div><div class="n">' + esc(o.name) + '</div>' + ctTag(o) +
         '<div class="it">' + o.items.map(function(i){ return i.q + '× ' + esc(i.n); }).join(', ') + '</div>' +
         '<div class="a"><button type="button" data-ct="' + o.id + '">Thẻ / SĐT</button>' + rdyBtn(o) + '</div></div>';
@@ -1073,8 +1082,8 @@
   function drawPaid(){
     $('paidView').innerHTML = D.paid.length ? '<table><tr><th>Mã</th><th>Giờ</th><th>Khách</th><th>Món</th><th>Tiền</th><th>TT</th><th>Thu ngân</th><th>In lại</th></tr>' + D.paid.map(function(o){
       return '<tr><td><b>#' + esc(o.code) + '</b><br><small>' + (o.src === 'Quầy' ? 'Quầy' : o.src === 'NV' ? 'NV · ' + esc(o.nv || '') : 'QR') + '</small></td><td>' + hhmm(o.paidAt) + '</td><td>' + esc(o.name) + (o.pager ? '<br><small>Thẻ ' + esc(o.pager) + '</small>' : '') + (o.phone ? '<br><small>📞 ' + esc(o.phone) + '</small>' : '') + (o.togo ? '<br><small>🥡 Mang đi</small>' : '') + '</td>' +
-        '<td>' + o.items.map(function(i){ return i.q + '× ' + esc(i.n) + (i.t ? ' <i>(' + esc(i.t) + ')</i>' : ''); }).join('<br>') + '</td><td class="num"><b>' + money(o.total) + '</b></td><td>' + esc(o.pay) + '</td><td><small>' + esc(o.cashier || '') + '</small></td>' +
-        '<td><button class="sbtn" data-rp="bill" data-id="' + o.id + '">Hóa đơn</button><button class="sbtn" data-rp="bep" data-id="' + o.id + '">Bếp</button><button class="sbtn" data-rp="tem" data-id="' + o.id + '">Tem</button><br><button class="sbtn" data-fx="method" data-id="' + o.id + '">Đổi sang ' + (o.pay === 'Chuyển khoản' ? 'TM' : 'CK') + '</button><button class="sbtn" data-fx="refund" data-id="' + o.id + '" style="color:#C0392B">Hoàn/hủy</button>' +
+        '<td>' + o.items.map(function(i){ return i.q + '× ' + esc(i.n) + (i.t ? ' <i>(' + esc(i.t) + ')</i>' : ''); }).join('<br>') + '</td><td class="num"><b>' + money(o.total) + '</b></td><td>' + esc(payTxtP(o)) + '</td><td><small>' + esc(o.cashier || '') + '</small></td>' +
+        '<td><button class="sbtn" data-rp="bill" data-id="' + o.id + '">Hóa đơn</button><button class="sbtn" data-rp="bep" data-id="' + o.id + '">Bếp</button><button class="sbtn" data-rp="tem" data-id="' + o.id + '">Tem</button><br><button class="sbtn" data-fx="method" data-id="' + o.id + '">Đổi hình thức TT</button><button class="sbtn" data-fx="refund" data-id="' + o.id + '" style="color:#C0392B">Hoàn/hủy</button>' +
         (o.src === 'QR' ? '<br>' + (o.ready ? '<small style="color:#0A8F5F">✓ Đã báo món ' + hhmm(o.ready) + '</small>' : '<button class="sbtn rdy" data-ready="' + o.id + '">🔔 Món xong</button>') + '<button class="sbtn" data-ct="' + o.id + '">Thẻ/SĐT</button>' : '') + '</td></tr>';
     }).join('') + '</table>' : '<div class="empty">Chưa có đơn nào thanh toán hôm nay.</div>';
   }
@@ -1123,17 +1132,22 @@
   });
   /* Sửa đơn đã thanh toán: đổi hình thức TT hoặc hoàn/hủy – nhân viên tự làm, ghi lại cho quản lý xem */
   function fixPaid(o, kind){
-    var what = 'Đơn #' + o.code + ' · ' + o.name + ' · ' + money(o.total) + 'đ · ' + o.pay;
+    var what = 'Đơn #' + o.code + ' · ' + o.name + ' · ' + money(o.total) + 'đ · ' + payTxtP(o);
     if (kind === 'method') {
-      var np = o.pay === 'Chuyển khoản' ? 'Tiền mặt' : 'Chuyển khoản';
-      return askReason({ title: 'Đổi sang ' + np, what: what, need: false, hint: 'Việc này được ghi lại cho quản lý xem. Ghi chú nếu cần (VD: khách chuyển khoản sau).', ph: 'Ghi chú (không bắt buộc)' }, function(why){
-        call('cashierUpdate', [PIN, o.id, 'method', { pay: np, reason: why }]).then(function(r){ if (r.ok) { apply(r.data); toast('Đã đổi đơn #' + o.code + ' sang ' + np); } else toast(r.msg, 4000); }, function(e){ toast('⚠️ ' + e.message, 4000); });
+      /* 20/11: chọn Tiền mặt / Chuyển khoản, hoặc gõ số tiền mặt để chia TM + CK; ghi chú thêm sau dấu · */
+      var opts = ['Tiền mặt', 'Chuyển khoản'].filter(function(x){ return x !== o.pay; });
+      return askReason({ title: 'Đổi hình thức thanh toán', what: what, need: true, list: opts, ph: 'Bấm 1–' + opts.length + ', hoặc gõ số tiền mặt (VD 50 = 50.000) để chia TM + CK',
+        hint: 'Chia TM + CK: gõ số tiền mặt khách đã đưa, phần còn lại tính chuyển khoản. Ghi chú thêm sau dấu · (VD: 50 · khách chuyển phần còn lại). Việc này được ghi lại cho quản lý xem.' }, function(why){
+        var m = /^\s*([\d.,]+)\s*(?:·\s*(.*))?$/.exec(why), d;
+        if (m) { var c = +m[1].replace(/\D/g, ''); if (c > 0 && c < 1000) c *= 1000; if (!(c > 0 && c < o.total)) return toast('Số tiền mặt phải nhỏ hơn tổng đơn ' + money(o.total) + 'đ.', 4000); d = { pay: PAY_SPLIT, split: { cash: c }, reason: (m[2] || '').trim() }; }
+        else { var np = /^chuy/i.test(why) ? 'Chuyển khoản' : /^ti/i.test(why) ? 'Tiền mặt' : ''; if (!np) return toast('Chọn Tiền mặt / Chuyển khoản hoặc gõ số tiền mặt.', 4000); d = { pay: np, reason: why.indexOf('·') >= 0 ? why.slice(why.indexOf('·') + 1).trim() : '' }; }
+        call('cashierUpdate', [PIN, o.id, 'method', d]).then(function(r){ if (r.ok) { apply(r.data); toast('Đã đổi đơn #' + o.code + ' sang ' + (d.split ? 'TM ' + money(d.split.cash) + ' + CK ' + money(o.total - d.split.cash) : d.pay)); } else toast(r.msg, 4000); }, function(e){ toast('⚠️ ' + e.message, 4000); });
       });
     }
     askReason({ title: 'Hoàn / hủy đơn đã thanh toán', what: what, ph: 'Bấm số 1–9 hoặc gõ lý do', list: rsList('refund'),
       hint: 'Đơn bị trừ khỏi doanh thu và được ghi lại cho quản lý xem. Nếu khách trả tiền mặt, nhớ trả lại tiền – ca của bạn sẽ trừ khoản này.' }, function(why){
       call('cashierUpdate', [PIN, o.id, 'refund', { reason: why }]).then(function(r){
-        if (r.ok) { apply(r.data); toast('Đã hoàn/hủy đơn #' + o.code + (o.pay === 'Tiền mặt' ? ' · Trả khách ' + money(o.total) + 'đ tiền mặt' : ''), 5000); } else toast(r.msg, 4000);
+        if (r.ok) { apply(r.data); toast('Đã hoàn/hủy đơn #' + o.code + (o.pay === 'Tiền mặt' ? ' · Trả khách ' + money(o.total) + 'đ tiền mặt' : o.pay === PAY_SPLIT && o.split ? ' · Trả khách ' + money(o.split.cash) + 'đ tiền mặt + ' + money(o.split.ck) + 'đ chuyển khoản' : ''), 5000); } else toast(r.msg, 4000);
       }, function(e){ toast('⚠️ ' + e.message, 4000); });
     });
   }
@@ -1509,7 +1523,7 @@
   function payload(pay){
     readHead();
     var idr = O.items.filter(function(i){ return i.dv && ITEM_DR[i.n]; }).map(function(i){ return i.n + ': ' + ITEM_DR[i.n]; }).join('; ');
-    return { name: O.name, phone: O.phone, pager: O.pager, note: O.note, pay: pay || '', disc: O.disc || null, togo: !!O.togo, idr: idr,
+    return { name: O.name, phone: O.phone, pager: O.pager, note: O.note, pay: pay || '', split: pay === PAY_SPLIT ? { cash: spVal() } : null, disc: O.disc || null, togo: !!O.togo, idr: idr,
       items: O.items.map(function(i){ var x = { n: i.n, q: i.q }; if (i.t) x.t = i.t; if (i.dt && i.dv) { x.dt = i.dt; x.dv = i.dv; } return x; }) };
   }
   function save(pay, kitchen){
@@ -1571,7 +1585,7 @@
     [10000, 20000, 50000, 100000, 200000, 500000].forEach(function(b){ var v = Math.ceil(t / b) * b; if (v > t && opts.indexOf(v) < 0 && opts.length < 5) opts.push(v); });
     $('quick').innerHTML = opts.map(function(v){ return '<button type="button" data-g="' + v + '">' + money(v) + '</button>'; }).join('');
     $('pBill').checked = !!S.bill_on; $('pTem').checked = !!(S.bep_on || S.tem_on);
-    $('givenBox').hidden = false; $('ckBox').hidden = true; $('payErr').hidden = true;
+    $('givenBox').hidden = false; $('ckBox').hidden = true; $('spBox').hidden = true; $('spCash').value = ''; $('payErr').hidden = true;
     $('payModal').hidden = false;
     var pm = PAYM; PAYM = 'Tiền mặt';
     if (pm === 'Chuyển khoản') setMethod(pm); else setTimeout(function(){ $('given').focus(); }, 30);
@@ -1580,18 +1594,26 @@
   /* gõ 100 = 100.000đ (số dưới 1.000 tự nhân 1.000) */
   function givenVal(){ var g = +($('given').value.replace(/\D/g, '')) || 0; return g > 0 && g < 1000 ? g * 1000 : g; }
   function calcChange(){ var g = givenVal(); $('change').textContent = !g ? '0đ' : g < O.total ? 'chưa đủ (' + money(g) + 'đ)' : money(g - O.total) + 'đ'; }
-  function setMethod(m){ METHOD = m; Array.prototype.forEach.call(document.querySelectorAll('.meth'), function(x){ x.classList.toggle('on', x.getAttribute('data-m') === m); }); $('givenBox').hidden = m !== 'Tiền mặt'; $('ckBox').hidden = m !== 'Chuyển khoản'; if (m === 'Chuyển khoản') showQR(); if (m === 'Tiền mặt') $('given').focus(); khPush(); }
+  /* Thanh toán chia Tiền mặt + Chuyển khoản (Tài 20/11) */
+  var PAY_SPLIT = 'Tiền mặt + CK';
+  function spVal(){ var g = +($('spCash').value.replace(/\D/g, '')) || 0; return g > 0 && g < 1000 ? g * 1000 : g; }
+  function spCalc(){ var c = spVal(), r = Math.max(0, O.total - c); $('spCk').textContent = c >= O.total ? 'tiền mặt đã đủ' : money(r) + 'đ'; clearTimeout(spCalc.t); spCalc.t = setTimeout(function(){ if (METHOD === PAY_SPLIT) { if (c > 0 && c < O.total) { $('ckBox').hidden = false; showQR(r); } else $('ckBox').hidden = true; khPush(); } }, 350); }
+  function payTxtP(o){ return o.pay === PAY_SPLIT && o.split ? 'TM ' + money(o.split.cash) + ' + CK ' + money(o.split.ck) : (o.pay || ''); }
+  function setMethod(m){ METHOD = m; Array.prototype.forEach.call(document.querySelectorAll('.meth'), function(x){ x.classList.toggle('on', x.getAttribute('data-m') === m); }); $('givenBox').hidden = m !== 'Tiền mặt'; $('ckBox').hidden = m !== 'Chuyển khoản'; $('spBox').hidden = m !== PAY_SPLIT; if (m === 'Chuyển khoản') showQR();
+    if (m === PAY_SPLIT) { $('spCash').value = ''; spCalc(); setTimeout(function(){ $('spCash').focus(); }, 30); } if (m === 'Tiền mặt') $('given').focus(); khPush(); }
   /* Mã VietQR có sẵn số tiền + nội dung; nhân viên tự xác nhận khi thấy tiền về */
   function ckNote(){ return 'CHATA ' + (O.code ? O.code : O.pager ? 'THE' + norm(O.pager).toUpperCase().replace(/[^A-Z0-9]/g, '') : ''); }
-  function showQR(){
+  function showQR(amt){
+    amt = amt || O.total;
     if (!S.qr_acc) { $('ckImg').hidden = true; $('ckInfo').innerHTML = '<b style="color:var(--red)">Chưa cài tài khoản nhận tiền.</b><br>Quản lý vào 🖨 Máy in → Thông tin trên hóa đơn → nhập Số tài khoản.'; return; }
     var note = ckNote().trim();
     $('ckImg').hidden = false;
     $('ckImg').onerror = function(){ this.hidden = true; $('ckInfo').insertAdjacentHTML('afterbegin', '<b style="color:var(--red)">Không tải được mã QR (kiểm tra mạng).</b><br>'); };
-    $('ckImg').src = 'https://img.vietqr.io/image/' + S.qr_bank + '-' + S.qr_acc + '-compact2.png?amount=' + O.total + '&addInfo=' + encodeURIComponent(note) + '&accountName=' + encodeURIComponent(S.qr_name || '');
+    $('ckImg').src = 'https://img.vietqr.io/image/' + S.qr_bank + '-' + S.qr_acc + '-compact2.png?amount=' + amt + '&addInfo=' + encodeURIComponent(note) + '&accountName=' + encodeURIComponent(S.qr_name || '');
     var bk = $('s_qr_bank').querySelector('option[value="' + S.qr_bank + '"]');
-    $('ckInfo').innerHTML = '<b>' + (bk ? bk.textContent : '') + ' · ' + esc(S.qr_acc) + '</b>' + (S.qr_name ? '<br>' + esc(S.qr_name) : '') + '<br>Số tiền: <b>' + money(O.total) + 'đ</b> · Nội dung: <b>' + esc(note) + '</b>';
+    $('ckInfo').innerHTML = '<b>' + (bk ? bk.textContent : '') + ' · ' + esc(S.qr_acc) + '</b>' + (S.qr_name ? '<br>' + esc(S.qr_name) : '') + '<br>Số tiền: <b>' + money(amt) + 'đ</b>' + (amt !== O.total ? ' <i>(phần chuyển khoản)</i>' : '') + ' · Nội dung: <b>' + esc(note) + '</b>';
   }
+  $('spCash').addEventListener('input', function(){ var v = this.value.replace(/\D/g, ''); this.value = v ? money(+v) : ''; spCalc(); });
   $('given').addEventListener('input', function(){ var v = this.value.replace(/\D/g, ''); this.value = v ? money(+v) : ''; calcChange(); });
   $('quick').addEventListener('click', function(e){ var b = e.target.closest('[data-g]'); if (!b) return; $('given').value = money(+b.getAttribute('data-g')); calcChange(); });
   document.querySelector('.methods').addEventListener('click', function(e){
@@ -1604,12 +1626,13 @@
     if (paying) return;
     var given = METHOD === 'Tiền mặt' ? givenVal() : 0;
     if (given && given < O.total) { $('payErr').textContent = 'Tiền khách đưa chưa đủ.'; $('payErr').hidden = false; return; }
+    if (METHOD === PAY_SPLIT) { var sc = spVal(); if (!(sc > 0 && sc < O.total)) { $('payErr').textContent = sc >= O.total ? 'Tiền mặt đã đủ cả đơn – chọn Tiền mặt (F9).' : 'Nhập số tiền mặt khách đưa (nhỏ hơn tổng đơn), phần còn lại chuyển khoản.'; $('payErr').hidden = false; $('spCash').focus(); return; } }
     paying = true; busy(true, 'Đang thanh toán…');
     var wantBill = $('pBill').checked, wantTem = $('pTem').checked;
     save(METHOD, wantTem).then(function(o){
       paying = false; busy(false); $('payModal').hidden = true;
       if (o) printOrder(o, { bill: wantBill, bep: wantTem && S.bep_on, tem: wantTem && S.tem_on }, { given: given }, o._k || []);
-      toast('✓ Đã thanh toán #' + (o ? o.code : '') + (given > O.total ? ' · Thối ' + money(given - O.total) + 'đ' : ''), 4000);
+      toast('✓ Đã thanh toán #' + (o ? o.code : '') + (given > O.total ? ' · Thối ' + money(given - O.total) + 'đ' : '') + (o && o.split ? ' · ' + payTxtP(o) : ''), 4000);
       khDone(o, hasMix(O.items)); closeOrder();
     }, function(e){ paying = false; busy(false); if (e.message !== 'empty') { $('payErr').textContent = e.message; $('payErr').hidden = false; } });
   }
@@ -1645,9 +1668,9 @@
   function khState(){
     if (!O || $('ordView').hidden) return { t: 'idle' };
     calcO();
-    if (!$('payModal').hidden && METHOD === 'Chuyển khoản' && S.qr_acc && $('ckImg').src) {
+    if (!$('payModal').hidden && (METHOD === 'Chuyển khoản' || (METHOD === PAY_SPLIT && !$('ckBox').hidden)) && S.qr_acc && $('ckImg').src) {
       var bk = $('s_qr_bank').querySelector('option[value="' + S.qr_bank + '"]');
-      return { t: 'pay', total: O.total, note: ckNote().trim(), qr: $('ckImg').src, bank: (bk ? bk.textContent + ' · ' : '') + (S.qr_name || S.qr_acc) };
+      return { t: 'pay', total: METHOD === PAY_SPLIT ? Math.max(0, O.total - spVal()) : O.total, note: ckNote().trim(), qr: $('ckImg').src, bank: (bk ? bk.textContent + ' · ' : '') + (S.qr_name || S.qr_acc) };
     }
     return { t: 'order', mix: hasMix(O.items), togo: !!O.togo, cnt: O.cnt, gross: O.gross, disc: O.discAmt, dl: O.disc ? discLabel(O.disc) : '', total: O.total, cashier: D && D.me ? D.me.name : '',
       items: O.items.map(function(i){ var da = lineDisc(i); return { q: i.q, n: i.n, t: i.t || '', g: i.p * i.q, s: i.p * i.q - da }; }) };
@@ -1800,6 +1823,7 @@
       else if (e.key === 'Escape') { $('payModal').hidden = true; back(); }
       else if (e.key === 'F10' || e.key === 'F9') { e.preventDefault(); setMethod(e.key === 'F10' ? 'Chuyển khoản' : 'Tiền mặt'); }
       else if (!e.ctrlKey && !e.altKey && /^[cCtT]$/.test(e.key)) { e.preventDefault(); setMethod(/[cC]/.test(e.key) ? 'Chuyển khoản' : 'Tiền mặt'); }
+      else if (!e.ctrlKey && !e.altKey && /^[sS]$/.test(e.key)) { e.preventDefault(); setMethod(PAY_SPLIT); }
       return;
     }
     if (!$('opsMenu').hidden) {

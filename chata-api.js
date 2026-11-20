@@ -247,7 +247,7 @@
   function pub(o) {
     var log = Array.isArray(o.log) ? o.log : [];
     return { id: o.id, code: o.code, name: o.name, phone: o.phone || '', items: o.items || [], total: o.total || 0, note: o.note || '',
-      status: o.status, pay: o.pay || '', pager: o.pager || '', created: o.created || 0, paidAt: o.paidAt || 0, mode: o.mode || '',
+      status: o.status, pay: o.pay || '', split: o.split || null, pager: o.pager || '', created: o.created || 0, paidAt: o.paidAt || 0, mode: o.mode || '',
       src: o.src || 'QR', cashier: o.cashier || '', by: o.createdBy || (log.length ? log[0].by : ''),
       gross: o.gross || o.total || 0, discAmt: o.discAmt || 0, disc: o.disc || null, togo: !!o.togo,
       ack: o.ack && o.ack.at || 0, ackBy: o.ack && o.ack.by || '',
@@ -319,16 +319,28 @@
     if (L.idisc > 0 && ik(L.items) !== ik(old.items))
       logReview(u, 'Giảm giá món', o, L.idisc, idr || '', L.items.filter(function (i) { return i.da; }).map(function (i) { return i.q + '× ' + i.n + ' −' + (i.dt === '%' ? i.dv + '%' : i.dv + 'đ/món'); }).join(', '));
   }
+  /* Thanh toán nhiều cách (Tài 20/11): chỉ Tiền mặt + Chuyển khoản. Đơn chia lưu pay = 'Tiền mặt + CK', split = { cash, ck } */
+  var PAY_SPLIT = 'Tiền mặt + CK';
+  function payParts(o) {
+    var t = Number(o.total) || 0;
+    if (o.pay === PAY_SPLIT && o.split) { var c = Math.max(0, Math.min(t, Number(o.split.cash) || 0)); return { cash: c, ck: t - c }; }
+    return o.pay === 'Chuyển khoản' ? { cash: 0, ck: t } : { cash: t, ck: 0 };
+  }
+  function payOf(d, total) {
+    if (d.pay === PAY_SPLIT) { var c = Math.round(Number(d.split && d.split.cash) || 0); if (c > 0 && c < total) return { pay: PAY_SPLIT, split: { cash: c, ck: total - c } }; return { pay: c >= total ? 'Tiền mặt' : 'Chuyển khoản', split: null }; }
+    return { pay: d.pay === 'Chuyển khoản' ? 'Chuyển khoản' : 'Tiền mặt', split: null };
+  }
+  function payTxt(o) { return o.pay === PAY_SPLIT && o.split ? 'TM ' + Number(o.split.cash).toLocaleString('vi-VN') + ' + CK ' + Number(o.split.ck).toLocaleString('vi-VN') : (o.pay || ''); }
   function byCode(w, code) { return !!w && (w === code || w.indexOf('(' + code + ')') >= 0 || w.split(' (')[0] === code); }
   function sumFor(all, code, from, to) {
     var s = { orders: 0, revenue: 0, cash: 0, transfer: 0, cancels: 0, refunds: 0, refundAmt: 0 };
     all.forEach(function (o) {
       if ((o.status === 'Đã thanh toán' || o.refundAt) && o.paidAt >= from && o.paidAt < to && byCode(o.cashier, code)) {
-        s.orders++; s.revenue += o.total; if (o.pay === 'Chuyển khoản') s.transfer += o.total; else s.cash += o.total;
+        var pp = payParts(o); s.orders++; s.revenue += o.total; s.transfer += pp.ck; s.cash += pp.cash;
       }
       // hoàn tiền đơn đã thu: trừ vào ca của người hoàn
       if (o.refundAt && o.refundAt >= from && o.refundAt < to && o.refundCode === code) {
-        s.refunds++; s.refundAmt += o.total; s.revenue -= o.total; if (o.pay === 'Chuyển khoản') s.transfer -= o.total; else s.cash -= o.total;
+        var rp = payParts(o); s.refunds++; s.refundAmt += o.total; s.revenue -= o.total; s.transfer -= rp.ck; s.cash -= rp.cash;
       }
       if (o.status === 'Đã hủy') (o.log || []).forEach(function (l) { if (l.a === 'huy' && l.at >= from && l.at < to && byCode(l.by, code)) s.cancels++; });
     });
@@ -378,8 +390,8 @@
       /* đơn QR đã thu tiền nhưng chưa báo món xong (3 giờ gần đây) – để thu ngân bấm "Món xong" */
       waiting: paid.filter(function (o) { return o.src === 'QR' && !(o.ready && o.ready.at) && Date.now() - (o.paidAt || 0) < 3 * 3600000; }).sort(function (a, b) { return a.paidAt - b.paidAt; }).map(pub),
       paid: paid.sort(function (a, b) { return b.paidAt - a.paidAt; }).slice(0, 40).map(pub),
-      stats: { paid: paid.length, revenue: sum(paid), cash: sum(paid.filter(function (o) { return o.pay === 'Tiền mặt'; })),
-        transfer: sum(paid.filter(function (o) { return o.pay === 'Chuyển khoản'; })) }
+      stats: { paid: paid.length, revenue: sum(paid), cash: paid.reduce(function (s, o) { return s + payParts(o).cash; }, 0),
+        transfer: paid.reduce(function (s, o) { return s + payParts(o).ck; }, 0) }
     };
   }
   function posReady() { khoBeat(); return Promise.all([wantCfg(), wantOrders(), wantShifts()]); }
@@ -442,7 +454,7 @@
       var r = { date: d, total: 0, gross: 0, disc: 0, orders: 0, pay: {}, items: [], hours: {}, cancel: 0, cancelAmt: 0, src: 'app', at: Date.now() }, it = {};
       q.forEach(function (x) {
         var o = x.data(); if (o.status !== 'Đã thanh toán') return;
-        r.orders++; r.total += o.total; r.gross += (o.gross || o.total); r.disc += (o.discAmt || 0); r.pay[o.pay || 'Tiền mặt'] = (r.pay[o.pay || 'Tiền mặt'] || 0) + o.total;
+        r.orders++; r.total += o.total; r.gross += (o.gross || o.total); r.disc += (o.discAmt || 0); var rpp = payParts(o); if (rpp.cash) r.pay['Tiền mặt'] = (r.pay['Tiền mặt'] || 0) + rpp.cash; if (rpp.ck) r.pay['Chuyển khoản'] = (r.pay['Chuyển khoản'] || 0) + rpp.ck;
         (o.items || []).forEach(function (i) { var k = i.n, e = it[k] || (it[k] = { n: i.n, c: i.g || '', q: 0, a: 0 }); e.q += i.q; e.a += i.p * i.q - (i.da || 0); });
         var h = hhOf(o.paidAt), hh = r.hours[h] || (r.hours[h] = [0, 0]); hh[0]++; hh[1] += o.total;
       });
@@ -592,8 +604,8 @@
           var mode = orderMode(), L = lines(d.items, menuFor(mode).concat(menuFor(mode === 'night' ? 'normal' : 'night')));
           if (!L.items.length) return { ok: false, msg: 'Đơn chưa có món nào.' };
           var phone = phoneOf(d.phone); if (phone === null) return { ok: false, msg: 'Số điện thoại chưa đúng.' };
-          var pay = d.pay === 'Chuyển khoản' ? 'Chuyển khoản' : (d.pay === 'Tiền mặt' ? 'Tiền mặt' : '');
           var A = applyDisc(L, d.disc);
+          var PO = d.pay ? payOf(d, A.total) : { pay: '', split: null }, pay = PO.pay;
           return newCode().then(function (c) {
             var id = uid('D'), now = Date.now();
             var o = { code: c.code, date: c.date, created: now, name: clean(d.name, 30) || 'Khách lẻ', phone: phone, items: L.items, total: A.total,
@@ -601,7 +613,8 @@
               note: clean(d.note, 200), status: pay ? 'Đã thanh toán' : 'Chờ thanh toán', pay: pay, pager: clean(d.pager, 10), paidAt: pay ? now : 0,
               paidDate: pay ? today() : '', mode: mode === 'night' ? 'Đêm nhạc' : 'Thường', token: '', src: 'Quầy', cashier: pay ? who(u) : '', cashierCode: pay ? u.c : '', createdBy: who(u), log: [] };
             if (d.togo) o.togo = true;
-            act(o, u, 'tao'); if (pay) act(o, u, 'thu', pay);
+            if (PO.split) o.split = PO.split;
+            act(o, u, 'tao'); if (pay) act(o, u, 'thu', payTxt(o));
             if (c.temp) o.tempCode = true;
             var K = d.kitchen ? kitchenDelta(L.items, null) : null; if (K) { o.sent = K.sent; act(o, u, 'bep'); }
             khoSync(o, id, u);
@@ -627,9 +640,9 @@
             var apx = '', why0 = clean(d.reason, 120), rv = null;
             if (action === 'method') {
               if (o.status !== 'Đã thanh toán') return { ok: false, msg: 'Chỉ đổi được hình thức của đơn đã thanh toán.' };
-              var np = d.pay === 'Chuyển khoản' ? 'Chuyển khoản' : 'Tiền mặt';
-              if (np === o.pay) return { ok: false, msg: 'Đơn này đã là ' + np + '.' };
-              act(o, u, 'doitt', o.pay + ' → ' + np + (why0 ? ' · ' + why0 : '')); rv = ['Đổi hình thức TT', o.total, why0, o.pay + ' → ' + np]; o.pay = np;
+              var NP = payOf(d, o.total), was = payTxt(o), nt = payTxt({ pay: NP.pay, split: NP.split });
+              if (nt === was) return { ok: false, msg: 'Đơn này đã là ' + nt + '.' };
+              act(o, u, 'doitt', was + ' → ' + nt + (why0 ? ' · ' + why0 : '')); rv = ['Đổi hình thức TT', o.total, why0, was + ' → ' + nt]; o.pay = NP.pay; if (NP.split) o.split = NP.split; else delete o.split;
             } else if (action === 'refund') {
               if (o.status !== 'Đã thanh toán') return { ok: false, msg: 'Đơn này chưa thanh toán, dùng Hủy đơn.' };
               var why = clean(d.reason, 120); if (!why) return { ok: false, msg: 'Ghi lý do hoàn/hủy đơn.' };
@@ -653,8 +666,8 @@
               o.pager = clean(d.pager, 10);
               if (d.togo !== undefined) o.togo = !!d.togo;
               if (action === 'pay') {
-                var pay = d.pay === 'Chuyển khoản' ? 'Chuyển khoản' : 'Tiền mặt';
-                o.status = 'Đã thanh toán'; o.pay = pay; o.paidAt = Date.now(); o.paidDate = today(); o.cashier = who(u); o.cashierCode = u.c; act(o, u, 'thu', pay);
+                var PO2 = payOf(d, o.total);
+                o.status = 'Đã thanh toán'; o.pay = PO2.pay; if (PO2.split) o.split = PO2.split; else delete o.split; o.paidAt = Date.now(); o.paidDate = today(); o.cashier = who(u); o.cashierCode = u.c; act(o, u, 'thu', payTxt(o));
               }
               if (d.kitchen) { K = kitchenDelta(L.items, o.sent); o.sent = K.sent; if (K.items.length) act(o, u, 'bep'); }
             }
@@ -909,7 +922,7 @@
           var cashiers = {}, items = {}, hours = {};
           paid.forEach(function (o) {
             var k = o.cashier || '(không rõ)', c = cashiers[k] || (cashiers[k] = { name: k, orders: 0, revenue: 0, cash: 0, transfer: 0 });
-            c.orders++; c.revenue += o.total; if (o.pay === 'Chuyển khoản') c.transfer += o.total; else c.cash += o.total;
+            var cp = payParts(o); c.orders++; c.revenue += o.total; c.transfer += cp.ck; c.cash += cp.cash;
             (o.items || []).forEach(function (i) { var it = items[i.n] || (items[i.n] = { n: i.n, g: i.g, q: 0, a: 0 }); it.q += i.q; it.a += i.p * i.q - (i.da || 0); });
             var h = hhOf(o.paidAt), hh = hours[h] || (hours[h] = { h: h, orders: 0, revenue: 0 }); hh.orders++; hh.revenue += o.total;
           });
@@ -926,8 +939,8 @@
           shifts.sort(function (a, b) { return a.openAt - b.openAt; });
           return { date: date, scope: mgr ? 'all' : 'mine', me: { code: u.c, name: u.n, role: u.r },
             discounts: paid.filter(function (o) { return o.discAmt > 0; }).map(function (o) { return { code: o.code, name: o.name, gross: o.gross || o.total, amt: o.discAmt, total: o.total, why: o.disc ? (o.disc.promo || o.disc.r || '') : 'Giảm giá món', by: o.disc && o.disc.by || o.cashier || '' }; }),
-            total: { orders: paid.length, revenue: sum(paid), disc: paid.reduce(function (s, o) { return s + (o.discAmt || 0); }, 0), cash: sum(paid.filter(function (o) { return o.pay !== 'Chuyển khoản'; })),
-              transfer: sum(paid.filter(function (o) { return o.pay === 'Chuyển khoản'; })), qr: paid.filter(function (o) { return o.src !== 'Quầy'; }).length,
+            total: { orders: paid.length, revenue: sum(paid), disc: paid.reduce(function (s, o) { return s + (o.discAmt || 0); }, 0), cash: paid.reduce(function (s, o) { return s + payParts(o).cash; }, 0),
+              transfer: paid.reduce(function (s, o) { return s + payParts(o).ck; }, 0), qr: paid.filter(function (o) { return o.src !== 'Quầy'; }).length,
               pending: mgr ? all.filter(function (o) { return o.status === 'Chờ thanh toán'; }).length : 0 },
             cashiers: Object.keys(cashiers).map(function (k) { return cashiers[k]; }).sort(function (a, b) { return b.revenue - a.revenue; }),
             items: Object.keys(items).map(function (k) { return items[k]; }).sort(function (a, b) { return b.a - a.a; }).slice(0, 15),
