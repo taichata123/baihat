@@ -686,11 +686,11 @@
       d = d || {};
       return me().then(function (u) {
         return posReady().then(function () {
-          var pager = clean(d.pager, 10); if (!pager) return { ok: false, msg: 'Nhập số bàn / thẻ rung.' };
+          var pager = clean(d.pager, 10); /* Tài 20/11: bàn / thẻ không bắt buộc – không có thì luôn tạo đơn mới */
           var mode = orderMode(), menu = menuFor(mode).concat(menuFor(mode === 'night' ? 'normal' : 'night'));
           var L = lines(d.items, menu); if (!L.items.length) return { ok: false, msg: 'Chọn ít nhất 1 món.' };
           var note = clean(d.note, 200), now = Date.now(), nAdd = L.items.reduce(function (s, i) { return s + i.q; }, 0);
-          var open = allOrders().filter(function (o) { return o.status === 'Chờ thanh toán' && o.pager === pager && now - (o.created || 0) < 12 * 3600000; })
+          var open = !pager ? null : allOrders().filter(function (o) { return o.status === 'Chờ thanh toán' && o.pager === pager && now - (o.created || 0) < 12 * 3600000; })
             .sort(function (a, b) { return b.created - a.created; })[0];
           if (open && !d.newOrder) {
             var id = open.id, o = JSON.parse(JSON.stringify(open)); delete o.id;
@@ -707,7 +707,7 @@
           }
           return newCode().then(function (c) {
             var id = uid('D');
-            var o = { code: c.code, date: c.date, created: now, name: clean(d.name, 30) || ('Bàn ' + pager), phone: '', items: L.items, total: L.total,
+            var o = { code: c.code, date: c.date, created: now, name: clean(d.name, 30) || (pager ? 'Bàn ' + pager : 'Tại bàn · ' + u.n), phone: '', items: L.items, total: L.total,
               gross: L.gross, itemDisc: L.idisc, disc: null, discAmt: L.idisc, note: note, status: 'Chờ thanh toán', pay: '', pager: pager, paidAt: 0, paidDate: '',
               mode: mode === 'night' ? 'Đêm nhạc' : 'Thường', token: '', src: 'NV', cashier: '', createdBy: who(u), log: [],
               ack: { at: now, by: who(u) }, nvName: u.n, nvCode: u.c, nvBy: [u.c], autoPrint: true };
@@ -734,7 +734,7 @@
       return me().then(function (u) {
         return posReady().then(function () {
           var d = today(), list = allOrders().filter(function (o) { return o.date === d && (o.nvBy || []).indexOf(u.c) >= 0; })
-            .sort(function (a, b) { return b.created - a.created; }).slice(0, 60).map(pub);
+            .sort(function (a, b) { return b.created - a.created; }).slice(0, 60).map(function (o) { var p = pub(o); p.autoPrint = !!o.autoPrint && kitchenDelta(o.items || [], o.sent).items.length > 0; return p; });
           return { ok: true, list: list };
         });
       });

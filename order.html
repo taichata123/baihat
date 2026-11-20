@@ -238,7 +238,7 @@
     <div class="lines" id="ckLines"></div>
     <div class="tot"><span>Tạm tính</span><b id="ckTot">0đ</b></div>
     <form id="ckForm" novalidate autocomplete="on">
-      <label for="cPager">Bàn / thẻ rung *</label>
+      <label for="cPager">Bàn / thẻ rung <span class="opt">(không bắt buộc)</span></label>
       <input id="cPager" inputmode="numeric" maxlength="10" placeholder="VD: 12" autocomplete="off">
       <div class="tbls" id="cOpen"></div>
       <div class="msg" id="cOpenMsg" hidden style="background:var(--accent-soft);color:var(--accent-d)"></div>
@@ -255,7 +255,7 @@
   </div>
 </div>
 
-<script src="chata-api.js?v=nv1"></script>
+<script src="chata-api.js?v=nv2"></script>
 <script>
 (function(){
   var API = 'https://script.google.com/macros/s/AKfycbxvRhb0Jjbrokyew1RBqWwBTCiqSIsvciWx_Vns9LeOs9LLCvTJcxOk71-7CMKuI1I/exec';
@@ -474,14 +474,13 @@
   $('ckForm').addEventListener('submit', function(e){
     e.preventDefault(); saveEdit();
     var pager = $('cPager').value.trim();
-    if (!pager) { ckErr('Nhập số bàn / thẻ rung.'); $('cPager').focus(); return; }
     var items = CART.map(function(c){ var o = { n: c.n, q: c.q }; if (c.t) o.t = c.t; return o; });
     var btn = $('ckSend'); btn.disabled = true; btn.textContent = 'Đang gửi…';
     call('staffOrder', ['', { pager: pager, togo: $('cTogo').checked, name: $('cName').value.trim(), note: $('cNote').value, items: items }]).then(function(r){
       btn.disabled = false; btn.textContent = 'Gửi đơn & in ở quầy';
       if (!r.ok) { ckErr(r.msg || 'Có lỗi, thử lại nhé.'); return; }
       CART = []; saveCart(); $('cNote').value = ''; $('cName').value = ''; $('cPager').value = ''; $('cTogo').checked = false; closeCk(); draw();
-      toast((r.merged ? '✓ Gọi thêm ' + r.added + ' món vào #' : '✓ Đã gửi đơn #') + r.code + ' · Bàn ' + pager + ' · quầy đang in', 4000);
+      toast((r.merged ? '✓ Gọi thêm ' + r.added + ' món vào #' : '✓ Đã gửi đơn #') + r.code + (pager ? ' · Bàn ' + pager : '') + ' · quầy đang in', 4000);
     }).catch(function(err){ btn.disabled = false; btn.textContent = 'Gửi đơn & in ở quầy'; ckErr(/Sai mã/.test(err && err.message || '') ? 'Phiên đăng nhập hết hạn, đăng nhập lại nhé.' : 'Mạng đang chập chờn, bấm gửi lại nhé.'); if (/Sai mã/.test(err && err.message || '')) setTimeout(boot, 1500); });
   });
   /* bàn đang có đơn chờ → gọi thêm vào đơn đó */

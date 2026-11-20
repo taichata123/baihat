@@ -611,7 +611,7 @@
 <div class="toast" id="toast" hidden></div>
 <iframe id="printFrame" title="in"></iframe>
 
-<script src="chata-api.js?v=nv1"></script>
+<script src="chata-api.js?v=nv2"></script>
 <script>
 (function(){
   var API = 'https://script.google.com/macros/s/AKfycbxvRhb0Jjbrokyew1RBqWwBTCiqSIsvciWx_Vns9LeOs9LLCvTJcxOk71-7CMKuI1I/exec';
@@ -2220,6 +2220,25 @@
 
   show(); drawPrintState(); load();
   setInterval(function(){ if (PIN && !paying) load(); }, 5000);
+  /* Tự cập nhật bản mới (Tài 20/11): 5 phút/lần hỏi GitHub Pages; có bản mới thì tải lại khi máy rảnh (không mở đơn / hộp thoại / đang gõ, in xong) */
+  (function(){
+    var V0 = null;
+    function idle(){
+      if (paying || !$('ordView').hidden) return false;
+      if ([].some.call(document.querySelectorAll('.mask'), function(m){ return !m.hidden; })) return false;
+      var a = document.activeElement; if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && a.value) return false;
+      return true;
+    }
+    function chk(){
+      fetch(location.pathname + '?_v=' + Date.now(), { method: 'HEAD', cache: 'no-store' }).then(function(r){
+        var s = r.ok ? (r.headers.get('etag') || r.headers.get('last-modified') || '') : ''; if (!s) return;
+        if (V0 === null) { V0 = s; return; }
+        if (s !== V0 && idle()) { toast('Đang cập nhật bản mới…', 3000); printQ.then(function(){ setTimeout(function(){ if (idle()) location.reload(); }, 1500); }); }
+      }).catch(function(){});
+    }
+    chk(); setInterval(chk, 5 * 60000);
+    document.addEventListener('visibilitychange', function(){ if (!document.hidden) chk(); });
+  })();
   if (NATIVE && NATIVE.setTitle) NATIVE.setTitle('Chata Thu ngân');
 })();
 </script>
