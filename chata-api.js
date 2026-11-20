@@ -251,7 +251,8 @@
       src: o.src || 'QR', cashier: o.cashier || '', by: o.createdBy || (log.length ? log[0].by : ''),
       gross: o.gross || o.total || 0, discAmt: o.discAmt || 0, disc: o.disc || null, togo: !!o.togo,
       ack: o.ack && o.ack.at || 0, ackBy: o.ack && o.ack.by || '',
-      ready: o.ready && o.ready.at || 0, readyBy: o.ready && o.ready.by || '', askPhone: o.askPhone || 0 };
+      ready: o.ready && o.ready.at || 0, readyBy: o.ready && o.ready.by || '', askPhone: o.askPhone || 0,
+      nv: o.nvName || '', autoPrint: !!o.autoPrint };
   }
   function save(ref, data, merge) {
     var p = merge ? ref.set(data, { merge: true }) : ref.set(data);
@@ -286,7 +287,7 @@
       if (!s || !s.me || !u || u.isAnonymous || s.uid !== u.uid) throw new Error('Sai mã thu ngân');
       if (s.me.r === 'staff' && Date.now() - (s.chk || 0) > 3600000) {
         staffDoc(s.me.c).then(function (st) {
-          if (!posAllowed(st)) { setSes(null); auth.signOut(); return; }
+          if (!(s.me.o ? st && st.active : posAllowed(st))) { setSes(null); auth.signOut(); return; }
           s.me.n = st.name; s.chk = Date.now(); setSes(s);
         }).catch(function () {});
       }
@@ -365,7 +366,7 @@
   function cashierData(u) {
     // Đơn tại quầy chưa thu: luôn hiện (không tự mất). Đơn QR khách gửi mà không ra quầy: ẩn sau 12 giờ.
     var mode = orderMode(), d = today(), qrSince = Date.now() - 12 * 3600000, all = allOrders();
-    var pending = all.filter(function (o) { return o.status === 'Chờ thanh toán' && (o.src === 'Quầy' || o.created >= qrSince); })
+    var pending = all.filter(function (o) { return o.status === 'Chờ thanh toán' && (o.src === 'Quầy' || o.src === 'NV' || o.created >= qrSince); })
       .sort(function (a, b) { return a.created - b.created; }).map(function (o) { return pub(fixQR(o)); });
     var paid = all.filter(function (o) { return o.status === 'Đã thanh toán' && (o.paidDate || o.date) === d; });
     var sum = function (a) { return a.reduce(function (s, o) { return s + o.total; }, 0); };
@@ -375,7 +376,7 @@
       menu: menuFor(mode), night: mode === 'night' ? null : menuFor('night'), other: menuFor(mode === 'night' ? 'normal' : 'night'),
       pending: pending, events: eventsCfg(), float: floatCfg(),
       /* đơn QR đã thu tiền nhưng chưa báo món xong (3 giờ gần đây) – để thu ngân bấm "Món xong" */
-      waiting: paid.filter(function (o) { return o.src !== 'Quầy' && !(o.ready && o.ready.at) && Date.now() - (o.paidAt || 0) < 3 * 3600000; }).sort(function (a, b) { return a.paidAt - b.paidAt; }).map(pub),
+      waiting: paid.filter(function (o) { return o.src === 'QR' && !(o.ready && o.ready.at) && Date.now() - (o.paidAt || 0) < 3 * 3600000; }).sort(function (a, b) { return a.paidAt - b.paidAt; }).map(pub),
       paid: paid.sort(function (a, b) { return b.paidAt - a.paidAt; }).slice(0, 40).map(pub),
       stats: { paid: paid.length, revenue: sum(paid), cash: sum(paid.filter(function (o) { return o.pay === 'Tiền mặt'; })),
         transfer: sum(paid.filter(function (o) { return o.pay === 'Chuyển khoản'; })) }
@@ -537,7 +538,7 @@
 
     /* ===== Thu ngân ===== */
     cashierLogin: function () { return Promise.resolve({ ok: false, msg: 'Mã chung đã ngừng dùng. Mở app Chata Thu ngân, đăng nhập bằng mã nhân viên và PIN của bạn.' }); },
-    posLogin: function (kind, code, pin) {
+    posLogin: function (kind, code, pin, any) {
       code = String(code || '').trim().toUpperCase(); pin = String(pin || '').trim();
       if (!pin) return Promise.resolve({ ok: false, msg: 'Nhập PIN của bạn.' });
       if (kind !== 'manager' && !code) return Promise.resolve({ ok: false, msg: 'Nhập mã nhân viên.' });
@@ -550,8 +551,8 @@
           resetSubs();
           if (kind === 'manager') return { c: r.r.code || code || 'QL', n: r.r.name || 'Quản lý', r: 'manager' };
           return staffDoc(r.r.code || code).then(function (st) {
-            if (!posAllowed(st)) return null;
-            return { c: st.code, n: st.name, r: 'staff' };
+            if (!(any ? st && st.active : posAllowed(st))) return null;
+            return { c: st.code, n: st.name, r: 'staff', o: any ? 1 : 0 };
           });
         }).then(function (u) {
           if (!u) { setSes(null); resetSubs(); return auth.signOut().then(function () { return auth.signInAnonymously(); }).then(function () { return { ok: false, msg: 'Tài khoản này chưa được dùng app thu ngân. Nhờ quản lý bật quyền trong Web vận hành (Nhân viên → App thu ngân).' }; }); }
@@ -668,6 +669,94 @@
             else if (o.status === 'Đã thanh toán' && o.paidDate) dayLater(o.paidDate);
             return { ok: true, total: o.total, order: pub(C.orders[id]), kitchen: K ? K.items : [], data: cashierData(u) };
           });
+        });
+      });
+    },
+
+    /* ===== Trang "Order tại bàn" cho nhân viên phục vụ (20/11/2026) =====
+       Tài chốt: gửi đơn xong máy quầy tự in phiếu bếp + tem ly (không chờ xác nhận); thu tiền tại quầy;
+       bàn/thẻ đang có đơn chờ thì gọi thêm vào đơn đó; tem ly in "NV ORDER", phiếu bếp in tên người order. */
+    staffMe: function () { return me().then(function (u) { return { ok: true, me: { code: u.c, name: u.n, role: u.r } }; }); },
+    staffMenu: function () {
+      return me().then(function () { return wantCfg(); }).then(function () {
+        var mode = orderMode(); return { ok: true, open: true, mode: mode, events: [], menu: menuFor(mode) };
+      });
+    },
+    staffOrder: function (tok, d) {
+      d = d || {};
+      return me().then(function (u) {
+        return posReady().then(function () {
+          var pager = clean(d.pager, 10); if (!pager) return { ok: false, msg: 'Nhập số bàn / thẻ rung.' };
+          var mode = orderMode(), menu = menuFor(mode).concat(menuFor(mode === 'night' ? 'normal' : 'night'));
+          var L = lines(d.items, menu); if (!L.items.length) return { ok: false, msg: 'Chọn ít nhất 1 món.' };
+          var note = clean(d.note, 200), now = Date.now(), nAdd = L.items.reduce(function (s, i) { return s + i.q; }, 0);
+          var open = allOrders().filter(function (o) { return o.status === 'Chờ thanh toán' && o.pager === pager && now - (o.created || 0) < 12 * 3600000; })
+            .sort(function (a, b) { return b.created - a.created; })[0];
+          if (open && !d.newOrder) {
+            var id = open.id, o = JSON.parse(JSON.stringify(open)); delete o.id;
+            var m2 = qrMenu(o).concat(menu), L2 = lines((o.items || []).concat(L.items), m2, priceExtra(o, m2)), A = applyDisc(L2, o.disc);
+            o.items = L2.items; o.total = A.total; o.gross = A.gross; o.itemDisc = A.itemDisc; o.discAmt = A.discAmt; o.disc = A.disc;
+            if (note) o.note = o.note ? o.note + ' · ' + note : note;
+            if (d.togo) o.togo = true;
+            o.autoPrint = true; o.edited = true; if (!o.nvName) { o.nvName = u.n; o.nvCode = u.c; }
+            o.nvBy = (o.nvBy || []).concat([u.c]).filter(function (x, k, a) { return a.indexOf(x) === k; });
+            act(o, u, 'sua', 'NV gọi thêm: ' + L.items.map(function (i) { return i.q + ' ' + i.n; }).join(', '));
+            khoSync(o, id, u);
+            C.orders[id] = Object.assign({ id: id }, o); save(db.doc('posOrders/' + id), o);
+            return { ok: true, id: id, code: o.code, added: nAdd, merged: true };
+          }
+          return newCode().then(function (c) {
+            var id = uid('D');
+            var o = { code: c.code, date: c.date, created: now, name: clean(d.name, 30) || ('Bàn ' + pager), phone: '', items: L.items, total: L.total,
+              gross: L.gross, itemDisc: L.idisc, disc: null, discAmt: L.idisc, note: note, status: 'Chờ thanh toán', pay: '', pager: pager, paidAt: 0, paidDate: '',
+              mode: mode === 'night' ? 'Đêm nhạc' : 'Thường', token: '', src: 'NV', cashier: '', createdBy: who(u), log: [],
+              ack: { at: now, by: who(u) }, nvName: u.n, nvCode: u.c, nvBy: [u.c], autoPrint: true };
+            if (d.togo) o.togo = true;
+            if (c.temp) o.tempCode = true;
+            act(o, u, 'tao', 'Order tại bàn');
+            khoSync(o, id, u);
+            C.orders[id] = Object.assign({ id: id }, o); save(db.collection('posOrders').doc(id), o);
+            return { ok: true, id: id, code: c.code, added: nAdd, merged: false };
+          });
+        });
+      });
+    },
+    staffOpen: function () {
+      return me().then(function () {
+        return posReady().then(function () {
+          var now = Date.now(), list = allOrders().filter(function (o) { return o.status === 'Chờ thanh toán' && o.pager && now - (o.created || 0) < 12 * 3600000; })
+            .sort(function (a, b) { return (parseInt(a.pager) || 0) - (parseInt(b.pager) || 0); }).map(function (o) { return { code: o.code, pager: o.pager, items: o.items || [] }; });
+          return { ok: true, list: list };
+        });
+      });
+    },
+    staffMine: function () {
+      return me().then(function (u) {
+        return posReady().then(function () {
+          var d = today(), list = allOrders().filter(function (o) { return o.date === d && (o.nvBy || []).indexOf(u.c) >= 0; })
+            .sort(function (a, b) { return b.created - a.created; }).slice(0, 60).map(pub);
+          return { ok: true, list: list };
+        });
+      });
+    },
+    /* Máy quầy (bản cài) nhận in đơn NV: giao dịch để 2 máy không in trùng, chỉ in phần món chưa báo bếp */
+    cashierAutoPrint: function (tok, id) {
+      return me().then(function (u) {
+        var ref = db.doc('posOrders/' + String(id));
+        return db.runTransaction(function (t) {
+          return t.get(ref).then(function (s) {
+            if (!s.exists) return null; var o = s.data();
+            if (!o.autoPrint || o.status === 'Đã hủy') return null;
+            var K = kitchenDelta(o.items || [], o.sent), log = o.log || [];
+            if (K.items.length) log = log.concat([{ a: 'bep', by: who(u), at: Date.now(), x: 'tự in (NV order)' }]).slice(-30);
+            t.update(ref, { autoPrint: false, sent: K.sent, log: log });
+            o.sent = K.sent; o.autoPrint = false; o.log = log;
+            return { o: Object.assign({ id: s.id }, o), items: K.items };
+          });
+        }).then(function (r) {
+          if (!r) return { ok: false };
+          if (C.orders[id]) C.orders[id] = r.o;
+          return { ok: true, order: pub(r.o), items: r.items };
         });
       });
     },

@@ -611,7 +611,7 @@
 <div class="toast" id="toast" hidden></div>
 <iframe id="printFrame" title="in"></iframe>
 
-<script src="chata-api.js"></script>
+<script src="chata-api.js?v=nv1"></script>
 <script>
 (function(){
   var API = 'https://script.google.com/macros/s/AKfycbxvRhb0Jjbrokyew1RBqWwBTCiqSIsvciWx_Vns9LeOs9LLCvTJcxOk71-7CMKuI1I/exec';
@@ -700,7 +700,7 @@
         (o.pager ? '<div style="border:.6mm solid #000;border-radius:1.5mm;padding:.8mm 3mm;text-align:center;min-width:22mm"><div style="font-size:' + (fs * .9) + 'mm;font-weight:800">' + (o.togo ? 'MANG ĐI · THẺ' : 'BÀN') + '</div><div style="font-size:' + (fs * 3) + 'mm;font-weight:900;line-height:1">' + esc(o.pager) + '</div></div>'
           : '<div style="border:.6mm solid #000;border-radius:1.5mm;padding:1.5mm 3mm;font-weight:900;font-size:' + (fs * 1.3) + 'mm">' + (o.togo ? 'MANG ĐI' : 'TẠI QUẦY') + '</div>') +
       '</div>' +
-      '<div>' + dmy(o.paidAt || Date.now()) + ' ' + hhmm(o.paidAt || Date.now()) + (o.src && o.src !== 'Quầy' ? ' · QR order' : '') + '</div>' +
+      '<div>' + dmy(o.paidAt || Date.now()) + ' ' + hhmm(o.paidAt || Date.now()) + (o.src === 'NV' ? ' · Order: ' + esc(o.nv || '') : o.src && o.src !== 'Quầy' ? ' · QR order' : '') + '</div>' +
       '<div>Khách: ' + esc(o.name) + (o.phone ? ' · ' + esc(o.phone) : '') + '</div>' +
       (o.cashier || (D && D.me) ? '<div>Thu ngân: ' + esc(String(o.cashier || D.me.name).replace(/ \(.*\)$/, '')) + '</div>' : '') +
       '<div style="border-top:.3mm dashed #000;margin:1.5mm 0"></div>' +
@@ -723,8 +723,8 @@
       '<div style="text-align:center;font-weight:800">PHIẾU BẾP · ' + esc(S.shop) + '</div>' +
       '<div style="text-align:center;font-size:' + (fs * 2.4) + 'mm;font-weight:900;line-height:1.05">#' + esc(o.code) + '</div>' +
       '<div style="display:flex;justify-content:space-between;font-weight:700"><span>' + esc(o.name) + '</span><span>' + (o.pager ? 'Thẻ rung ' + esc(o.pager) : '') + '</span></div>' +
-      '<div style="display:flex;justify-content:space-between"><span>' + hhmm(o.paidAt || o.created || Date.now()) + ' ' + dmy(o.paidAt || o.created || Date.now()).slice(0,5) + '</span><span>' + (o.src === 'QR' ? 'Đơn QR' : 'Tại quầy') + (o.mode === 'Đêm nhạc' ? ' · Đêm nhạc' : '') + '</span></div>' +
-      (o.src && o.src !== 'Quầy' ? '<div style="text-align:center;font-weight:900;font-size:' + (fs * 1.5) + 'mm;border:.5mm solid #000;margin-top:1mm">QR ORDER</div>' : '') +
+      '<div style="display:flex;justify-content:space-between"><span>' + hhmm(o.paidAt || o.created || Date.now()) + ' ' + dmy(o.paidAt || o.created || Date.now()).slice(0,5) + '</span><span>' + (o.src === 'QR' ? 'Đơn QR' : o.src === 'NV' ? 'Order tại bàn' : 'Tại quầy') + (o.mode === 'Đêm nhạc' ? ' · Đêm nhạc' : '') + '</span></div>' +
+      (o.src && o.src !== 'Quầy' ? '<div style="text-align:center;font-weight:900;font-size:' + (fs * 1.5) + 'mm;border:.5mm solid #000;margin-top:1mm">' + (o.src === 'NV' ? 'NV ORDER' + (o.nv ? ' · ' + esc(o.nv) : '') : 'QR ORDER') + '</div>' : '') +
       (o.togo ? '<div style="text-align:center;font-weight:900;font-size:' + (fs * 1.5) + 'mm;background:#000;color:#fff;margin-top:1mm">★ MANG ĐI ★</div>' : '') +
       '<div style="border-top:.4mm dashed #000;margin:1.5mm 0"></div>' +
       items.map(function(i){ return '<div style="display:flex;gap:2mm;font-weight:800;font-size:' + (fs * 1.3) + 'mm;line-height:1.2;margin:1mm 0"><b style="min-width:9mm">' + i.q + ' x</b><span>' + esc(i.n) + (i.t ? '<br><span style="font-weight:700;font-size:' + fs + 'mm">→ ' + esc(i.t) + '</span>' : '') + '</span></div>'; }).join('') +
@@ -756,7 +756,8 @@
     font(hfs, true); var kk = k + '/' + total, kw = g.measureText(kk).width;
     /* đơn khách gọi qua QR: in QR ORDER / QR · MANG ĐI (Tài chốt 19/11) */
     var qr = o.src && o.src !== 'Quầy';
-    var head = (qr ? (o.togo ? 'QR · MANG ĐI' : 'QR ORDER') : (o.togo ? 'MANG ĐI' : '(Bàn) TẠI QUÁN')) + (o.pager ? ' - ' + o.pager : '');
+    var nvo = o.src === 'NV'; /* đơn nhân viên order tại bàn (Tài 20/11) */
+    var head = (nvo ? (o.togo ? 'NV · MANG ĐI' : 'NV ORDER') : qr ? (o.togo ? 'QR · MANG ĐI' : 'QR ORDER') : (o.togo ? 'MANG ĐI' : '(Bàn) TẠI QUÁN')) + (o.pager ? ' - ' + o.pager : '');
     g.textAlign = 'right'; g.fillText(kk, cw - px, py); g.textAlign = 'left';
     font(hfs, false); g.fillText(fit(head, iw - kw - D), px, py);
     var y = py + Math.round(hfs * 1.25); g.fillRect(px, y, iw, Math.max(2, Math.round(.25 * D))); y += Math.round(.8 * D);
@@ -952,8 +953,21 @@
       if (r.n < 3 && Date.now() - r.at >= 300000) { r.at = Date.now(); r.n++; ting(); toast('🔔 Đơn QR #' + o.code + ' (' + o.name + ') chưa xác nhận', 6000); }
     });
   }, 20000);
+  /* Đơn nhân viên order tại bàn: máy quầy (bản cài) tự in phiếu bếp + tem ly phần món mới (Tài 20/11) */
+  var NVP = {};
+  function nvAutoPrint(d){
+    if (!NATIVE || !d || !d.pending) return;
+    d.pending.forEach(function(o){
+      if (!o.autoPrint || (NVP[o.id] && Date.now() - NVP[o.id] < 20000)) return; NVP[o.id] = Date.now();
+      call('cashierAutoPrint', [PIN, o.id]).then(function(r){
+        if (!r || !r.ok || !r.items || !r.items.length) return;
+        printOrder(r.order, { bep: true, tem: true }, null, r.items);
+        toast('🧾 Đã in đơn #' + r.order.code + ' (Bàn ' + (r.order.pager || '–') + ') · ' + (r.order.nv || 'NV'), 4000);
+      }).catch(function(){ delete NVP[o.id]; });
+    });
+  }
   function apply(d){
-    D = d;
+    D = d; nvAutoPrint(d);
     var qr = d.pending.filter(function(o){ return o.src !== 'Quầy'; });
     var ids = qr.map(function(o){ return o.id; });
     if (seenQr && ids.some(function(id){ return seenQr.indexOf(id) < 0; })) { ting(); toast('🧾 Có đơn QR mới', 5000); }
@@ -986,14 +1000,14 @@
     if (TAB === 'rep') return;
     var list = D.pending.filter(function(o){ return TAB === 'all' || o.src !== 'Quầy'; });
     $('orders').innerHTML = list.length ? list.map(function(o){
-      var qr = o.src !== 'Quầy';
+      var qr = o.src !== 'Quầy', nvo = o.src === 'NV';
       return '<div class="oc' + (qr ? ' qr' : '') + (qr && !o.ack ? ' qnew' : '') + (Date.now() - o.created > 30 * 60000 ? ' late' : '') + '" data-open="' + o.id + '">' +
-        '<div class="h"><span class="src">' + (qr ? (o.ack ? 'QR ✓' : 'QR · chưa xác nhận') + (o.pager ? ' · trả khi lấy món' : '') : 'Tại quầy') + (o.togo ? ' · 🥡 Mang đi' : '') + '</span><span>⏱ ' + ago(o.created) + '</span></div>' +
+        '<div class="h"><span class="src">' + (nvo ? '🧾 NV · ' + esc(o.nv || '') : qr ? (o.ack ? 'QR ✓' : 'QR · chưa xác nhận') + (o.pager ? ' · trả khi lấy món' : '') : 'Tại quầy') + (o.togo ? ' · 🥡 Mang đi' : '') + '</span><span>⏱ ' + ago(o.created) + '</span></div>' +
         '<div class="c">#' + esc(o.code) + (o.pager ? ' <small style="font-size:13px;color:#0A8F5F">· Bàn ' + esc(o.pager) + '</small>' : '') + '</div><div class="n">' + esc(o.name) + '</div>' +
-        (qr ? ctTag(o) : '') +
+        (qr && !nvo ? ctTag(o) : '') +
         '<div class="it">' + o.items.map(function(i){ return i.q + '× ' + esc(i.n); }).join(', ') + '</div>' +
         '<div class="f"><span>' + o.items.reduce(function(s, i){ return s + i.q; }, 0) + ' món</span><b class="num">' + money(o.total) + 'đ</b></div>' +
-        '<div class="a"><button type="button" data-open="' + o.id + '">Mở đơn</button>' + (qr && o.ack ? rdyBtn(o) : '') + '<button type="button" data-pay="' + o.id + '">Thanh toán</button></div></div>';
+        '<div class="a"><button type="button" data-open="' + o.id + '">Mở đơn</button>' + (qr && !nvo && o.ack ? rdyBtn(o) : '') + '<button type="button" data-pay="' + o.id + '">Thanh toán</button></div></div>';
     }).join('') : '<div class="empty">' + (TAB === 'qr' ? 'Chưa có đơn QR nào đang chờ.' : 'Chưa có đơn nào đang chờ. Bấm <b>＋ Tạo đơn mới</b> để bán hàng.') + '</div>';
     /* đơn QR đã thu tiền, đang làm món: bấm "Món xong" để báo khách */
     var W = D.waiting || [];
@@ -1039,10 +1053,10 @@
   $('readyBtn').addEventListener('click', function(){ if (O && O.id) doReady(O.id); });
   function drawPaid(){
     $('paidView').innerHTML = D.paid.length ? '<table><tr><th>Mã</th><th>Giờ</th><th>Khách</th><th>Món</th><th>Tiền</th><th>TT</th><th>Thu ngân</th><th>In lại</th></tr>' + D.paid.map(function(o){
-      return '<tr><td><b>#' + esc(o.code) + '</b><br><small>' + (o.src === 'Quầy' ? 'Quầy' : 'QR') + '</small></td><td>' + hhmm(o.paidAt) + '</td><td>' + esc(o.name) + (o.pager ? '<br><small>Thẻ ' + esc(o.pager) + '</small>' : '') + (o.phone ? '<br><small>📞 ' + esc(o.phone) + '</small>' : '') + (o.togo ? '<br><small>🥡 Mang đi</small>' : '') + '</td>' +
+      return '<tr><td><b>#' + esc(o.code) + '</b><br><small>' + (o.src === 'Quầy' ? 'Quầy' : o.src === 'NV' ? 'NV · ' + esc(o.nv || '') : 'QR') + '</small></td><td>' + hhmm(o.paidAt) + '</td><td>' + esc(o.name) + (o.pager ? '<br><small>Thẻ ' + esc(o.pager) + '</small>' : '') + (o.phone ? '<br><small>📞 ' + esc(o.phone) + '</small>' : '') + (o.togo ? '<br><small>🥡 Mang đi</small>' : '') + '</td>' +
         '<td>' + o.items.map(function(i){ return i.q + '× ' + esc(i.n) + (i.t ? ' <i>(' + esc(i.t) + ')</i>' : ''); }).join('<br>') + '</td><td class="num"><b>' + money(o.total) + '</b></td><td>' + esc(o.pay) + '</td><td><small>' + esc(o.cashier || '') + '</small></td>' +
         '<td><button class="sbtn" data-rp="bill" data-id="' + o.id + '">Hóa đơn</button><button class="sbtn" data-rp="bep" data-id="' + o.id + '">Bếp</button><button class="sbtn" data-rp="tem" data-id="' + o.id + '">Tem</button><br><button class="sbtn" data-fx="method" data-id="' + o.id + '">Đổi sang ' + (o.pay === 'Chuyển khoản' ? 'TM' : 'CK') + '</button><button class="sbtn" data-fx="refund" data-id="' + o.id + '" style="color:#C0392B">Hoàn/hủy</button>' +
-        (o.src !== 'Quầy' ? '<br>' + (o.ready ? '<small style="color:#0A8F5F">✓ Đã báo món ' + hhmm(o.ready) + '</small>' : '<button class="sbtn rdy" data-ready="' + o.id + '">🔔 Món xong</button>') + '<button class="sbtn" data-ct="' + o.id + '">Thẻ/SĐT</button>' : '') + '</td></tr>';
+        (o.src === 'QR' ? '<br>' + (o.ready ? '<small style="color:#0A8F5F">✓ Đã báo món ' + hhmm(o.ready) + '</small>' : '<button class="sbtn rdy" data-ready="' + o.id + '">🔔 Món xong</button>') + '<button class="sbtn" data-ct="' + o.id + '">Thẻ/SĐT</button>' : '') + '</td></tr>';
     }).join('') + '</table>' : '<div class="empty">Chưa có đơn nào thanh toán hôm nay.</div>';
   }
   document.querySelector('.tabs').addEventListener('click', function(e){
@@ -1318,14 +1332,14 @@
     if (needShift(function(){ openOrder(ord); })) return;
     O = ord ? JSON.parse(JSON.stringify(ord)) : { id: null, code: '', src: 'Quầy', items: [], name: '', phone: '', pager: '', note: '', disc: null, togo: false, created: Date.now() };
     O.togo = !!O.togo; SEL = O.items.length - 1; HL = 0; ITEM_DR = {};
-    $('oTitle').textContent = ord ? ('Đơn #' + ord.code + ' · ' + (ord.src === 'Quầy' ? 'Tại quầy' : 'QR')) : 'Đơn mới · Tại quầy';
+    $('oTitle').textContent = ord ? ('Đơn #' + ord.code + ' · ' + (ord.src === 'Quầy' ? 'Tại quầy' : ord.src === 'NV' ? 'NV order · ' + (ord.nv || '') : 'QR')) : 'Đơn mới · Tại quầy';
     $('oTime').textContent = ord ? 'gửi ' + hhmm(ord.created) : '';
     $('cName').value = O.name === 'Khách lẻ' ? '' : O.name; $('cPhone').value = O.phone || ''; $('cPager').value = O.pager || ''; $('cNote').value = O.note || '';
     $('search').value = ''; $('menuPick').value = 'cur'; $('menuPick').hidden = !(D && D.other && D.other.length);
     $('menuPick').options[1].textContent = D && D.mode === 'night' ? 'Menu thường' : 'Menu đêm nhạc';
     $('moreBtn').hidden = true; $('cancelBtn').hidden = true; $('opsBtn').hidden = !ord;
     $('ackBar').hidden = !(ord && ord.src !== 'Quầy' && !ord.ack); ackAskShow();
-    $('readyBtn').hidden = !(ord && ord.src !== 'Quầy' && ord.ack && !ord.ready);
+    $('readyBtn').hidden = !(ord && ord.src === 'QR' && ord.ack && !ord.ready);
     $('ordView').hidden = false; drawCats(); drawCart(); O0 = snap();
     setTimeout(function(){ if ($('payModal').hidden) $('search').focus(); }, 30);
   }
