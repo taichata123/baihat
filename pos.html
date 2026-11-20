@@ -2121,6 +2121,11 @@
     var out = list.map(function(i, x){ return '<div style="width:' + W + 'mm;height:' + H + 'mm;overflow:hidden;page-break-after:always;break-after:page"><img src="' + tagCanvas(i, x + 1, list.length, W, H) + '" style="display:block;width:' + W + 'mm;height:' + H + 'mm;image-rendering:pixelated"></div>'; }).join('');
     return { html: out, w: W, h: H, n: list.length };
   }
+  /* dấu "đã in tem" trên từng mẻ của Web vận hành: tagMark/{mã mẻ} */
+  function pjMark(db, job, id, v){
+    var per = {}; (job.items || []).forEach(function(i){ if (i.pid) per[i.pid] = (per[i.pid] || 0) + Math.min(20, Math.max(1, +i.copies || 1)); });
+    Object.keys(per).forEach(function(pid){ db.collection('tagMark').doc(pid).set(Object.assign({ job: id, n: per[pid], at: Date.now() }, v), { merge: true }).catch(function(){}); });
+  }
   function pjRun(id, job){
     if (PJ.busy[id]) return; PJ.busy[id] = 1;
     var db = ChataAPI._db(), ref = db.collection('printJobs').doc(id), me = (D && D.me && D.me.name) || 'Máy quầy';
@@ -2135,8 +2140,9 @@
           return NATIVE.print({ html: doc, printer: S.tem_p || '', widthMm: j.w, heightMm: j.h, copies: 1 }).then(function(r){
             if (r && r.ok === false) throw new Error(r.error || 'máy in báo lỗi');
             toast('🏷 Đã in ' + j.n + ' tem' + (job.byName ? ' cho ' + job.byName : ''), 4000);
+            pjMark(db, job, id, { st: 'done', by: me });
             return ref.update({ st: 'done', doneAt: Date.now(), doneBy: me, printed: j.n });
-          }).catch(function(e){ toast('⚠️ Lỗi in tem mẻ: ' + (e && e.message || ''), 5000); return ref.update({ st: 'err', err: String(e && e.message || 'lỗi in').slice(0, 120), doneAt: Date.now(), doneBy: me }); });
+          }).catch(function(e){ toast('⚠️ Lỗi in tem mẻ: ' + (e && e.message || ''), 5000); pjMark(db, job, id, { st: 'err' }); return ref.update({ st: 'err', err: String(e && e.message || 'lỗi in').slice(0, 120), doneAt: Date.now(), doneBy: me }); });
         });
         return printQ;
       }).catch(function(){ delete PJ.busy[id]; });
