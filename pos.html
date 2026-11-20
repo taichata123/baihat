@@ -797,18 +797,52 @@
   }
 
   var printQ = Promise.resolve();
+  /* Hóa đơn / phiếu bếp (Tài 20/11 09:32): in ra bị xám lốm đốm và mất chữ 2 bên lề →
+     vẽ trang in thành ảnh đen–trắng tuyệt đối (như tem ly), khổ 80mm chỉ dùng 72mm giữa (58mm → 48mm) */
+  function rasterJob(job){
+    return new Promise(function(ok, bad){
+      var pw = +job.w || 80, cwmm = pw >= 80 ? 72 : 48, D8 = 8;
+      var host = document.createElement('div');
+      host.style.cssText = 'position:fixed;left:-20000px;top:0;width:' + cwmm + 'mm;background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif';
+      host.innerHTML = job.html; document.body.appendChild(host);
+      var root = host.firstElementChild;
+      if (root) { root.style.width = cwmm + 'mm'; root.style.boxSizing = 'border-box'; root.style.paddingLeft = '1mm'; root.style.paddingRight = '1mm'; }
+      Array.prototype.forEach.call(host.querySelectorAll('*'), function(el){ el.style.boxSizing = 'border-box'; });
+      var wpx = host.offsetWidth, hpx = host.scrollHeight;
+      host.style.position = 'static'; host.style.left = '0';
+      var xml = new XMLSerializer().serializeToString(host); document.body.removeChild(host);
+      var cw = cwmm * D8, ch = Math.ceil(hpx * cw / wpx);
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + cw + '" height="' + ch + '" viewBox="0 0 ' + wpx + ' ' + hpx + '"><foreignObject x="0" y="0" width="' + wpx + '" height="' + hpx + '">' + xml + '</foreignObject></svg>';
+      var im = new Image();
+      im.onload = function(){
+        try {
+          var c = document.createElement('canvas'); c.width = cw; c.height = ch;
+          var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cw, ch); g.drawImage(im, 0, 0, cw, ch);
+          var th = TEM_INK[S.tem_ink] || TEM_INK['Vừa'], img = g.getImageData(0, 0, cw, ch), d = img.data;
+          for (var p = 0; p < d.length; p += 4) { var v = (d[p] * 299 + d[p + 1] * 587 + d[p + 2] * 114) / 1000 < 255 - th ? 0 : 255; d[p] = d[p + 1] = d[p + 2] = v; d[p + 3] = 255; }
+          g.putImageData(img, 0, 0);
+          var mg = (pw - cwmm) / 2;
+          ok({ html: '<div style="width:' + pw + 'mm;padding:0 ' + mg + 'mm"><img src="' + c.toDataURL('image/png') + '" style="display:block;width:' + cwmm + 'mm;image-rendering:pixelated"></div>', w: pw, h: null, copies: job.copies });
+        } catch (e) { bad(e); }
+      };
+      im.onerror = function(){ bad(new Error('raster')); };
+      im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    });
+  }
   function sendPrint(kind, job){
     if (!job.html) return Promise.resolve();
     var printer = S[kind + '_p'] || '';
-    var doc = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + CSS + '@page{size:' + job.w + 'mm ' + (job.h ? job.h + 'mm' : 'auto') + ';margin:0}</style></head><body>' + job.html + '</body></html>';
     printQ = printQ.then(function(){
-      if (NATIVE) {
-        return NATIVE.print({ html: doc, printer: printer, widthMm: job.w, heightMm: job.h, copies: job.copies || 1 })
-          .then(function(r){ if (r && r.ok === false) toast('⚠️ Lỗi in ' + kind + ': ' + (r.error || ''), 5000); }, function(e){ toast('⚠️ Lỗi in: ' + e.message, 5000); });
-      }
-      return new Promise(function(res){
-        var f = $('printFrame'); f.srcdoc = doc;
-        f.onload = function(){ setTimeout(function(){ try { f.contentWindow.focus(); f.contentWindow.print(); } catch(e){} res(); }, 150); };
+      return ((kind === 'bill' || kind === 'bep') ? rasterJob(job).catch(function(){ return job; }) : Promise.resolve(job)).then(function(jb){
+        var doc = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + CSS + '@page{size:' + jb.w + 'mm ' + (jb.h ? jb.h + 'mm' : 'auto') + ';margin:0}</style></head><body>' + jb.html + '</body></html>';
+        if (NATIVE) {
+          return NATIVE.print({ html: doc, printer: printer, widthMm: jb.w, heightMm: jb.h, copies: jb.copies || 1 })
+            .then(function(r){ if (r && r.ok === false) toast('⚠️ Lỗi in ' + kind + ': ' + (r.error || ''), 5000); }, function(e){ toast('⚠️ Lỗi in: ' + e.message, 5000); });
+        }
+        return new Promise(function(res){
+          var f = $('printFrame'); f.srcdoc = doc;
+          f.onload = function(){ setTimeout(function(){ try { f.contentWindow.focus(); f.contentWindow.print(); } catch(e){} res(); }, 150); };
+        });
       });
     });
     return printQ;
