@@ -2077,6 +2077,79 @@
   }
   document.querySelector('.tabs').addEventListener('click', function(e){ var b = e.target.closest('[data-tab="rep"]'); if (b) loadRep(); });
 
+  /* ================= Tem mẻ từ điện thoại (20/11/2026) =================
+     Nhân viên bấm "In tem" trên Web vận hành → ghi printJobs {kind:'tag', st:'new', items}.
+     App thu ngân (bản cài trên máy quầy) nhận lệnh, in ra máy in tem ly, báo lại st 'done' / 'err'. */
+  var PJ = { un: null, busy: {} };
+  function pjQty(v){ v = Math.round((+v || 0) * 1000) / 1000; return v.toLocaleString('vi-VN'); }
+  function tagCanvas(i, k, total, W, H){
+    var D8 = 8, cw = Math.round(W * D8), ch = Math.round(H * D8);
+    var c = document.createElement('canvas'); c.width = cw; c.height = ch;
+    var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cw, ch); g.fillStyle = '#000'; g.textBaseline = 'top';
+    var FONT = 'Arial, "Segoe UI", sans-serif', px = Math.round(1.8 * D8), py = Math.round(1.2 * D8), iw = cw - 2 * px;
+    var fs = Math.round(Math.max(2.2, Math.min(3, H / 10.5)) * D8), hfs = Math.round(fs * .82), nfs = Math.round(fs * 1.1), ffs = Math.round(fs * .85), pfs = fs;
+    function font(sz, b){ g.font = (b ? 'bold ' : '') + sz + 'px ' + FONT; }
+    function fit(t, w){ if (g.measureText(t).width <= w) return t; while (t.length > 1 && g.measureText(t + '…').width > w) t = t.slice(0, -1); return t + '…'; }
+    function wrap(t, w){ var ws = String(t || '').split(/\s+/), ls2 = [], cur = ''; ws.forEach(function(wd){ var tr = cur ? cur + ' ' + wd : wd; if (g.measureText(tr).width <= w || !cur) cur = tr; else { ls2.push(cur); cur = wd; } }); if (cur) ls2.push(cur); return ls2; }
+    var dm = function(t){ return hhmm(t) + ' ' + dmy(t).slice(0, 5); };
+    var head = i.raw ? 'Nhập: ' + (i.nhap || '') : (i.code ? 'Mẻ: ' + i.code : 'TEM MẺ');
+    var info = i.raw ? [(i.supplier ? 'NCC: ' + i.supplier : ''), (i.qty ? 'SL: ' + pjQty(i.qty) + ' ' + (i.unit || '') : '')]
+      : [(i.qty ? 'SL: ' + pjQty(i.qty) + ' ' + (i.unit || '') : ''), (i.at ? 'Làm: ' + dm(i.at) : '') + (i.by ? ' · ' + i.by : '')];
+    info = info.filter(Boolean);
+    /* Hạn dùng: mặt hàng chưa cài hạn thì để trống (Tài chốt 20/11) */
+    var hsd = 'HSD: ' + (i.raw ? (i.hsd || '') : (i.exp ? dm(i.exp) : ''));
+    font(hfs, true); var kk = k + '/' + total, kw = g.measureText(kk).width;
+    g.textAlign = 'right'; g.fillText(kk, cw - px, py); g.textAlign = 'left';
+    font(hfs, false); g.fillText(fit(head, iw - kw - D8), px, py);
+    var y = py + Math.round(hfs * 1.25); g.fillRect(px, y, iw, Math.max(2, Math.round(.25 * D8))); y += Math.round(.8 * D8);
+    var footY = ch - py - pfs, lh = Math.round(ffs * 1.18);
+    var room = Math.floor((footY - Math.round(.4 * D8) - y - info.length * lh) / Math.round(nfs * 1.18));
+    font(nfs, true); var nl = wrap(i.name, iw).slice(0, Math.max(1, Math.min(3, room)));
+    nl.forEach(function(l){ g.fillText(fit(l, iw), px, y); y += Math.round(nfs * 1.18); });
+    font(ffs, false);
+    info.forEach(function(l){ if (y + ffs <= footY - Math.round(.3 * D8)) { g.fillText(fit(l, iw), px, y); y += lh; } });
+    font(pfs, true); g.fillText(fit(hsd, iw), px, footY);
+    var img = g.getImageData(0, 0, cw, ch), d = img.data, th = TEM_INK[S.tem_ink] || TEM_INK['Vừa'];
+    for (var p = 0; p < d.length; p += 4) { var v = (d[p] * 299 + d[p + 1] * 587 + d[p + 2] * 114) / 1000 < 255 - th ? 0 : 255; d[p] = d[p + 1] = d[p + 2] = v; d[p + 3] = 255; }
+    g.putImageData(img, 0, 0);
+    return c.toDataURL('image/png');
+  }
+  function tagJobHtml(job){
+    var sz = String(S.tem_s || '50x30').split('x'), W = +sz[0] || 50, H = +sz[1] || 30, list = [];
+    (job.items || []).slice(0, 30).forEach(function(i){ var n = Math.min(20, Math.max(1, +i.copies || 1)); for (var q = 0; q < n; q++) list.push(i); });
+    list = list.slice(0, 60);
+    var out = list.map(function(i, x){ return '<div style="width:' + W + 'mm;height:' + H + 'mm;overflow:hidden;page-break-after:always;break-after:page"><img src="' + tagCanvas(i, x + 1, list.length, W, H) + '" style="display:block;width:' + W + 'mm;height:' + H + 'mm;image-rendering:pixelated"></div>'; }).join('');
+    return { html: out, w: W, h: H, n: list.length };
+  }
+  function pjRun(id, job){
+    if (PJ.busy[id]) return; PJ.busy[id] = 1;
+    var db = ChataAPI._db(), ref = db.collection('printJobs').doc(id), me = (D && D.me && D.me.name) || 'Máy quầy';
+    if (Date.now() - (+job.at || 0) > 12 * 3600000) { ref.update({ st: 'old' }).catch(function(){}); return; }
+    db.runTransaction(function(t){ return t.get(ref).then(function(s){ if (!s.exists || s.data().st !== 'new') return false; t.update(ref, { st: 'printing', claimAt: Date.now(), claimBy: me }); return true; }); })
+      .then(function(mine){
+        if (!mine) return;
+        var j = tagJobHtml(job);
+        if (!j.n) return ref.update({ st: 'err', err: 'Không có tem', doneAt: Date.now() });
+        var doc = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + CSS + '@page{size:' + j.w + 'mm ' + j.h + 'mm;margin:0}</style></head><body>' + j.html + '</body></html>';
+        printQ = printQ.then(function(){
+          return NATIVE.print({ html: doc, printer: S.tem_p || '', widthMm: j.w, heightMm: j.h, copies: 1 }).then(function(r){
+            if (r && r.ok === false) throw new Error(r.error || 'máy in báo lỗi');
+            toast('🏷 Đã in ' + j.n + ' tem' + (job.byName ? ' cho ' + job.byName : ''), 4000);
+            return ref.update({ st: 'done', doneAt: Date.now(), doneBy: me, printed: j.n });
+          }).catch(function(e){ toast('⚠️ Lỗi in tem mẻ: ' + (e && e.message || ''), 5000); return ref.update({ st: 'err', err: String(e && e.message || 'lỗi in').slice(0, 120), doneAt: Date.now(), doneBy: me }); });
+        });
+        return printQ;
+      }).catch(function(){ delete PJ.busy[id]; });
+  }
+  function pjStart(){
+    if (PJ.un || !NATIVE || !PIN || !window.ChataAPI || !ChataAPI._db) return;
+    var a = ChataAPI._auth && ChataAPI._auth(), u = a && a.currentUser; if (!u || u.isAnonymous) return;
+    PJ.un = ChataAPI._db().collection('printJobs').where('st', '==', 'new').onSnapshot(function(s){
+      s.docs.forEach(function(d){ var j = d.data(); if (j.kind === 'tag') pjRun(d.id, j); });
+    }, function(){ PJ.un = null; });
+  }
+  setInterval(pjStart, 10000); setTimeout(pjStart, 3000);
+
   show(); drawPrintState(); load();
   setInterval(function(){ if (PIN && !paying) load(); }, 5000);
   if (NATIVE && NATIVE.setTitle) NATIVE.setTitle('Chata Thu ngân');
