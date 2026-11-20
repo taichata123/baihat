@@ -299,6 +299,7 @@
       <button class="tbtn" id="updBtn" type="button" hidden style="background:#13C48A;color:#fff;border-color:#13C48A">⬆ Cập nhật app</button>
       <button class="tbtn" id="khBtn" type="button" title="Mở / tắt màn hình phụ quay ra khách">🖥 Màn hình khách</button>
       <button class="tbtn" id="setBtn" type="button">🖨 Máy in</button>
+      <button class="tbtn kbFix" id="kbBtn" type="button" title="Ô nhập không gõ được chữ? Bấm đây (Ctrl+K)">⌨ Sửa bàn phím</button>
       <button class="tbtn" id="lockBtn" type="button" title="Khóa máy / đổi người">🔒 Khóa</button>
       <button class="tbtn" id="outBtn" type="button">Đăng xuất</button>
     </div>
@@ -336,6 +337,7 @@
   <div class="mid">
     <div class="mtop">
       <input id="search" placeholder="Chọn món (F2): gõ tên hoặc chữ đầu (VD: ts) + Enter · ↑↓ chọn" autocomplete="off">
+      <button type="button" class="kbFix" title="Ô nhập không gõ được chữ? Bấm đây (Ctrl+K)" style="flex:none;padding:0 12px;border:1px solid #D5DCE6;border-radius:8px;background:#fff;font-size:18px;cursor:pointer">⌨</button>
       <select id="menuPick" title="Bảng giá"><option value="cur">Menu hiện tại</option><option value="other">Menu khác</option></select>
     </div>
     <div class="grid" id="grid"></div>
@@ -654,6 +656,28 @@
     });
   }
   var $ = function(id){ return document.getElementById(id); };
+  /* Bàn phím: sau hộp hỏi (confirm/alert) và khi bấm vào ô nhập mà ô không nhận, tự trả bàn phím về app */
+  var RF = function(hard){ try { if (NATIVE && NATIVE.refocus) NATIVE.refocus(hard); } catch (e) {} };
+  ['alert', 'confirm', 'prompt'].forEach(function(fn){
+    var o = window[fn]; if (!o) return;
+    window[fn] = function(){ var r = o.apply(window, arguments); RF(true); return r; };
+  });
+  var isTxt = function(t){ return t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !/^(button|submit|checkbox|radio|range|color|file)$/i.test(t.type || ''))); };
+  function fixKb(silent){
+    var a = document.activeElement, t = isTxt(a) && a.offsetParent ? a : null;
+    if (!t) { var s = $('search'); t = s && s.offsetParent ? s : null; }
+    RF(true);
+    setTimeout(function(){ try { if (t) { t.blur(); t.focus(); } else window.focus(); } catch (e) {} }, 150);
+    if (!silent) toast('⌨ Đã lấy lại bàn phím' + (NATIVE && NATIVE.refocus ? '' : ' (nếu chưa được, tắt mở lại app 1 lần để cập nhật)'));
+  }
+  document.addEventListener('mousedown', function(e){
+    var t = e.target;
+    if (!document.hasFocus()) RF(true);
+    if (!isTxt(t)) return;
+    setTimeout(function(){ if (document.activeElement !== t || !document.hasFocus()) { RF(true); setTimeout(function(){ try { t.focus(); } catch (x) {} }, 120); } }, 80);
+  }, true);
+  document.addEventListener('keydown', function(e){ if (e.ctrlKey && !e.altKey && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); fixKb(); } }, true);
+  document.addEventListener('click', function(e){ if (e.target && e.target.closest && e.target.closest('.kbFix')) fixKb(); });
   // Máy chủ Firebase (chata-api.js): dữ liệu realtime, ghi ngay trên máy rồi tự đồng bộ
   function call(fn, args){
     return ChataAPI.call(fn, args || []).then(function(d){ $('net').classList.toggle('bad', !navigator.onLine); return d; },
