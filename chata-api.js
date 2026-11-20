@@ -339,11 +339,13 @@
     Object.keys(b).forEach(function (k) { m[k] = b[k]; }); // bản trong C.orders là bản mới nhất trên máy
     return Object.keys(m).map(function (k) { return m[k]; });
   }
+  /* Quỹ tiền lẻ cố định trong tủ (Tài chốt 20/11/2026: 500.000đ để thối, giữ lại tủ khi kết ca) */
+  function floatCfg() { var v = Number(cfg().float); return v >= 0 && cfg().float !== undefined && cfg().float !== '' ? Math.round(v) : 500000; }
   function openShiftOf(code) { return (C.shifts || []).filter(function (s) { return s.code === code; }).sort(function (a, b) { return a.openAt - b.openAt; }).pop() || null; }
   function shiftLive(u) {
     var s = openShiftOf(u.c); if (!s) return null;
     var t = sumFor(allOrders(), u.c, s.openAt, Date.now() + 60000);
-    return { id: s.id, openAt: s.openAt, openCash: s.openCash, orders: t.orders, revenue: t.revenue, cash: t.cash, transfer: t.transfer,
+    return { id: s.id, openAt: s.openAt, openCash: s.openCash, float: s.float != null ? s.float : floatCfg(), openNote: s.openNote || '', orders: t.orders, revenue: t.revenue, cash: t.cash, transfer: t.transfer,
       cancels: t.cancels, refunds: t.refunds, refundAmt: t.refundAmt, expect: s.openCash + t.cash };
   }
   function cashierPatch(id, fn) {
@@ -371,7 +373,7 @@
       me: { code: u.c, name: u.n, role: u.r }, shift: shiftLive(u), revPending: u.r === 'manager' ? Object.keys(C.rev || {}).filter(function (k) { return C.rev[k].status === 'Chờ duyệt'; }).length : 0,
       mode: mode, modeSetting: modeSetting(), open: orderOpen(), tables: cleanTables(cfg().tables), promos: cleanPromos(cfg().promos),
       menu: menuFor(mode), night: mode === 'night' ? null : menuFor('night'), other: menuFor(mode === 'night' ? 'normal' : 'night'),
-      pending: pending, events: eventsCfg(),
+      pending: pending, events: eventsCfg(), float: floatCfg(),
       /* đơn QR đã thu tiền nhưng chưa báo món xong (3 giờ gần đây) – để thu ngân bấm "Món xong" */
       waiting: paid.filter(function (o) { return o.src !== 'Quầy' && !(o.ready && o.ready.at) && Date.now() - (o.paidAt || 0) < 3 * 3600000; }).sort(function (a, b) { return a.paidAt - b.paidAt; }).map(pub),
       paid: paid.sort(function (a, b) { return b.paidAt - a.paidAt; }).slice(0, 40).map(pub),
@@ -749,11 +751,13 @@
           var up = {};
           if (key === 'mode' && ORD_MODES.indexOf(val) >= 0) up.mode = val;
           if (key === 'open') up.qrOpen = !!val;
+          if (key === 'float') up.float = Math.max(0, Math.round(Number(val) || 0));
           if (key === 'tables') up.tables = cleanTables(val);
           if (key === 'promos') up.promos = cleanPromos(val);
           if (key === 'events') up.events = cleanEvents(val);
           up.updatedBy = ok.by; up.updatedAt = Date.now();
           var desc = key === 'mode' ? 'Menu: ' + val : key === 'open' ? (val ? 'Bật' : 'Tắt') + ' nhận đơn QR' : key === 'tables' ? 'Sơ đồ bàn: ' + (up.tables || []).map(function (z) { return z.a + ' (' + z.t.length + ')'; }).join(', ')
+            : key === 'float' ? 'Quỹ tiền lẻ cố định: ' + up.float
             : key === 'events' ? 'Sự kiện: ' + (up.events || []).map(function (x) { return x.n; }).join(', ')
             : key === 'promos' ? 'Khuyến mãi: ' + (up.promos || []).map(function (x) { return x.n + ' ' + (x.t === '%' ? x.v + '%' : x.v + 'đ'); }).join(', ') : key;
           logReview(u, 'Đổi cài đặt', null, 0, '', desc);
@@ -763,12 +767,12 @@
         });
       });
     },
-    shiftOpen: function (tok, cash) {
+    shiftOpen: function (tok, cash, note) {
       return me().then(function (u) {
         return posReady().then(function () {
           if (!openShiftOf(u.c)) {
             var id = uid('CA'), s = { code: u.c, name: u.n, role: u.r === 'manager' ? 'Quản lý' : 'Thu ngân', date: today(), openAt: Date.now(),
-              openCash: Math.max(0, Math.round(Number(cash) || 0)), closeAt: 0, status: 'Đang mở' };
+              openCash: Math.max(0, Math.round(Number(cash) || 0)), float: floatCfg(), openNote: clean(note, 200), closeAt: 0, status: 'Đang mở' };
             C.shifts = (C.shifts || []).concat([Object.assign({ id: id }, s)]);
             save(db.collection('posShifts').doc(id), s);
           }
@@ -785,13 +789,16 @@
             : db.collection('posOrders').where('created', '>=', s.openAt - 24 * 3600000).get().then(function (q) { var a = []; q.forEach(function (d) { a.push(d.data()); }); return a; });
           return src.then(function (all) {
             var t = sumFor(all, u.c, s.openAt, now + 1), expect = s.openCash + t.cash, c = Math.max(0, Math.round(Number(counted) || 0));
+            var fl = s.float != null ? s.float : floatCfg();
+            /* tách: quỹ cố định để lại tủ · tiền mặt thu thực tế (đếm − tiền đầu ca) so với tiền mặt thu theo app · tiền nộp (đếm − quỹ) */
             var up = { closeAt: now, orders: t.orders, revenue: t.revenue, cash: t.cash, transfer: t.transfer, expect: expect, counted: c, diff: c - expect,
+              float: fl, cashActual: c - s.openCash, handover: Math.max(0, c - fl), keep: Math.min(c, fl),
               cancels: t.cancels, refunds: t.refunds, refundAmt: t.refundAmt, note: clean(note, 200), status: 'Đã kết' };
             C.shifts = (C.shifts || []).filter(function (x) { return x.id !== s.id; });
             save(db.doc('posShifts/' + s.id), up, true);
             // tính lại doanh thu ngày cho báo cáo Web vận hành (phòng đơn cuối chưa kịp tính)
             rebuildDay(today()); if (ymdOf(s.openAt) !== today()) rebuildDay(ymdOf(s.openAt));
-            return { ok: true, report: Object.assign({ id: s.id, code: u.c, name: u.n, openAt: s.openAt, openCash: s.openCash }, up) };
+            return { ok: true, report: Object.assign({ id: s.id, code: u.c, name: u.n, openAt: s.openAt, openCash: s.openCash, openNote: s.openNote || '' }, up) };
           });
         });
       });
