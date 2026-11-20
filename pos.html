@@ -127,6 +127,19 @@
   .rt b{font-size:15px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.rt small{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
   .rt .qy{top:4px;right:4px;min-width:22px;height:22px;font-size:12px}
   .sres{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;margin-top:8px}.sres .ht{height:140px}
+  /* Ô món v3 (Tài chốt 20/11): mọi ô cùng cỡ, có hình, tên dưới hình; mỗi dòng sản phẩm một hàng */
+  .lnl{color:#C9D3E2;font-size:12.5px;font-weight:700;letter-spacing:.3px;margin:8px 2px 4px;text-transform:uppercase}.band h3+.lnl{margin-top:2px}
+  .tg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+  .tl{position:relative;border:0;border-radius:8px;overflow:hidden;background:#fff;height:152px;display:flex;flex-direction:column;padding:0;text-align:left;color:var(--ink);box-shadow:inset 0 0 0 0 transparent}
+  .tl .im{flex:1;min-height:0;margin:4px 4px 0;background:#fff center/contain no-repeat}
+  .tl.noimg .im{margin:0;background:var(--c);display:flex;align-items:center;justify-content:center;font-size:38px}
+  .tl .nm{padding:4px 8px 6px;height:46px;display:flex;flex-direction:column;justify-content:center;border-top:1px solid #EEF1F5}
+  .tl .nm b{font-size:15px;line-height:1.15;font-weight:700;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .tl .nm small{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tl .bd{top:5px;left:5px;font-size:13px;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  .tl.in{box-shadow:inset 0 0 0 3px #16A34A}
+  .tl .qy{position:absolute;top:5px;right:5px;background:#16A34A;color:#fff;min-width:32px;height:32px;padding:0 6px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .tl.hl{outline:4px solid #FFD54A;outline-offset:-4px}.tl:active{transform:scale(.97)}
   .ht.hl{outline:4px solid #FFD54A;outline-offset:-4px}.ht:active,.rt:active{transform:scale(.97)}
   #varList button{display:flex;align-items:center;gap:10px;width:100%;margin:6px 0;padding:13px 14px;font-size:17px;text-align:left;border:1px solid var(--line);border-radius:6px;background:#F7F9FC}
   #varList button i{font-style:normal;display:inline-flex;width:28px;height:28px;border-radius:14px;background:var(--blue);color:#fff;align-items:center;justify-content:center;font-size:14px;font-weight:700}
@@ -1236,6 +1249,21 @@
   var GCOL = { 'Trà - Trà sữa':'#7A5BB5', 'Ăn vặt':'#C0692B', 'Mì cay - Bánh mì chảo':'#B2453E', 'Nước ép - Soda - Nước chai':'#2E9D8F', 'Cà phê - Món nóng':'#6B4A2E', 'Sữa chua - Đá xay':'#2F6690', 'Đồ chiên':'#A0522D', 'Kem':'#C2477E', 'Khác':'#5A7D2B' };
   var GICO = { 'Trà - Trà sữa':'🧋', 'Ăn vặt':'🍿', 'Mì cay - Bánh mì chảo':'🍜', 'Nước ép - Soda - Nước chai':'🍹', 'Cà phê - Món nóng':'☕', 'Sữa chua - Đá xay':'🥤', 'Đồ chiên':'🍗', 'Kem':'🍦', 'Khác':'🏊' };
   function gcol(g){ return GCOL[g] || color(g); }
+  /* Dòng sản phẩm trong nhóm: mỗi dòng 1 hàng riêng (nhóm không có ở đây = 1 dòng) */
+  var LINES = {
+    'Trà - Trà sữa': [['Trà', /^(?!.*(sữa|latte|matcha)).*$/i], ['Trà sữa', /./]],
+    'Cà phê - Món nóng': [['Cà phê', /^(cà phê|bạc xỉu)/i], ['Món nóng', /./]],
+    'Nước ép - Soda - Nước chai': [['Nước ép', /^ép/i], ['Soda', /^soda/i], ['Bia · Nước chai', /./]],
+    'Sữa chua - Đá xay': [['Sữa chua', /^sữa chua/i], ['Đá xay', /./]],
+    'Mì cay - Bánh mì chảo': [['Mì cay', /^mì cay/i], ['Chảo · Bánh mì · Mì trộn', /./]]
+  };
+  function tileHtml(t, data, col, hl){
+    var c = t.items.reduce(function(s, m){ return s + qtyOf(m.n); }, 0), nm = splitName(t.b);
+    return '<button class="tl' + (t.img ? '' : ' noimg') + (c ? ' in' : '') + (hl ? ' hl' : '') + '" type="button" tabindex="-1" ' + data + ' style="--c:' + col + '">' +
+      '<span class="im"' + (t.img ? ' style="background-image:url(\'' + esc(t.img) + '\')"' : '') + '>' + (t.img ? '' : (GICO[t.dg] || '🍽')) + '</span>' +
+      '<span class="bd num">' + esc(tileBadge(t)) + '</span>' + (c ? '<span class="qy">' + c + '</span>' : '') +
+      '<span class="nm"><b>' + esc(nm[0]) + '</b>' + (nm[1] ? '<small>' + esc(nm[1]) + '</small>' : '') + '</span></button>';
+  }
   var BANDS = [], VAR = null;
   function makeBands(){
     var out = [], idx = {};
@@ -1249,8 +1277,15 @@
     return out;
   }
   function splitName(n){ var x = /^(.*?)\s*\((.*)\)$/.exec(n); return x && x[2].length > 6 ? [x[1], x[2]] : [n, '']; }
+  function kk(p){ p = +p || 0; return p % 1000 ? money(p) : (p / 1000) + 'k'; }
   function tileBadge(t){
     if (t.items.length < 2) return money(t.items[0].p);
+    var SZR = /^(M|L|Vừa|Lớn)$/i;
+    if (t.items.every(function(m){ return m.s && SZR.test(m.s); })) {
+      var it = t.items.slice().sort(function(a, b){ return a.p - b.p; });
+      return it.map(function(m, k){ return (k ? m.s + ' ' : '') + kk(m.p); }).join(' · ');
+    }
+    if (t.items.length > 1) { var lo = Math.min.apply(null, t.items.map(function(m){ return +m.p || 0; })); return 'từ ' + kk(lo) + ' · ' + t.items.length + ' loại'; }
     var ss = t.items.map(function(m){ return m.s || m.n; });
     return ss.length <= 3 && ss.every(function(x){ return x.length <= 4; }) ? ss.join(' / ') : t.items.length + ' loại';
   }
@@ -1273,28 +1308,25 @@
       var list = curMenu().filter(function(m){ return score(m) < 3; }).map(function(m, k){ return { m: m, s: score(m), k: k }; })
         .sort(function(a, b){ return a.s - b.s || a.k - b.k; }).map(function(x){ return x.m; });
       GRID = list; if (HL >= list.length) HL = list.length - 1; if (HL < 0) HL = 0;
-      g.innerHTML = '<div class="sres">' + (list.map(function(m, idx){
-        var c = qtyOf(m.n), dg = m.dg || m.g, nm = splitName(m.n);
-        return '<button class="ht' + (m.img ? '' : ' noimg') + (idx === HL ? ' hl' : '') + '" type="button" tabindex="-1" data-add="' + esc(m.n) + '" style="--c:' + gcol(dg) + (m.img ? ';background-image:url(\'' + esc(m.img) + '\')' : '') + '">' +
-          (m.img ? '' : '<span class="em">' + (GICO[dg] || '🍽') + '</span>') + '<span class="bd num">' + money(m.p) + '</span>' + (c ? '<span class="qy">' + c + '</span>' : '') +
-          '<span class="nm">' + esc(nm[0]) + (nm[1] ? '<small>' + esc(nm[1]) + '</small>' : '') + '</span></button>';
+      g.innerHTML = '<div class="sres tg">' + (list.map(function(m, idx){
+        var dg = m.dg || m.g;
+        return tileHtml({ b: m.n, items: [m], img: m.img, dg: dg }, 'data-add="' + esc(m.n) + '"', gcol(dg), idx === HL);
       }).join('') || '<div class="cempty" style="grid-column:1/-1;color:#C9D3E2">Không tìm thấy món.</div>') + '</div>';
       g.scrollTop = 0; return;
     }
     GRID = [];
     g.innerHTML = BANDS.map(function(B, i){
-      var col = gcol(B.g), hot = B.tiles.slice(0, 8), rest = B.tiles.slice(8);
-      function qn(t){ return t.items.reduce(function(s, m){ return s + qtyOf(m.n); }, 0); }
-      return '<div class="band" id="band' + i + '" style="--c:' + col + '"><h3><b>' + (i + 1) + ' · ' + esc(B.g) + '</b><small>' + B.tiles.length + ' món · Alt+' + (i + 1) + '</small></h3><div class="hot">' +
-        hot.map(function(t, j){
-          var c = qn(t), nm = splitName(t.b);
-          return '<button class="ht' + (t.img ? '' : ' noimg') + '" type="button" tabindex="-1" data-tile="' + i + ':' + j + '"' + (t.img ? ' style="background-image:url(\'' + esc(t.img) + '\')"' : '') + '>' +
-            (t.img ? '' : '<span class="em">' + (GICO[B.g] || '🍽') + '</span>') + '<span class="bd">' + esc(tileBadge(t)) + '</span>' + (c ? '<span class="qy">' + c + '</span>' : '') +
-            '<span class="nm">' + esc(nm[0]) + (nm[1] ? '<small>' + esc(nm[1]) + '</small>' : '') + '</span></button>';
-        }).join('') + '</div>' + (rest.length ? '<div class="rest">' + rest.map(function(t, j){
-          var c = qn(t), nm = splitName(t.b), sub = nm[1] || (t.items.length > 1 ? tileBadge(t) : money(t.items[0].p));
-          return '<button class="rt" type="button" tabindex="-1" data-tile="' + i + ':' + (j + 8) + '"><b>' + esc(nm[0]) + '</b><small>' + esc(sub) + '</small>' + (c ? '<span class="qy">' + c + '</span>' : '') + '</button>';
-        }).join('') + '</div>' : '') + '</div>';
+      var col = gcol(B.g), L = LINES[B.g], groups;
+      if (L) {
+        groups = L.map(function(x){ return { lb: x[0], re: x[1], ts: [] }; });
+        B.tiles.forEach(function(t, j){ t.dg = B.g; for (var k = 0; k < groups.length; k++) if (groups[k].re.test(t.b)) { groups[k].ts.push(j); return; } });
+        groups = groups.filter(function(x){ return x.ts.length; });
+      } else { B.tiles.forEach(function(t){ t.dg = B.g; }); groups = [{ lb: '', ts: B.tiles.map(function(t, j){ return j; }) }]; }
+      return '<div class="band" id="band' + i + '" style="--c:' + col + '"><h3><b>' + (i + 1) + ' · ' + esc(B.g) + '</b><small>' + B.tiles.length + ' món · Alt+' + (i + 1) + '</small></h3>' +
+        groups.map(function(G){
+          return (G.lb && groups.length > 1 ? '<div class="lnl">' + esc(G.lb) + '</div>' : '') + '<div class="tg">' +
+            G.ts.map(function(j){ return tileHtml(B.tiles[j], 'data-tile="' + i + ':' + j + '"', col); }).join('') + '</div>';
+        }).join('') + '</div>';
     }).join('');
     g.scrollTop = st;
   }
