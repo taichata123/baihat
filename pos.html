@@ -721,8 +721,9 @@
     var w = +S.bep_w, fs = w === 80 ? 4 : 3.4, pad = w === 80 ? 4 : 2;
     var h = '<div style="width:' + w + 'mm;padding:3mm ' + pad + 'mm 6mm;font-size:' + fs + 'mm">' +
       '<div style="text-align:center;font-weight:800">PHIẾU BẾP · ' + esc(S.shop) + '</div>' +
-      '<div style="text-align:center;font-size:' + (fs * 2.4) + 'mm;font-weight:900;line-height:1.05">#' + esc(o.code) + '</div>' +
-      '<div style="display:flex;justify-content:space-between;font-weight:700"><span>' + esc(o.name) + '</span><span>' + (o.pager ? 'Thẻ rung ' + esc(o.pager) : '') + '</span></div>' +
+      /* Tài 20/11: số to ở giữa là THẺ rung (bếp giao món theo thẻ), mã đơn in nhỏ bên phải; không có thẻ thì giữ mã đơn to */
+      '<div style="text-align:center;font-size:' + (fs * 2.4) + 'mm;font-weight:900;line-height:1.15;margin-top:1.5mm">' + (o.pager ? 'THẺ ' + esc(o.pager) : '#' + esc(o.code)) + '</div>' +
+      '<div style="display:flex;justify-content:space-between;font-weight:700"><span>' + esc(o.name) + '</span><span>' + (o.pager ? 'Mã đơn #' + esc(o.code) : '') + '</span></div>' +
       '<div style="display:flex;justify-content:space-between"><span>' + hhmm(o.paidAt || o.created || Date.now()) + ' ' + dmy(o.paidAt || o.created || Date.now()).slice(0,5) + '</span><span>' + (o.src === 'QR' ? 'Đơn QR' : o.src === 'NV' ? 'Order tại bàn' : 'Tại quầy') + (o.mode === 'Đêm nhạc' ? ' · Đêm nhạc' : '') + '</span></div>' +
       (o.src && o.src !== 'Quầy' ? '<div style="text-align:center;font-weight:900;font-size:' + (fs * 1.5) + 'mm;border:.5mm solid #000;margin-top:1mm">' + (o.src === 'NV' ? 'NV ORDER' + (o.nv ? ' · ' + esc(o.nv) : '') : 'QR ORDER') + '</div>' : '') +
       (o.togo ? '<div style="text-align:center;font-weight:900;font-size:' + (fs * 1.5) + 'mm;background:#000;color:#fff;margin-top:1mm">★ MANG ĐI ★</div>' : '') +
