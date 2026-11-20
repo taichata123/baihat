@@ -611,7 +611,7 @@
 <div class="toast" id="toast" hidden></div>
 <iframe id="printFrame" title="in"></iframe>
 
-<script src="chata-api.js?v=nv2"></script>
+<script src="chata-api.js?v=nv3"></script>
 <script>
 (function(){
   var API = 'https://script.google.com/macros/s/AKfycbxvRhb0Jjbrokyew1RBqWwBTCiqSIsvciWx_Vns9LeOs9LLCvTJcxOk71-7CMKuI1I/exec';
@@ -955,7 +955,7 @@
     });
   }, 20000);
   /* Đơn nhân viên order tại bàn: máy quầy (bản cài) tự in phiếu bếp + tem ly phần món mới (Tài 20/11) */
-  var NVP = {};
+  var NVP = {}, MORE = {};
   function nvAutoPrint(d){
     if (!NATIVE || !d || !d.pending) return;
     d.pending.forEach(function(o){
@@ -973,6 +973,8 @@
     var ids = qr.map(function(o){ return o.id; });
     if (seenQr && ids.some(function(id){ return seenQr.indexOf(id) < 0; })) { ting(); toast('🧾 Có đơn QR mới', 5000); }
     ids.forEach(function(id){ if (!QRING[id]) QRING[id] = { at: Date.now(), n: 0 }; });
+    /* Khách gọi thêm món trên trang QR (Tài 20/11): đơn báo lại "chưa xác nhận" + kêu ting ting */
+    qr.forEach(function(o){ if (o.more && MORE[o.id] !== undefined && MORE[o.id] !== o.more) { ting(); toast('➕ #' + o.code + ' (' + o.name + ') gọi thêm món – mở đơn, xác nhận (F4) rồi F3 in món thêm', 7000); QRING[o.id] = { at: Date.now(), n: 0 }; } MORE[o.id] = o.more || 0; });
     seenQr = ids;
     $('bAll').textContent = d.pending.length; $('bAll').classList.toggle('z', !d.pending.length);
     $('bQr').textContent = qr.length; $('bQr').classList.toggle('z', !qr.length);
@@ -1005,7 +1007,7 @@
       return '<div class="oc' + (qr ? ' qr' : '') + (qr && !o.ack ? ' qnew' : '') + (Date.now() - o.created > 30 * 60000 ? ' late' : '') + '" data-open="' + o.id + '">' +
         '<div class="h"><span class="src">' + (nvo ? '🧾 NV · ' + esc(o.nv || '') : qr ? (o.ack ? 'QR ✓' : 'QR · chưa xác nhận') + (o.pager ? ' · trả khi lấy món' : '') : 'Tại quầy') + (o.togo ? ' · 🥡 Mang đi' : '') + '</span><span>⏱ ' + ago(o.created) + '</span></div>' +
         '<div class="c">#' + esc(o.code) + (o.pager ? ' <small style="font-size:13px;color:#0A8F5F">· Bàn ' + esc(o.pager) + '</small>' : '') + '</div><div class="n">' + esc(o.name) + '</div>' +
-        (qr && !nvo ? ctTag(o) : '') +
+        (qr && !nvo ? ctTag(o) : '') + (qr && !o.ack && o.more ? '<div style="margin:4px 0;background:#FFF3C4;border:1.5px solid #F2B544;border-radius:8px;padding:3px 8px;font-weight:700;font-size:13px">➕ Khách gọi thêm món</div>' : '') +
         '<div class="it">' + o.items.map(function(i){ return i.q + '× ' + esc(i.n); }).join(', ') + '</div>' +
         '<div class="f"><span>' + o.items.reduce(function(s, i){ return s + i.q; }, 0) + ' món</span><b class="num">' + money(o.total) + 'đ</b></div>' +
         '<div class="a"><button type="button" data-open="' + o.id + '">Mở đơn</button>' + (qr && !nvo && o.ack ? rdyBtn(o) : '') + '<button type="button" data-pay="' + o.id + '">Thanh toán</button></div></div>';

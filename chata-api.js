@@ -251,7 +251,7 @@
       src: o.src || 'QR', cashier: o.cashier || '', by: o.createdBy || (log.length ? log[0].by : ''),
       gross: o.gross || o.total || 0, discAmt: o.discAmt || 0, disc: o.disc || null, togo: !!o.togo,
       ack: o.ack && o.ack.at || 0, ackBy: o.ack && o.ack.by || '',
-      ready: o.ready && o.ready.at || 0, readyBy: o.ready && o.ready.by || '', askPhone: o.askPhone || 0,
+      ready: o.ready && o.ready.at || 0, readyBy: o.ready && o.ready.by || '', askPhone: o.askPhone || 0, more: o.more && o.more.at || 0, moreX: o.more && o.more.x || '',
       nv: o.nvName || '', autoPrint: !!o.autoPrint };
   }
   function save(ref, data, merge) {
