@@ -152,7 +152,14 @@
   .qn.need{border-color:var(--bad);color:var(--bad);animation:shk .25s 2}
   @keyframes shk{50%{transform:translateX(3px)}}
   .tgo{display:flex!important;align-items:center;gap:10px;font-size:15px!important;font-weight:600;margin-top:14px!important}.tgo input{width:22px;height:22px;margin:0}
-  .sec{scroll-margin-top:112px}
+  .sec{scroll-margin-top:150px}
+  /* 20/11: 2 tab lớn Đồ uống | Đồ ăn */
+  .tabs2{display:flex;gap:8px;padding:8px 12px 0}
+  .tabs2 button{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:10px 6px;font-weight:700;font-size:15.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+  .tabs2 button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .tabs2 button i{font-style:normal;background:var(--sun);color:#2b2118;border-radius:999px;min-width:20px;height:20px;font-size:12px;display:inline-flex;align-items:center;justify-content:center;padding:0 6px}
+.cb.noim .qy{position:static;flex:none}
+  .ci .opts{margin-top:6px;gap:6px}.ci .qn{padding:4px 10px;font-size:12.5px}
   .askp .r{display:flex;gap:8px}.askp input{flex:1}.askp button{border:none;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;padding:0 16px;font-size:15px;cursor:pointer}
 </style>
 </head>
@@ -167,7 +174,7 @@
   <!-- Banner sự kiện (Tài 19/11): đêm nhạc thứ Ba -->
   <div class="addbar wrap" id="addBar" hidden></div>
   <div class="wrap" id="evTop" style="padding:10px 12px 0" hidden></div>
-  <div class="stk" id="stk"><div class="srch"><input id="q" type="search" placeholder="🔍 Tìm món… (VD: trà vải, tv)" autocomplete="off" enterkeyhint="search" aria-label="Tìm món"></div><div class="cats" id="cats"></div></div>
+  <div class="stk" id="stk"><div class="srch"><input id="q" type="search" placeholder="🔍 Tìm món… (VD: trà vải, tv)" autocomplete="off" enterkeyhint="search" aria-label="Tìm món"></div><div class="tabs2" id="tabs2"><button type="button" data-k="u" class="on">🥤 Đồ uống</button><button type="button" data-k="a">🍜 Đồ ăn</button></div><div class="cats" id="cats"></div></div>
   <div class="wrap" style="padding:0 12px"><div id="menu"><div class="empty">Đang tải menu…</div></div><div class="pad"></div></div>
   <div class="bar"><button id="cartBtn" type="button" disabled><span><span class="ct" id="cartN">0</span><span id="cartCnt">Chưa chọn món</span></span><span id="cartTot">0đ</span></button></div>
 </div>
@@ -346,10 +353,18 @@
       var ev = evList(d.events); $('evTop').hidden = !ev.length; $('evTop').innerHTML = ev.length ? evHtml(ev[0]) : '';
       CART = CART.filter(function(c){ return MENU.some(function(m){ return m.n === c.n; }); }).map(function(c){ var m = MENU.filter(function(x){ return x.n === c.n; })[0]; c.p = m.p; return c; });
       build();
-      $('cats').innerHTML = GROUPS.map(function(G, i){ return '<button type="button" class="chip' + (i ? '' : ' on') + '" data-g="' + i + '">' + (ICO[G.g] || '') + ' ' + esc(grpName(G.g)) + '</button>'; }).join('');
       draw();
     }
   }
+  /* 2 tab lớn (Tài 20/11): khách thấy ngay quán có cả đồ ăn; Kem, Khác xếp vào Đồ uống */
+  var TAB = 'u', FOOD = ['Mì cay - Bánh mì chảo', 'Đồ chiên', 'Ăn vặt'];
+  function tabOf(g){ return FOOD.indexOf(g) >= 0 ? 'a' : 'u'; }
+  function drawCats(){
+    $('cats').innerHTML = GROUPS.map(function(G, i){ return tabOf(G.g) !== TAB ? '' : '<button type="button" class="chip" data-g="' + i + '">' + (ICO[G.g] || '') + ' ' + esc(grpName(G.g)) + '</button>'; }).join('');
+    var n = { u: 0, a: 0 }; CART.forEach(function(c){ n[tabOf(c.dg || c.g)] += c.q; });
+    Array.prototype.forEach.call($('tabs2').children, function(b){ var k = b.getAttribute('data-k'); b.classList.toggle('on', k === TAB); b.innerHTML = (k === 'u' ? '🥤 Đồ uống' : '🍜 Đồ ăn') + (n[k] ? ' <i>' + n[k] + '</i>' : ''); });
+  }
+  $('tabs2').addEventListener('click', function(e){ var b = e.target.closest('[data-k]'); if (!b || b.getAttribute('data-k') === TAB) return; TAB = b.getAttribute('data-k'); if (QS) { QS = ''; $('q').value = ''; } draw(); var top = $('menu').getBoundingClientRect().top + window.scrollY - $('stk').offsetHeight - 6; window.scrollTo(0, Math.max(0, Math.min(window.scrollY, top))); });
   /* Tìm món (Tài 20/11): gõ có dấu / không dấu, hoặc chữ đầu (tv = Trà vải) */
   var QS = '';
   function nrm(s){ return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim(); }
@@ -361,17 +376,18 @@
   function draw(){
     var q = nrm(QS), found = 0;
     $('menu').innerHTML = GROUPS.map(function(G, i){
+      if (!q && tabOf(G.g) !== TAB) return ''; /* đang tìm thì tìm cả 2 tab */
       var any = G.tiles.some(function(t){ return hit(t, q); }); if (!any) return '';
       return '<section class="sec" id="g' + i + '"><h2>' + (ICO[G.g] || '') + ' ' + esc(grpName(G.g)) + ' <small>' + G.tiles.length + ' món</small></h2><div class="gb">' +
         G.tiles.map(function(t, j){
           if (!hit(t, q)) return ''; found++;
           var q2 = qtyT(t), sb = subLbl(t), k = i + ':' + j;
-          return '<div class="cb" data-t="' + k + '">' + imgBox(t.img, t.g, 'im') + (q2 ? '<span class="qy">' + q2 + '</span>' : '') +
+          return '<div class="cb' + (t.img ? '' : ' noim') + '" data-t="' + k + '">' + imgBox(t.img, t.g, 'im') + (q2 ? '<span class="qy">' + q2 + '</span>' : '') +
             '<div class="tx"><div class="nm">' + esc(nameLbl(t)) + '</div>' + (sb ? '<div class="sb">' + esc(sb) + '</div>' : '') + '<div class="pb">' + priceLbl(t) + '</div></div>' +
             '<button class="plus" type="button" data-p="' + k + '" aria-label="Thêm ' + esc(nameLbl(t)) + '">+</button></div>';
         }).join('') + '</div></section>';
     }).join('') || (q ? '<div class="empty">Không thấy món “' + esc(QS) + '”. Bạn thử gõ tên khác nhé.</div>' : '<div class="empty">Chưa có món.</div>');
-    drawBar(); markCat(); lazyImgs($('menu'));
+    drawCats(); drawBar(); markCat(); lazyImgs($('menu'));
   }
   function drawBar(){
     var cnt = 0, tot = 0; CART.forEach(function(c){ cnt += c.q; tot += c.q * c.p; });
@@ -393,15 +409,16 @@
     var p = e.target.closest('[data-p]'), t;
     /* mì cay cần chọn cấp độ: bấm + cũng mở bảng chọn (Tài 19/11) */
     if (p) { t = tileOf(p.getAttribute('data-p')); if (!t) return; if (kinds(t) || /^Mì cay/.test(t.b)) return openItem(t); return addCart(defItem(t), 1, ''); }
-    var c = e.target.closest('[data-t]'); if (c && (t = tileOf(c.getAttribute('data-t')))) openItem(t);
+    /* 20/11 (Tài): bấm vào món cũng thêm thẳng vào đơn như nút +; ghi chú sửa trong giỏ hàng */
+    var c = e.target.closest('[data-t]'); if (c && (t = tileOf(c.getAttribute('data-t')))) { if (kinds(t) || /^Mì cay/.test(t.b)) return openItem(t); addCart(defItem(t), 1, ''); }
   });
   $('cats').addEventListener('click', function(e){ var b = e.target.closest('[data-g]'); if (!b) return; var s = $('g' + b.getAttribute('data-g')); if (s) window.scrollTo({ top: s.getBoundingClientRect().top + window.scrollY - $('stk').offsetHeight + 2, behavior: 'smooth' }); });
   $('q').addEventListener('input', function(){ QS = this.value; draw(); var top = $('menu').getBoundingClientRect().top + window.scrollY - $('stk').offsetHeight - 6; if (window.scrollY > top) window.scrollTo(0, Math.max(0, top)); });
   function markCat(){
     if ($('menuView').hidden) return;
-    var y = $('stk').offsetHeight + Math.min(160, window.innerHeight * 0.22), on = 0; /* 20/11: sáng đúng nhóm đang xem */
-    GROUPS.forEach(function(G, i){ var s = $('g' + i); if (s && s.getBoundingClientRect().top <= y) on = i; });
-    Array.prototype.forEach.call($('cats').children, function(c, i){ var o = i === on; if (o !== c.classList.contains('on')) { c.classList.toggle('on', o); if (o) c.scrollIntoView({ inline: 'center', block: 'nearest' }); } });
+    var y = $('stk').offsetHeight + Math.min(160, window.innerHeight * 0.22), on = -1; /* 20/11: sáng đúng nhóm đang xem */
+    GROUPS.forEach(function(G, i){ var s = $('g' + i); if (s && (on < 0 || s.getBoundingClientRect().top <= y)) on = i; });
+    Array.prototype.forEach.call($('cats').children, function(c){ var o = +c.getAttribute('data-g') === on; if (o !== c.classList.contains('on')) { c.classList.toggle('on', o); if (o) c.scrollIntoView({ inline: 'center', block: 'nearest' }); } });
   }
   window.addEventListener('scroll', markCat, { passive: true });
 
@@ -419,6 +436,7 @@
     $('iHero').hidden = !t.img;
     $('iQnL').innerHTML = /^Mì cay/.test(t.b) ? 'Cấp độ cay * <small>(bắt buộc · 0 = không cay → 7 = cay nhất)</small>' : 'Ghi chú <small>(chọn nhanh hoặc tự gõ)</small>';
     $('iNote').value = ''; $('iErr').hidden = true;
+    var mc = /^Mì cay/.test(t.b); $('iQnL').hidden = !mc; $('iQn').hidden = !mc || !qn.length; $('iNote').hidden = true; /* chỉ mì cay chọn cấp; ghi chú khác sửa trong giỏ */
     $('iNote').placeholder = kindT(t) === 'bep' ? 'VD: không hành, thêm rau…' : kindT(t) === 'bar' ? 'VD: ít ngọt, thêm ống hút…' : 'Ghi chú thêm (nếu có)…';
     var ul = upTiles(kindT(t) === 'bar' ? 'bar' : 'bep', [t]); $('iUp').hidden = !ul.length; $('iUps').innerHTML = upHtml(ul); lazyImgs($('iUps'));
     drawItem(); $('itModal').hidden = false; lockBody(true);
@@ -472,7 +490,8 @@
     $('ckLines').innerHTML = CART.map(function(c, k){
       tot += c.q * c.p;
       return '<div class="ci">' + imgBox(c.img, c.dg || c.g, 'im') + '<div class="tx"><div class="nm">' + esc(c.n) + '</div>' +
-        (EDIT === k ? '<input class="ein" id="eIn" maxlength="60" value="' + esc(c.t) + '" placeholder="VD: ít đá, cấp 3…"><span class="ed" data-sv="' + k + '">Lưu ghi chú</span>'
+        szBtn(c, k) +
+        (EDIT === k ? '<input class="ein" id="eIn" maxlength="60" value="' + esc(c.t) + '" placeholder="VD: ít đá, cấp 3…">' + qcHtml(c) + '<span class="ed" data-sv="' + k + '">Lưu ghi chú</span>'
           : (c.t ? '<div class="nt">✎ ' + esc(c.t) + '</div>' : '') + '<span class="ed" data-ed="' + k + '">' + (c.t ? 'Sửa ghi chú' : '+ Ghi chú') + '</span>') +
         '</div><div class="rt"><b>' + money(c.p * c.q) + '</b><div class="stp"><button type="button" data-m="' + k + '" aria-label="Bớt">−</button><b>' + c.q + '</b><button type="button" data-a="' + k + '" aria-label="Thêm">+</button></div></div></div>';
     }).join('');
@@ -482,6 +501,12 @@
     lazyImgs($('ckLines'));
     if (!CART.length) closeCk();
   }
+  /* Giỏ hàng (Tài 20/11): ghi chú chọn nhanh ngay dưới ô ghi chú; món có size đổi M ⇄ L tại đây */
+  function tileByName(n){ var r = null; GROUPS.forEach(function(G){ G.tiles.forEach(function(t){ if (!r && t.items.some(function(m){ return m.n === n; })) r = t; }); }); return r; }
+  function szBtn(c, k){ var t = tileByName(c.n); if (!t || !sizes(t)) return ''; var cur = t.items.filter(function(m){ return m.n === c.n; })[0], nx = t.items[(t.items.indexOf(cur) + 1) % t.items.length];
+    return '<span class="ed" data-sz="' + k + '" style="margin-right:12px">Size ' + esc(sLbl(cur.s)) + ' ⇄ đổi ' + esc(sLbl(nx.s)) + ' (' + money(nx.p) + ')</span>'; }
+  function qcHtml(c){ var t = tileByName(c.n), qn = qnFor(c.dg || c.g, t ? t.b : c.n), cur = (c.t || '').split(/\s*,\s*/);
+    return qn.length ? '<div class="opts">' + qn.map(function(x){ return '<button type="button" class="qn' + (cur.indexOf(x) >= 0 ? ' on' : '') + '" data-qc="' + esc(x) + '">' + esc(x) + '</button>'; }).join('') + '</div>' : ''; }
   function saveEdit(){ if (EDIT >= 0 && $('eIn') && CART[EDIT]) { CART[EDIT].t = $('eIn').value.trim().slice(0, 60); saveCart(); } EDIT = -1; }
   function openCk(){
     try { var me = JSON.parse(localStorage.getItem('chata_me') || '{}'); if (me.n && !$('cName').value) $('cName').value = me.n; if (me.p && !$('cPhone').value) $('cPhone').value = me.p; } catch(e){}
@@ -498,9 +523,24 @@
     else if ((b = e.target.closest('[data-a]'))) { saveEdit(); var a = CART[+b.getAttribute('data-a')]; a.q = Math.min(50, a.q + 1); }
     else if ((b = e.target.closest('[data-ed]'))) { saveEdit(); EDIT = +b.getAttribute('data-ed'); drawCk(); var el = $('eIn'); if (el) { el.focus(); var L = el.value.length; try { el.setSelectionRange(L, L); } catch (x) {} } return; }
     else if ((b = e.target.closest('[data-sv]'))) saveEdit();
+    else if ((b = e.target.closest('[data-qc]'))) {
+      var x = b.getAttribute('data-qc'), el = $('eIn'), L = (el ? el.value : '').split(/\s*,\s*/).filter(Boolean), j = L.indexOf(x);
+      if (j >= 0) L.splice(j, 1); else { if (/^Cấp /.test(x)) L = L.filter(function(y){ return !/^Cấp /.test(y); }); if (/đá$/.test(x)) L = L.filter(function(y){ return !/đá$/.test(y); }); L.push(x); }
+      if (el) { el.value = L.join(', '); el.focus(); }
+      Array.prototype.forEach.call(b.parentNode.children, function(y){ y.classList.toggle('on', L.indexOf(y.getAttribute('data-qc')) >= 0); });
+      return;
+    }
+    else if ((b = e.target.closest('[data-sz]'))) {
+      saveEdit(); var c = CART[+b.getAttribute('data-sz')], t = c && tileByName(c.n); if (!t) return;
+      var cur = t.items.filter(function(m){ return m.n === c.n; })[0], nx = t.items[(t.items.indexOf(cur) + 1) % t.items.length];
+      var dup = CART.filter(function(o){ return o !== c && o.n === nx.n && (o.t || '') === (c.t || ''); })[0];
+      if (dup) { dup.q = Math.min(50, dup.q + c.q); CART.splice(CART.indexOf(c), 1); } else { c.n = nx.n; c.p = nx.p; if (nx.img) c.img = nx.img; }
+    }
     else return;
     saveCart(); drawCk();
   });
+  /* bấm chip ghi chú không làm mất con trỏ trong ô ghi chú */
+  ['mousedown', 'pointerdown'].forEach(function(ev){ $('ckLines').addEventListener(ev, function(e){ if (e.target.closest('[data-qc]')) e.preventDefault(); }); });
   $('ckLines').addEventListener('keydown', function(e){ if (e.target.id === 'eIn' && e.key === 'Enter') { e.preventDefault(); saveEdit(); saveCart(); drawCk(); } });
   /* rời ô ghi chú (bấm chỗ khác) thì tự lưu, không cần bấm "Lưu ghi chú" */
   $('ckLines').addEventListener('focusout', function(e){ if (e.target.id === 'eIn') setTimeout(function(){ if (EDIT >= 0 && document.activeElement !== $('eIn')) { saveEdit(); saveCart(); drawCk(); } }, 150); });
