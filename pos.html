@@ -142,6 +142,20 @@
   .chead input{border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-width:0}
   .chead .nm{flex:1 1 150px}.chead .ph{flex:1 1 110px}.chead .pg{width:80px}
   .ocode{width:100%;display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+  /* Nhiều đơn cùng lúc (Tài 20/11, giống KiotViet) */
+  .otabs{display:flex;gap:4px;align-items:stretch;overflow-x:auto;background:var(--nav2);padding:6px 6px 0;scrollbar-width:thin}
+  .otab{flex:none;display:flex;align-items:center;gap:6px;max-width:190px;background:#5A6E8C;color:#E8EEF7;border:none;border-radius:8px 8px 0 0;padding:6px 8px 6px 10px;cursor:pointer;font:inherit;font-size:13px;text-align:left;line-height:1.2}
+  .otab b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .otab small{display:block;opacity:.85;font-size:11.5px;white-space:nowrap}
+  .otab.on{background:#fff;color:var(--ink)}
+  .otab .x{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;opacity:.7}
+  .otab .x:hover{background:rgba(0,0,0,.15);opacity:1}
+  .otab .dt{width:7px;height:7px;border-radius:50%;background:var(--orange);flex:none}
+  .otadd,.othome{flex:none;border:none;border-radius:8px 8px 0 0;background:var(--green);color:#fff;font-weight:800;font-size:18px;padding:0 14px;cursor:pointer}
+  .othome{background:transparent;color:#C9D6EA;font-size:18px;margin-left:auto;padding:0 10px}
+  .tstrip{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--yellow);border-radius:10px;padding:8px 10px;margin:0 0 10px}
+  .tstrip>span{font-weight:700;font-size:13.5px;color:#6B4A00}
+  .tstrip button{border:1.5px solid #F2B544;background:#fff;border-radius:8px;padding:5px 10px;cursor:pointer;font:inherit;font-size:13px}
   .lines{flex:1;overflow:auto}
   .ln{display:grid;grid-template-columns:1fr auto auto;gap:4px 8px;padding:9px 10px;border-bottom:1px solid #EEF1F5;align-items:center}
   .ln .t{font-weight:600}
@@ -287,6 +301,7 @@
     </div>
   </div>
   <div class="home" id="homeView">
+    <div class="tstrip" id="tStrip" hidden></div>
     <div class="orders" id="orders"></div>
     <div class="paid" id="paidView" hidden></div>
     <div class="rep" id="repView" hidden></div>
@@ -323,6 +338,7 @@
     <div class="grid" id="grid"></div>
   </div>
   <div class="cart">
+    <div class="otabs" id="oTabs"></div>
     <div class="chead">
       <div class="ocode"><span id="oTitle">Đơn mới · Tại quầy</span><span id="oTime"></span></div>
       <div class="ackbar" id="ackBar" hidden><span>🔔 Đơn QR chưa xác nhận – kiểm tra món rồi bấm xác nhận để báo khách</span><button type="button" id="ackAsk" title="Khách chưa có thẻ rung, chưa để lại SĐT: trang QR của khách hiện ô nhập SĐT">📱 Xác nhận + xin SĐT</button><button type="button" id="ackBtn">✓ Xác nhận đơn (F4)</button></div>
@@ -871,8 +887,7 @@
   }
   function lockNow(){
     if (!PIN || LOCK) return;
-    if (!$('ordView').hidden && dirty()) { toast('Đang có đơn chưa lưu – lưu hoặc thoát đơn trước khi khóa.'); return; }
-    if (!$('ordView').hidden) closeOrder();
+    if (!$('ordView').hidden) goHome(); /* 20/11: đơn đang làm giữ ở tab, mở khóa xong làm tiếp */
     ['payModal','discModal','noteModal','tblModal','setModal','rfModal','apModal','openModal','closeModal'].forEach(function(id){ if ($(id)) $(id).hidden = true; });
     LOCK = true; ls('chata_lock', '1'); $('pw').value = ''; $('loginErr').hidden = true; show();
   }
@@ -998,6 +1013,7 @@
 
   function drawHome(){
     if (!D) return;
+    drawStrip();
     $('orders').hidden = TAB === 'paid' || TAB === 'rep'; $('paidView').hidden = TAB !== 'paid'; $('repView').hidden = TAB !== 'rep';
     if (TAB === 'paid') return drawPaid();
     if (TAB === 'rep') return;
@@ -1265,6 +1281,7 @@
   }
   function discLabel(d){ return d ? (d.promo || (d.t === '%' ? 'Giảm ' + d.v + '%' : 'Giảm ' + money(d.v) + 'đ')) : ''; }
   function drawCart(){
+    setTimeout(drawTabs, 0);
     calcO(); if (SEL >= O.items.length) SEL = O.items.length - 1;
     $('lines').innerHTML = O.items.length ? O.items.map(function(i, k){
       var da = lineDisc(i);
@@ -1331,9 +1348,47 @@
     var go = function(by){ d.by = by || ''; O.disc = d; $('discModal').hidden = true; drawCart(); toast('Đã giảm giá: ' + discLabel(d)); back(); };
     if (d.promo) go(D.me.name); else withApprove('Giảm giá đơn: ' + discLabel(d) + ' – ' + d.r, go);
   });
+  /* ---- Nhiều đơn cùng lúc (Tài 20/11, giống KiotViet): mỗi đơn đang làm là 1 tab; ＋ tạo đơn mới, đơn cũ giữ nguyên.
+     Đơn mới ở tab chưa in bếp / chưa trừ kho / chưa tính doanh thu cho tới khi F3 hoặc thanh toán. Lưu trên máy quầy (localStorage chata_tabs), quá 3 giờ tự bỏ. ---- */
+  var TABS = [], TCUR = -1, TSEQ = 0, TKEY = 'chata_tabs';
+  try { var _tb = JSON.parse(localStorage.getItem(TKEY) || 'null'); if (_tb && Array.isArray(_tb.tabs)) { TABS = _tb.tabs.filter(function(t){ return t && t.O && Date.now() - (t.at || 0) < 3 * 3600000; }); TSEQ = +_tb.seq || 0; } } catch(e){}
+  function tabsSave(){ try { localStorage.setItem(TKEY, JSON.stringify({ seq: TSEQ, tabs: TABS })); } catch(e){} }
+  function tabStash(){ if (O && TCUR >= 0 && TABS[TCUR]) { readHead(); TABS[TCUR].O = O; TABS[TCUR].O0 = O0; TABS[TCUR].SEL = SEL; TABS[TCUR].at = Date.now(); } tabsSave(); }
+  function tabLabel(t){ var o = t.O; return o.id ? '#' + o.code + (o.pager ? ' · Bàn ' + o.pager : '') : 'Đơn ' + t.n + (o.name && o.name !== 'Khách lẻ' ? ' · ' + o.name : ''); }
+  function tabDirty(t, i){ return i >= 0 && i === TCUR && O && TABS[i] === t ? dirty() : t.O0 !== undefined && JSON.stringify([t.O.items, t.O.name || '', t.O.phone || '', t.O.pager || '', t.O.note || '', t.O.disc || null, !!t.O.togo]) !== t.O0; }
+  function drawTabs(){
+    if (!$('oTabs')) return;
+    $('oTabs').innerHTML = TABS.map(function(t, i){
+      var it = t.O.items || [], n = it.reduce(function(s, x){ return s + x.q; }, 0), tot = it.reduce(function(s, x){ return s + x.p * x.q; }, 0);
+      return '<button type="button" class="otab' + (i === TCUR ? ' on' : '') + '" data-tab="' + i + '" title="' + esc(tabLabel(t)) + '">' + (tabDirty(t, i) && !t.O.id ? '' : tabDirty(t, i) ? '<span class="dt" title="Có thay đổi chưa lưu"></span>' : '') +
+        '<span style="min-width:0"><b>' + esc(tabLabel(t)) + '</b><small>' + (n ? n + ' món · ' + money(tot) + 'đ' : 'chưa có món') + '</small></span><span class="x" data-tx="' + i + '" title="Đóng đơn này">✕</span></button>';
+    }).join('') + '<button type="button" class="otadd" id="tabAdd" title="Tạo đơn mới (F1) – đơn đang làm vẫn giữ ở tab">＋</button><button type="button" class="othome" id="tabHome" title="Về danh sách đơn – các tab vẫn giữ">🏠</button>';
+  }
+  function drawStrip(){
+    var el = $('tStrip'); if (!el) return; el.hidden = !TABS.length;
+    el.innerHTML = TABS.length ? '<span>📝 Đơn đang làm dở:</span>' + TABS.map(function(t, i){ var n = (t.O.items || []).reduce(function(s, x){ return s + x.q; }, 0); return '<button type="button" data-tab="' + i + '">' + esc(tabLabel(t)) + ' · ' + n + ' món</button>'; }).join('') : '';
+  }
+  function tabShow(i){
+    var t = TABS[i]; if (!t) return;
+    if (t.O.id && D) { var fresh = D.pending.filter(function(x){ return x.id === t.O.id; })[0];
+      if (!fresh) { TABS.splice(i, 1); tabsSave(); toast('Đơn #' + t.O.code + ' đã được thanh toán / hủy ở nơi khác – đã đóng tab.', 4000); if (TABS.length) return tabShow(Math.min(i, TABS.length - 1)); return goHome(); }
+      if (!tabDirty(t, -1)) { t.O = JSON.parse(JSON.stringify(fresh)); t.O0 = undefined; } }
+    TCUR = i; fillOrder(t.O.id ? t.O : null, t.O);
+    if (t.O0 !== undefined) O0 = t.O0; else { O0 = snap(); t.O0 = O0; }
+    if (t.SEL != null) { SEL = t.SEL; drawCart(); }
+    tabsSave();
+  }
+  function goHome(){ tabStash(); O = null; TCUR = -1; $('ordView').hidden = true; drawHome(); }
   function openOrder(ord){
     if (needShift(function(){ openOrder(ord); })) return;
-    O = ord ? JSON.parse(JSON.stringify(ord)) : { id: null, code: '', src: 'Quầy', items: [], name: '', phone: '', pager: '', note: '', disc: null, togo: false, created: Date.now() };
+    if (ord) { var j = -1; TABS.forEach(function(t, k){ if (t.O.id === ord.id) j = k; }); if (j >= 0) { tabStash(); return tabShow(j); } }
+    tabStash();
+    var nO = ord ? JSON.parse(JSON.stringify(ord)) : { id: null, code: '', src: 'Quầy', items: [], name: '', phone: '', pager: '', note: '', disc: null, togo: false, created: Date.now() };
+    TABS.push({ O: nO, n: ord ? 0 : ++TSEQ, at: Date.now() }); TCUR = TABS.length - 1;
+    fillOrder(ord, nO); O0 = snap(); TABS[TCUR].O0 = O0; drawTabs(); tabsSave();
+  }
+  function fillOrder(ord, nO){
+    O = nO;
     O.togo = !!O.togo; SEL = O.items.length - 1; HL = 0; ITEM_DR = {};
     $('oTitle').textContent = ord ? ('Đơn #' + ord.code + ' · ' + (ord.src === 'Quầy' ? 'Tại quầy' : ord.src === 'NV' ? 'NV order · ' + (ord.nv || '') : 'QR')) : 'Đơn mới · Tại quầy';
     $('oTime').textContent = ord ? 'gửi ' + hhmm(ord.created) : '';
@@ -1343,10 +1398,26 @@
     $('moreBtn').hidden = true; $('cancelBtn').hidden = true; $('opsBtn').hidden = !ord;
     $('ackBar').hidden = !(ord && ord.src !== 'Quầy' && !ord.ack); ackAskShow();
     $('readyBtn').hidden = !(ord && ord.src === 'QR' && ord.ack && !ord.ready);
-    $('ordView').hidden = false; drawCats(); drawCart(); O0 = snap();
+    $('ordView').hidden = false; drawCats(); drawCart();
     setTimeout(function(){ if ($('payModal').hidden) $('search').focus(); }, 30);
   }
-  function closeOrder(){ $('ordView').hidden = true; O = null; drawHome(); }
+  /* đóng đơn đang mở (lưu / thanh toán xong, thoát, hủy): bỏ tab, chuyển sang tab còn lại hoặc về danh sách */
+  function closeOrder(){
+    if (TCUR >= 0) TABS.splice(TCUR, 1); O = null; TCUR = -1; tabsSave();
+    if (TABS.length) return tabShow(TABS.length - 1);
+    $('ordView').hidden = true; drawHome();
+  }
+  $('oTabs').addEventListener('click', function(e){
+    var x = e.target.closest('[data-tx]'), b = e.target.closest('[data-tab]');
+    if (e.target.closest('#tabAdd')) { openOrder(null); return; }
+    if (e.target.closest('#tabHome')) { goHome(); return; }
+    if (x) { var i = +x.getAttribute('data-tx'), t = TABS[i];
+      if (i === TCUR) { $('exitBtn').click(); return; }
+      if (tabDirty(t, i) && !confirm(t.O.id ? 'Đơn #' + t.O.code + ' có thay đổi chưa lưu. Đóng và bỏ thay đổi?' : 'Đóng và bỏ ' + tabLabel(t) + ' (' + (t.O.items || []).length + ' dòng món)?')) return;
+      TABS.splice(i, 1); if (i < TCUR) TCUR--; tabsSave(); drawTabs(); back(); return; }
+    if (b) { var k = +b.getAttribute('data-tab'); if (k === TCUR) return back(); tabStash(); tabShow(k); }
+  });
+  $('tStrip').addEventListener('click', function(e){ var b = e.target.closest('[data-tab]'); if (!b) return; if (needShift(function(){})) return; tabShow(+b.getAttribute('data-tab')); });
   function readHead(){ O.name = $('cName').value.trim(); O.phone = $('cPhone').value.trim(); O.pager = $('cPager').value.trim(); O.note = $('cNote').value.trim(); }
   var O0 = '';
   function snap(){ return JSON.stringify([O.items, $('cName').value.trim(), $('cPhone').value.trim(), $('cPager').value.trim(), $('cNote').value.trim(), O.disc || null, !!O.togo]); }
@@ -1613,7 +1684,7 @@
     if (!o) return;
     askReason({ title: 'Hủy đơn #' + o.code, what: o.name + ' · ' + money(o.total) + 'đ · ' + (o.src === 'Quầy' ? 'Tại quầy' : 'Đơn QR'), ph: 'Bấm số 1–9 hoặc gõ lý do', list: rsList('cancel'),
       hint: 'Việc hủy được ghi lại cho quản lý xem sau.' }, function(why){
-      call('cashierUpdate', [PIN, o.id, 'cancel', { reason: why }]).then(function(r){ if (r.ok) { if (O && O.id === o.id) { $('ordView').hidden = true; O = null; } apply(r.data); toast('Đã hủy đơn #' + o.code); } else toast(r.msg, 4000); }, function(e){ toast('⚠️ ' + e.message, 4000); });
+      call('cashierUpdate', [PIN, o.id, 'cancel', { reason: why }]).then(function(r){ if (r.ok) { if (O && O.id === o.id) closeOrder(); else { TABS = TABS.filter(function(t){ return t.O.id !== o.id; }); tabsSave(); } apply(r.data); toast('Đã hủy đơn #' + o.code); } else toast(r.msg, 4000); }, function(e){ toast('⚠️ ' + e.message, 4000); });
     });
   }
   $('cancelBtn').addEventListener('click', function(){ if (!O || !O.id) return; cancelPending(D.pending.find(function(x){ return x.id === O.id; }) || O); });
@@ -1762,7 +1833,7 @@
       else if (e.key === 'F3') { e.preventDefault(); doSave(); }
       else if (e.key === 'F6') { e.preventDefault(); openDisc(); }
       else if (e.key === 'F2') { e.preventDefault(); $('search').focus(); $('search').select(); }
-      else if (e.key === 'F1') { e.preventDefault(); }
+      else if (e.key === 'F1') { e.preventDefault(); openOrder(null); }
       else if (e.key === 'F4') { e.preventDefault(); doAck(false); }
       else if (e.key === 'F7') { e.preventDefault(); if (O && O.id) $('moreBtn').click(); else toast('Lưu đơn trước (F3) rồi mới báo bếp riêng.'); }
       else if (e.key === 'F8') { e.preventDefault(); $('togoBtn').click(); }
