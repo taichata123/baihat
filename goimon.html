@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chata – Gọi món</title>
+<link rel="preconnect" href="https://asia-southeast1-chata-checklist.cloudfunctions.net" crossorigin>
+<link rel="preconnect" href="https://wsrv.nl">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Lora:wght@600;700&display=swap">
 <style>
@@ -212,7 +214,7 @@
   </div>
 </div>
 
-<script src="chata-api.js"></script>
+<script src="goimon-api.js?v=1"></script>
 <script>
 (function(){
   var API = 'https://script.google.com/macros/s/AKfycbxvRhb0Jjbrokyew1RBqWwBTCiqSIsvciWx_Vns9LeOs9LLCvTJcxOk71-7CMKuI1I/exec';
@@ -252,7 +254,28 @@
   function nameLbl(t){ return t.items.length > 1 ? t.b : t.b.replace(/\s*\(.*\)$/, ''); }
   function grpName(g){ return SHORT[g] || g; }
   function qtyT(t){ return CART.filter(function(c){ return t.items.some(function(m){ return m.n === c.n; }); }).reduce(function(s, c){ return s + c.q; }, 0); }
-  function imgBox(src, g, cls){ return '<div class="' + cls + '"' + (src ? ' style="background-image:url(\'' + esc(src) + '\')"' : '') + '>' + (src ? '' : (ICO[g] || '🍽')) + '</div>'; }
+  /* Ảnh món (20/11/2026): tải bản thu nhỏ WebP qua wsrv.nl, chỉ khi ô món sắp hiện trên màn hình; lỗi thì dùng ảnh gốc */
+  var BG = {}, IO = null;
+  function thumb(src, w){ return /^https?:\/\//.test(src) ? 'https://wsrv.nl/?url=' + encodeURIComponent(src.replace(/^https?:\/\//, '')) + '&w=' + w + '&h=' + w + '&fit=cover&output=webp&q=72' : src; }
+  function loadBg(el){
+    var s = el.getAttribute('data-bg'), w = +el.getAttribute('data-w') || 160; if (!s) return; el.removeAttribute('data-bg');
+    var k = s + '|' + w; if (BG[k]) { el.style.backgroundImage = 'url(\'' + BG[k] + '\')'; return; }
+    var t = thumb(s, w), im = new Image();
+    im.onload = function(){ BG[k] = t; el.style.backgroundImage = 'url(\'' + t + '\')'; };
+    im.onerror = function(){ if (t === s) return; BG[k] = s; el.style.backgroundImage = 'url(\'' + s.replace(/'/g, '%27') + '\')'; };
+    im.src = t;
+  }
+  function lazyImgs(root){
+    var els = (root || document).querySelectorAll('[data-bg]');
+    if (!('IntersectionObserver' in window)) { Array.prototype.forEach.call(els, loadBg); return; }
+    IO = IO || new IntersectionObserver(function(es){ es.forEach(function(e){ if (e.isIntersecting) { IO.unobserve(e.target); loadBg(e.target); } }); }, { rootMargin: '300px 0px' });
+    Array.prototype.forEach.call(els, function(el){ IO.observe(el); });
+  }
+  function imgBox(src, g, cls){
+    if (!src) return '<div class="' + cls + '">' + (ICO[g] || '🍽') + '</div>';
+    var k = src + '|160';
+    return BG[k] ? '<div class="' + cls + '" style="background-image:url(\'' + esc(BG[k]) + '\')"></div>' : '<div class="' + cls + '" data-bg="' + esc(src) + '" data-w="160"></div>';
+  }
   function build(){
     var gi = {}; GROUPS = [];
     MENU.forEach(function(m){
@@ -302,7 +325,7 @@
             '<button class="plus" type="button" data-p="' + k + '" aria-label="Thêm ' + esc(nameLbl(t)) + '">+</button></div>';
         }).join('') + '</div></section>';
     }).join('') || '<div class="empty">Chưa có món.</div>';
-    drawBar(); markCat();
+    drawBar(); markCat(); lazyImgs($('menu'));
   }
   function drawBar(){
     var cnt = 0, tot = 0; CART.forEach(function(c){ cnt += c.q; tot += c.q * c.p; });
@@ -340,7 +363,8 @@
   function lockBody(on){ document.body.style.overflow = on ? 'hidden' : ''; }
   function openItem(t){
     CUR = t; SEL = defItem(t); Q = 1; QN = [];
-    $('iHero').style.backgroundImage = t.img ? 'url(\'' + t.img + '\')' : 'none'; $('iHero').textContent = t.img ? '' : (ICO[t.g] || '🍽');
+    var H = $('iHero'); H.style.backgroundImage = 'none'; H.textContent = t.img ? '' : (ICO[t.g] || '🍽');
+    if (t.img) { var hk = t.img + '|160'; if (BG[hk]) H.style.backgroundImage = 'url(\'' + BG[hk] + '\')'; H.setAttribute('data-bg', t.img); H.setAttribute('data-w', '720'); loadBg(H); }
     $('iName').textContent = nameLbl(t);
     $('iSizeW').hidden = t.items.length < 2; $('iSizeL').textContent = sizes(t) ? 'Chọn size' : 'Chọn loại';
     var qn = qnFor(t.g, t.b);
@@ -380,6 +404,7 @@
         '</div><div class="rt"><b>' + money(c.p * c.q) + '</b><div class="stp"><button type="button" data-m="' + k + '" aria-label="Bớt">−</button><b>' + c.q + '</b><button type="button" data-a="' + k + '" aria-label="Thêm">+</button></div></div></div>';
     }).join('');
     $('ckTot').textContent = money(tot); $('ckMix').hidden = !hasMix(CART);
+    lazyImgs($('ckLines'));
     if (!CART.length) closeCk();
   }
   function saveEdit(){ if (EDIT >= 0 && $('eIn') && CART[EDIT]) { CART[EDIT].t = $('eIn').value.trim().slice(0, 60); saveCart(); } EDIT = -1; }
