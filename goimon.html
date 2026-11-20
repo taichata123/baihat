@@ -161,6 +161,9 @@
 .cb.noim .qy{position:static;flex:none}
   .ci .opts{margin-top:6px;gap:6px}.ci .qn{padding:4px 10px;font-size:12.5px}
   .askp .r{display:flex;gap:8px}.askp input{flex:1}.askp button{border:none;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;padding:0 16px;font-size:15px;cursor:pointer}
+  /* Món thêm (topping) – Tài 20/11 */
+  .ads{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}.adc{display:inline-flex;align-items:center;border:1.5px solid var(--line);border-radius:999px;overflow:hidden;background:#fff}.adc.on{border-color:var(--accent);background:#E7F3F1}
+  .adc button{border:0;background:none;padding:6px 10px;font-size:13.5px;font-weight:600;cursor:pointer;color:inherit;font-family:inherit}.adc small{color:var(--muted);font-weight:500}.adc b{padding:0 2px;color:var(--accent)}.adc button[data-adm]{padding:6px 4px 6px 10px;font-size:16px}
 </style>
 </head>
 <body>
@@ -257,6 +260,22 @@
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
   function money(v){ return (Number(v)||0).toLocaleString('vi-VN') + 'đ'; }
   var KEY = 'chata_order', MENU = [], CART = [], GROUPS = [];
+  /* Món thêm (topping) theo nhóm Sapo – Tài 20/11/2026: chọn ở giỏ hàng, có số lượng; in ra như ghi chú */
+  var ADDONS = [];
+  function adFor(n){ var L = []; ADDONS.forEach(function(s){ var re; try { re = new RegExp(s.m, 'i'); } catch (e) { return; } if (re.test(n)) (s.o || []).forEach(function(o){ if (!L.some(function(x){ return x.n === o.n; })) L.push(o); }); }); return L; }
+  function adSum(c){ return (c.ad || []).reduce(function(s, a){ return s + a.p * a.q; }, 0); }
+  function adTxt(ad){ return (ad || []).map(function(a){ return '+ ' + (a.q > 1 ? a.q + ' ' : '') + a.n; }).join(', '); }
+  function adHtml(c, k){ var L = adFor(c.n); if (!L.length) return '';
+    return '<div class="ads">' + L.map(function(o){ var a = (c.ad || []).filter(function(x){ return x.n === o.n; })[0], q = a ? a.q : 0, v = k + '|' + esc(o.n);
+      return '<span class="adc' + (q ? ' on' : '') + '">' + (q ? '<button type="button" data-adm="' + v + '" aria-label="Bớt">−</button><b>' + q + '</b>' : '') + '<button type="button" data-adp="' + v + '">＋ ' + esc(o.n) + ' <small>' + money(o.p) + '</small></button></span>'; }).join('') + '</div>'; }
+  function adChange(c, n, d){ var o = adFor(c.n).filter(function(x){ return x.n === n; })[0]; if (!o) return;
+    var base = c.p0 != null ? c.p0 : c.p; c.ad = c.ad || []; var a = c.ad.filter(function(x){ return x.n === n; })[0];
+    if (!a) { if (d < 0) return; a = { n: n, p: o.p, q: 0 }; c.ad.push(a); }
+    a.q = Math.max(0, Math.min(10, a.q + d)); c.ad = c.ad.filter(function(x){ return x.q > 0; });
+    if (c.ad.length) { c.p0 = base; c.p = base + adSum(c); } else { delete c.ad; delete c.p0; c.p = base; } }
+  function adFix(c, base){ if (!c.ad) return; var L = adFor(c.n); c.ad = c.ad.filter(function(a){ return L.some(function(o){ return o.n === a.n; }); }).map(function(a){ return { n: a.n, p: L.filter(function(o){ return o.n === a.n; })[0].p, q: a.q }; });
+    if (c.ad.length) { c.p0 = base; c.p = base + adSum(c); } else { delete c.ad; delete c.p0; c.p = base; } }
+
   function getSaved(){ try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch(e){ return null; } }
   function setSaved(v){ try { if (v) localStorage.setItem(KEY, JSON.stringify(v)); else localStorage.removeItem(KEY); } catch(e){} }
   function show(v){ $('menuView').hidden = v !== 'menu'; $('closedView').hidden = v !== 'closed'; $('ticketView').hidden = v !== 'ticket'; }
@@ -349,10 +368,10 @@
   }
   function applyMenu(d){
     {
-      MENU = d.menu || [];
+      MENU = d.menu || []; ADDONS = d.addons || [];
       $('modeBadge').hidden = d.mode !== 'night';
       var ev = evList(d.events); $('evTop').hidden = !ev.length; $('evTop').innerHTML = ev.length ? evHtml(ev[0]) : '';
-      CART = CART.filter(function(c){ return MENU.some(function(m){ return m.n === c.n; }); }).map(function(c){ var m = MENU.filter(function(x){ return x.n === c.n; })[0]; c.p = m.p; return c; });
+      CART = CART.filter(function(c){ return MENU.some(function(m){ return m.n === c.n; }); }).map(function(c){ var m = MENU.filter(function(x){ return x.n === c.n; })[0]; c.p = m.p; adFix(c, m.p); return c; });
       build();
       draw();
     }
@@ -402,7 +421,7 @@
   function hasMix(list){ var k = {}; (list || []).forEach(function(i){ var g = i.g; if (!g) { var m = MENU.filter(function(x){ return x.n === i.n; })[0]; g = m && m.g; } k[kindOf(g)] = 1; }); return !!(k.bep && k.bar); }
   function addCart(m, q, note){
     note = String(note || '').slice(0, 60);
-    var c = CART.filter(function(c){ return c.n === m.n && (c.t || '') === note; })[0];
+    var c = CART.filter(function(c){ return c.n === m.n && (c.t || '') === note && !c.ad; })[0];
     if (c) c.q = Math.min(50, c.q + q); else CART.push({ n: m.n, p: m.p, q: q, t: note, img: m.img || '', g: m.g, dg: m.dg || m.g });
     saveCart(); draw(); toast('Đã thêm ' + q + ' × ' + m.n);
   }
@@ -490,7 +509,7 @@
     var tot = 0;
     $('ckLines').innerHTML = CART.map(function(c, k){
       tot += c.q * c.p;
-      return '<div class="ci">' + imgBox(c.img, c.dg || c.g, 'im') + '<div class="tx"><div class="nm">' + esc(c.n) + '</div>' +
+      return '<div class="ci">' + imgBox(c.img, c.dg || c.g, 'im') + '<div class="tx"><div class="nm">' + esc(c.n) + '</div>' + (c.ad ? '<div class="nt">' + esc(adTxt(c.ad)) + '</div>' : '') + adHtml(c, k) +
         szBtn(c, k) +
         (EDIT === k ? '<input class="ein" id="eIn" maxlength="60" value="' + esc(c.t) + '" placeholder="VD: ít đá, cấp 3…">' + qcHtml(c) + '<span class="ed" data-sv="' + k + '">Lưu ghi chú</span>'
           : (c.t ? '<div class="nt">✎ ' + esc(c.t) + '</div>' : '') + '<span class="ed" data-ed="' + k + '">' + (c.t ? 'Sửa ghi chú' : '+ Ghi chú') + '</span>') +
@@ -535,8 +554,9 @@
       saveEdit(); var c = CART[+b.getAttribute('data-sz')], t = c && tileByName(c.n); if (!t) return;
       var cur = t.items.filter(function(m){ return m.n === c.n; })[0], nx = t.items[(t.items.indexOf(cur) + 1) % t.items.length];
       var dup = CART.filter(function(o){ return o !== c && o.n === nx.n && (o.t || '') === (c.t || ''); })[0];
-      if (dup) { dup.q = Math.min(50, dup.q + c.q); CART.splice(CART.indexOf(c), 1); } else { c.n = nx.n; c.p = nx.p; if (nx.img) c.img = nx.img; }
+      if (dup) { dup.q = Math.min(50, dup.q + c.q); CART.splice(CART.indexOf(c), 1); } else { c.n = nx.n; c.p = nx.p; adFix(c, nx.p); if (nx.img) c.img = nx.img; }
     }
+    else if ((b = e.target.closest('[data-adp],[data-adm]'))) { saveEdit(); var pa = (b.getAttribute('data-adp') || b.getAttribute('data-adm')).split('|'), cc = CART[+pa[0]]; if (cc) adChange(cc, pa.slice(1).join('|'), b.hasAttribute('data-adp') ? 1 : -1); }
     else return;
     saveCart(); drawCk();
   });
@@ -552,7 +572,7 @@
     var name = $('cName').value.trim(), phone = $('cPhone').value.trim(), dg = phone.replace(/\D/g, '');
     if (!name) { ckErr('Bạn cho Chata xin tên để gọi khi tới quầy nhé.'); $('cName').focus(); return; }
     if (phone && (dg.length < 9 || dg.length > 12)) { ckErr('Số điện thoại chưa đúng, bạn kiểm tra lại hoặc để trống nhé.'); return; }
-    var items = CART.map(function(c){ var o = { n: c.n, q: c.q }; if (c.t) o.t = c.t; return o; });
+    var items = CART.map(function(c){ var o = { n: c.n, q: c.q }; if (c.t) o.t = c.t; if (c.ad) o.ad = c.ad.map(function(a){ return { n: a.n, q: a.q }; }); return o; });
     var btn = $('ckSend'); btn.disabled = true; btn.textContent = 'Đang gửi…';
     call('submitOrder', [{ name: name, phone: phone, pager: $('cPager').value.trim(), note: $('cNote').value, togo: $('cTogo').checked, items: items }]).then(function(r){
       btn.disabled = false; btn.textContent = 'Gửi đơn & nhận mã số';
@@ -569,7 +589,7 @@
   function drawAddBar(){ $('addBar').hidden = !ADD; $('addBar').innerHTML = ADD ? '<div><span>➕ Gọi thêm vào đơn <b>#' + esc(ADD.code) + '</b> · ' + esc(ADD.name) + '</span><button type="button" id="addX">Thôi</button></div>' : ''; }
   $('addBar').addEventListener('click', function(e){ if (e.target.id === 'addX') { ADD = null; CART = []; saveCart(); drawBar(); loadTicket(); window.scrollTo(0, 0); } });
   function sendMore(){
-    var items = CART.map(function(c){ var o = { n: c.n, q: c.q }; if (c.t) o.t = c.t; return o; });
+    var items = CART.map(function(c){ var o = { n: c.n, q: c.q }; if (c.t) o.t = c.t; if (c.ad) o.ad = c.ad.map(function(a){ return { n: a.n, q: a.q }; }); return o; });
     var btn = $('ckSend'), lbl = btn.textContent; btn.disabled = true; btn.textContent = 'Đang gửi…';
     call('addToOrder', [ADD.id, ADD.token, items, $('cTogo').checked]).then(function(r){
       btn.disabled = false; btn.textContent = lbl;
@@ -592,7 +612,7 @@
       var o = r.order; LAST = o;
       $('tCode').textContent = '#' + o.code;
       $('tName').textContent = o.name;
-      $('tLines').innerHTML = (o.items || []).map(function(i){ return '<div><span>' + i.q + '× ' + esc(i.n) + (i.t ? '<br><small style="color:var(--muted)">✎ ' + esc(i.t) + '</small>' : '') + '</span><span>' + money(i.p * i.q) + '</span></div>'; }).join('') +
+      $('tLines').innerHTML = (o.items || []).map(function(i){ return '<div><span>' + i.q + '× ' + esc(i.n) + (i.ad && i.ad.length ? '<br><small style="color:var(--muted)">' + esc(adTxt(i.ad)) + '</small>' : '') + (i.t ? '<br><small style="color:var(--muted)">✎ ' + esc(i.t) + '</small>' : '') + '</span><span>' + money(i.p * i.q) + '</span></div>'; }).join('') +
         (o.note ? '<div><span style="color:var(--muted)">Ghi chú: ' + esc(o.note) + '</span></div>' : '');
       $('tTot').textContent = money(o.total);
       var pend = o.status === 'Chờ thanh toán', paid = o.status === 'Đã thanh toán';

@@ -163,18 +163,30 @@
     var v = Number(o.dv) || 0; if (!o.dt || v <= 0) return 0;
     var g = o.p * o.q; return Math.min(g, o.dt === '%' ? Math.round(g * Math.min(v, 100) / 100) : Math.round(v) * o.q);
   }
+  /* Món thêm (topping) theo nhóm Sapo – Tài 20/11/2026: config/pos.addons = [{ n: tên nhóm, m: biểu thức tên món, o: [{ n, p }] }]
+     Dòng món có món thêm: ad = [{ n, p, q }] (q = số lượng mỗi món), p = giá món + món thêm, p0 = giá món gốc */
+  function addonsCfg() { var v = cfg().addons; return (Array.isArray(v) ? v : []).filter(function (s) { return s && s.m && Array.isArray(s.o); }).map(function (s) { return { n: clean(s.n, 60), m: String(s.m).slice(0, 120), o: s.o.filter(function (o) { return o && o.n && Number(o.p) >= 0; }).map(function (o) { return { n: clean(o.n, 40), p: Math.round(Number(o.p)) }; }) }; }); }
+  function addonsFor(n) { var L = []; addonsCfg().forEach(function (s) { var re; try { re = new RegExp(s.m, 'i'); } catch (e) { return; } if (re.test(n)) s.o.forEach(function (o) { if (!L.some(function (x) { return x.n === o.n; })) L.push(o); }); }); return L; }
+  function cleanAd(ad, n) {
+    var av = addonsFor(n), out = [];
+    (Array.isArray(ad) ? ad : []).forEach(function (a) { var o = av.filter(function (x) { return x.n === String(a && a.n || ''); })[0], q = Math.round(Number(a && a.q) || 0); if (!o || q < 1) return;
+      var ex = out.filter(function (x) { return x.n === o.n; })[0]; if (ex) ex.q = Math.min(10, ex.q + q); else out.push({ n: o.n, p: o.p, q: Math.min(10, q) }); });
+    return out.sort(function (a, b) { return av.indexOf(av.filter(function (x) { return x.n === a.n; })[0]) - av.indexOf(av.filter(function (x) { return x.n === b.n; })[0]); });
+  }
+  function adText(ad) { return (ad || []).map(function (a) { return '+ ' + (a.q > 1 ? a.q + ' ' : '') + a.n; }).join(', '); }
   function lines(items, menu, extra) {
     var price = {};
-    (extra || []).forEach(function (x) { price[x.n] = { g: x.g || '', p: x.p, vid: x.vid }; });
+    (extra || []).forEach(function (x) { price[x.n] = { g: x.g || '', p: x.p0 != null ? x.p0 : x.p, vid: x.vid }; });
     menu.forEach(function (m) { if (!price[m.n]) price[m.n] = { g: m.g, p: m.p, vid: m.vid }; else if (!price[m.n].vid && m.vid) price[m.n].vid = m.vid; });
     var out = [], total = 0, gross = 0, idisc = 0;
     (Array.isArray(items) ? items : []).slice(0, 60).forEach(function (it) {
       var n = String(it && it.n || ''), q = Math.round(Number(it && it.q) || 0), m = price[n], t = clean(it && it.t, 60);
       var dt = it && (it.dt === '%' || it.dt === 'đ') ? it.dt : '', dv = dt ? Math.max(0, Number(it.dv) || 0) : 0; if (!dv) dt = '';
       if (!m || q < 1 || q > 50) return;
-      var ex = out.filter(function (o) { return o.n === n && (o.t || '') === t && (o.dt || '') === dt && (o.dv || 0) === dv; })[0];
+      var ad = cleanAd(it && it.ad, n), ak = adText(ad), adp = ad.reduce(function (s, a) { return s + a.p * a.q; }, 0);
+      var ex = out.filter(function (o) { return o.n === n && (o.t || '') === t && (o.dt || '') === dt && (o.dv || 0) === dv && adText(o.ad) === ak; })[0];
       if (ex) ex.q = Math.min(50, ex.q + q);
-      else { var L = { n: n, g: m.g, p: m.p, q: q }; if (m.vid) L.vid = m.vid; if (t) L.t = t; if (dt) { L.dt = dt; L.dv = dv; } out.push(L); }
+      else { var L = { n: n, g: m.g, p: m.p + adp, q: q }; if (ad.length) { L.ad = ad; L.p0 = m.p; } if (m.vid) L.vid = m.vid; if (t) L.t = t; if (dt) { L.dt = dt; L.dv = dv; } out.push(L); }
     });
     out.forEach(function (o) { var da = lineDisc(o); if (da) o.da = da; else delete o.da; gross += o.p * o.q; idisc += da; });
     total = gross - idisc;
@@ -190,7 +202,7 @@
     return { gross: L.gross, itemDisc: L.idisc, disc: od, discAmt: L.idisc + amt, total: sub - amt };
   }
   // Báo bếp: chỉ in phần món mới so với lần báo trước (sent = [{k: tên|ghi chú, q}])
-  function kKey(i) { return i.n + '|' + (i.t || ''); }
+  function kKey(i) { return i.n + '|' + (i.t || '') + (i.ad && i.ad.length ? '|' + adText(i.ad) : ''); }
   function kitchenDelta(items, sent) {
     var had = {}, cur = {}, out = [], left = {};
     (Array.isArray(sent) ? sent : []).forEach(function (x) { had[x.k] = (had[x.k] || 0) + (Number(x.q) || 0); });
@@ -198,7 +210,7 @@
     Object.keys(cur).forEach(function (k) { left[k] = Math.max(0, cur[k] - (had[k] || 0)); });
     items.forEach(function (i) {
       var k = kKey(i), take = Math.min(i.q, left[k] || 0); if (take < 1) return; left[k] -= take;
-      var x = { n: i.n, g: i.g, p: i.p, q: take }; if (i.t) x.t = i.t; out.push(x);
+      var x = { n: i.n, g: i.g, p: i.p, q: take }; if (i.t) x.t = i.t; if (i.ad && i.ad.length) { x.ad = i.ad; x.p0 = i.p0; } out.push(x);
     });
     return { items: out, sent: Object.keys(cur).map(function (k) { return { k: k, q: cur[k] }; }) };
   }
@@ -386,7 +398,7 @@
       me: { code: u.c, name: u.n, role: u.r }, shift: shiftLive(u), revPending: u.r === 'manager' ? Object.keys(C.rev || {}).filter(function (k) { return C.rev[k].status === 'Chờ duyệt'; }).length : 0,
       mode: mode, modeSetting: modeSetting(), open: orderOpen(), tables: cleanTables(cfg().tables), promos: cleanPromos(cfg().promos),
       menu: menuFor(mode), night: mode === 'night' ? null : menuFor('night'), other: menuFor(mode === 'night' ? 'normal' : 'night'),
-      pending: pending, events: eventsCfg(), float: floatCfg(),
+      pending: pending, events: eventsCfg(), float: floatCfg(), addons: addonsCfg(),
       /* đơn QR đã thu tiền nhưng chưa báo món xong (3 giờ gần đây) – để thu ngân bấm "Món xong" */
       waiting: paid.filter(function (o) { return o.src === 'QR' && !(o.ready && o.ready.at) && Date.now() - (o.paidAt || 0) < 3 * 3600000; }).sort(function (a, b) { return a.paidAt - b.paidAt; }).map(pub),
       paid: paid.sort(function (a, b) { return b.paidAt - a.paidAt; }).slice(0, 40).map(pub),
@@ -495,7 +507,7 @@
 
   var API = {
     /* ===== Khách gọi món QR ===== */
-    getOrderMenu: function () { return wantCfg().then(function () { var mode = orderMode(); return { mode: mode, open: orderOpen(), events: eventsCfg(), menu: menuFor(mode).filter(function (m) { return !m.nq; }) }; }); },
+    getOrderMenu: function () { return wantCfg().then(function () { var mode = orderMode(); return { mode: mode, open: orderOpen(), events: eventsCfg(), menu: menuFor(mode).filter(function (m) { return !m.nq; }), addons: addonsCfg() }; }); },
     submitOrder: function (d) {
       d = d || {};
       return wantCfg().then(function () {
@@ -692,7 +704,7 @@
     staffMe: function () { return me().then(function (u) { return { ok: true, me: { code: u.c, name: u.n, role: u.r } }; }); },
     staffMenu: function () {
       return me().then(function () { return wantCfg(); }).then(function () {
-        var mode = orderMode(); return { ok: true, open: true, mode: mode, events: [], menu: menuFor(mode) };
+        var mode = orderMode(); return { ok: true, open: true, mode: mode, events: [], menu: menuFor(mode), addons: addonsCfg() };
       });
     },
     staffOrder: function (tok, d) {
