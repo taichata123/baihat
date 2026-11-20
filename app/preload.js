@@ -9,6 +9,7 @@ if (ALLOWED.indexOf(location.origin) >= 0 || location.protocol === 'file:') {
     setTitle: (t) => ipcRenderer.send('title', String(t || '')),
     updateReady: () => ipcRenderer.sendSync('update-state'),
     onUpdate: (cb) => ipcRenderer.on('update-ready', (e, v) => { try { cb(String(v)); } catch (x) {} }),
-    restart: () => ipcRenderer.send('restart')
+    restart: () => ipcRenderer.send('restart'),
+    refocus: (hard) => ipcRenderer.send('refocus', !!hard)
   });
 }

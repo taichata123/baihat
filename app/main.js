@@ -62,7 +62,7 @@ function createWindow() {
       if (input.key === 'F5') { child.webContents.reloadIgnoringCache(); e.preventDefault(); }
     });
     /* trả bàn phím về màn thu ngân */
-    setTimeout(() => { if (win && !win.isDestroyed()) win.focus(); }, 400);
+    setTimeout(() => refocus(true), 400);
   });
   win.on('closed', () => { for (const w of BrowserWindow.getAllWindows()) { try { w.destroy(); } catch (e) {} } });
   win.webContents.on('before-input-event', (e, input) => {
@@ -70,8 +70,10 @@ function createWindow() {
     if (input.key === 'F5') { win.webContents.reloadIgnoringCache(); e.preventDefault(); }
     if (input.key === 'F12') { win.webContents.toggleDevTools(); e.preventDefault(); }
     if (input.key === 'F11') { win.setFullScreen(!win.isFullScreen()); e.preventDefault(); }
+    if (input.control && !input.alt && (input.key === 'k' || input.key === 'K')) refocus(true);
   });
   win.on('page-title-updated', (e) => { e.preventDefault(); });
+  win.on('focus', () => { try { win.webContents.focus(); } catch (e) {} });
   // Tự kiểm tra cập nhật giao diện mỗi sáng: tải lại khi máy để không lúc 5h
   // Mỗi giờ: 5h sáng tải lại giao diện (và khởi động lại nếu có bản app mới); cứ 3 giờ kiểm tra cập nhật app
   setInterval(() => {
@@ -128,6 +130,16 @@ function checkUpdate(ms) {
   return checking;
 }
 function restartApp() { app.relaunch(); app.exit(0); }
+/* Lấy lại bàn phím cho màn thu ngân (lỗi Electron/Windows: ô nhập không nhận phím sau khi đóng cửa sổ in / hộp hỏi) — từ 1.3.0 */
+function refocus(hard) {
+  if (!win || win.isDestroyed() || win.isMinimized()) return;
+  try {
+    if (hard) { win.blur(); win.focus(); }
+    else if (!win.isFocused()) return;
+    win.webContents.focus();
+  } catch (e) {}
+}
+ipcMain.on('refocus', (e, hard) => refocus(!!hard));
 ipcMain.on('restart', () => { if (updateReady) restartApp(); });
 
 ipcMain.on('version', (e) => { e.returnValue = app.getVersion(); });
@@ -142,13 +154,26 @@ ipcMain.handle('printers', async () => {
 let queue = Promise.resolve();
 ipcMain.handle('print', (e, job) => { const p = queue.then(() => doPrint(job)); queue = p.catch(() => {}); return p; });
 
+/* Cửa sổ in ẩn dùng lại (không tạo/hủy mỗi lần in nữa, vì hủy cửa sổ làm Windows lấy mất bàn phím) — từ 1.3.0 */
+let printWin = null;
+function getPrintWin(wPx) {
+  if (!printWin || printWin.isDestroyed()) {
+    printWin = new BrowserWindow({ show: false, focusable: false, skipTaskbar: true, width: wPx, height: 800,
+      webPreferences: { sandbox: true, contextIsolation: true, javascript: true, offscreen: false } });
+    printWin.webContents.on('render-process-gone', () => { try { printWin.destroy(); } catch (x) {} printWin = null; });
+  } else { try { printWin.setSize(wPx, 800); } catch (x) {} }
+  return printWin;
+}
 function doPrint(job) {
   return new Promise((resolve) => {
     const w = Math.max(20, Number(job.widthMm) || 80);
-    const pw = new BrowserWindow({ show: false, width: Math.round(w / 25.4 * 96) + 20, height: 800,
-      webPreferences: { sandbox: true, contextIsolation: true, javascript: true, offscreen: false } });
+    const pw = getPrintWin(Math.round(w / 25.4 * 96) + 20);
     let done = false;
-    const finish = (r) => { if (done) return; done = true; resolve(r); setTimeout(() => { try { pw.destroy(); } catch (x) {} }, 500); };
+    const finish = (r) => {
+      if (done) return; done = true; resolve(r);
+      if (!r.ok) { try { pw.destroy(); } catch (x) {} printWin = null; }
+      setTimeout(() => refocus(false), 300);
+    };
     const timer = setTimeout(() => finish({ ok: false, error: 'Hết thời gian chờ máy in' }), 30000);
     pw.webContents.once('did-finish-load', async () => {
       try {
