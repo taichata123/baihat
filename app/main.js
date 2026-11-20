@@ -132,11 +132,14 @@ function checkUpdate(ms) {
 function restartApp() { app.relaunch(); app.exit(0); }
 /* Lấy lại bàn phím cho màn thu ngân (lỗi Electron/Windows: ô nhập không nhận phím sau khi đóng cửa sổ in / hộp hỏi) — từ 1.3.0 */
 function refocus(hard) {
-  if (!win || win.isDestroyed() || win.isMinimized()) return;
+  if (!win || win.isDestroyed()) return;
   try {
-    if (hard) { win.blur(); win.focus(); }
-    else if (!win.isFocused()) return;
-    win.webContents.focus();
+    if (!hard) { if (win.isFocused()) win.webContents.focus(); return; }
+    /* kéo cửa sổ thu ngân lên trước (không dùng blur: trên Windows blur đẩy cửa sổ ra sau) — 1.3.1 */
+    if (win.isMinimized()) win.restore();
+    const top = win.isAlwaysOnTop();
+    win.setAlwaysOnTop(true); win.show(); win.moveTop(); win.focus(); win.webContents.focus();
+    setTimeout(() => { try { if (!win.isDestroyed()) { win.setAlwaysOnTop(top); win.webContents.focus(); } } catch (e) {} }, 120);
   } catch (e) {}
 }
 ipcMain.on('refocus', (e, hard) => refocus(!!hard));
