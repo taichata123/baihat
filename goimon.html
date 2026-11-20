@@ -271,7 +271,8 @@
   var QN_DRINK = ['Ít đá','Không đá','Nhiều đá','Ít ngọt','Không đường'];
   function qnFor(g, n){
     if (/^Mì cay/.test(n)) return ['Cấp 0','Cấp 1','Cấp 2','Cấp 3','Cấp 4','Cấp 5','Cấp 6','Cấp 7'];
-    if (/^(Mì trộn|Chảo|Bánh mì)/.test(n)) return ['Ít cay','Không cay','Không hành'];
+    if (/^Chảo/.test(n)) return ['Trứng chín','Không hành','Ít cay','Không cay'];
+    if (/^(Mì trộn|Bánh mì)/.test(n)) return ['Ít cay','Không cay','Không hành'];
     if (/chiên|Lai rai|Đồ ăn/i.test(g)) return ['Ít cay','Không cay','Thêm tương ớt'];
     if (/^(Bia|Monster|Fanta|Nutri|Aquarius|Charged)/.test(n)) return ['Thêm ly đá'];
     if (/nóng/i.test(n)) return ['Ít ngọt','Không đường'];

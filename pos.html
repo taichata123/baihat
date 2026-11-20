@@ -1537,17 +1537,40 @@
   });
 
   // Ghi chú món
-  var noteK = -1, QUICK_NOTES = ['Ít đá', 'Không đá', 'Ít ngọt', 'Không đường', 'Nhiều đá', 'Ít cay', 'Không cay', 'Cay nhiều', 'Mang về'];
-  $('noteQuick').innerHTML = QUICK_NOTES.map(function(n, k){ return '<button type="button" tabindex="-1" data-qn="' + n + '">' + n + '</button>'; }).join('');
+  /* Ghi chú chọn nhanh theo món (Tài chốt 20/11): mì cay chọn Cấp 0–7 (không bắt buộc), chảo: trứng chín, không hành…; đồ ăn không hiện đá/ngọt */
+  var noteK = -1, QN_DRINK = ['Ít đá', 'Không đá', 'Nhiều đá', 'Ít ngọt', 'Không đường'];
+  function qnFor(it){
+    var n = it.n || '', g = it.g || '', L;
+    if (/^Mì cay/i.test(n)) L = ['Cấp 0', 'Cấp 1', 'Cấp 2', 'Cấp 3', 'Cấp 4', 'Cấp 5', 'Cấp 6', 'Cấp 7'];
+    else if (/^Chảo/i.test(n)) L = ['Trứng chín', 'Không hành', 'Ít cay', 'Không cay'];
+    else if (/^Mì trộn/i.test(n)) L = ['Ít cay', 'Không cay', 'Không hành'];
+    else if (/^(Bia|Monster|Fanta|Nutri|Aquarius|Charged|Coca|Pepsi|7 ?up|Sting|Nước suối)/i.test(n) || /^(Bia|Nước chai)$/i.test(g)) L = ['Thêm ly đá'];
+    else if (where(g) === 'bep') L = ['Ít cay', 'Không cay', 'Thêm tương ớt'];
+    else if (where(g) === 'bar') L = /nóng/i.test(n) ? ['Ít ngọt', 'Không đường'] : QN_DRINK;
+    else L = [];
+    return L.concat(['Mang về']);
+  }
+  function drawQuick(it){
+    var L = qnFor(it || {}), cap = L[0] === 'Cấp 0';
+    $('noteQuick').classList.toggle('cap', cap);
+    $('noteQuick').innerHTML = L.map(function(n){ return '<button type="button" tabindex="-1" data-qn="' + n + '"' + (n === 'Mang về' ? ' class="wide"' : '') + '>' + n + '</button>'; }).join('');
+  }
   var ndType = '%';
   function drawNdType(){ Array.prototype.forEach.call(document.querySelectorAll('#ndType button'), function(b){ b.classList.toggle('on', b.getAttribute('data-t') === ndType); }); }
   $('ndType').addEventListener('click', function(e){ var b = e.target.closest('[data-t]'); if (!b) return; ndType = b.getAttribute('data-t'); $('ndVal').value = ''; drawNdType(); });
   $('ndVal').addEventListener('input', function(){ var v = this.value.replace(/\D/g, ''); if (ndType === '%') { if (+v > 100) v = '100'; this.value = v; } else this.value = v ? money(+v) : ''; });
-  function openNote(k){ noteK = k; var it = O.items[k]; $('noteTitle').textContent = 'Món: ' + it.n + ' · ' + money(it.p) + 'đ'; $('noteIn').value = it.t || ''; ndType = it.dt || '%'; $('ndVal').value = it.dv ? (ndType === '%' ? it.dv : money(it.dv)) : ''; drawNdType();
+  function openNote(k){ noteK = k; var it = O.items[k]; drawQuick(it); $('noteTitle').textContent = 'Món: ' + it.n + ' · ' + money(it.p) + 'đ'; $('noteIn').value = it.t || ''; ndType = it.dt || '%'; $('ndVal').value = it.dv ? (ndType === '%' ? it.dv : money(it.dv)) : ''; drawNdType();
     var many = it.q > 1; $('noteAll').hidden = !many; $('noteAll').textContent = 'Ghi cho cả ' + it.q + ' ly (Ctrl+Enter)';
     $('noteOk').textContent = many ? 'Chỉ 1 ly – tách dòng (Enter)' : 'Lưu (Enter)';
     $('noteModal').hidden = false; setTimeout(function(){ $('noteIn').focus(); }, 30); }
-  function addQuick(x){ var v = $('noteIn').value.trim(); $('noteIn').value = v ? v + ', ' + x.toLowerCase() : x; $('noteIn').focus(); }
+  function addQuick(x){
+    var v = $('noteIn').value.trim();
+    if (/^Cấp \d$/.test(x)) v = v.replace(/(^|,\s*)c[ấa]p\s*\d+/ig, '').replace(/^,\s*/, '').trim(); // chỉ giữ 1 cấp
+    if (/đá$/.test(x) && x !== 'Thêm ly đá') v = v.replace(/(^|,\s*)(ít đá|không đá|nhiều đá)/ig, '').replace(/^,\s*/, '').trim();
+    if (/^Cấp \d$/.test(x)) $('noteIn').value = v ? x + ', ' + v : x; // cấp luôn đứng đầu ghi chú
+    else $('noteIn').value = v ? v + ', ' + x.toLowerCase() : x;
+    $('noteIn').focus();
+  }
   $('noteQuick').addEventListener('click', function(e){ var b = e.target.closest('[data-qn]'); if (b) addQuick(b.getAttribute('data-qn')); });
   var NOTE_ALL = false, ITEM_DR = {};
   function saveNote(all){
