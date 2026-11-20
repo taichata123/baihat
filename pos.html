@@ -652,10 +652,47 @@
       if (!e.target || e.target.id !== 'updBtn') return;
       var ov = document.getElementById('ordView');
       if (ov && !ov.hidden) { toast('Xong đơn đang làm rồi hãy cập nhật.'); return; }
-      if (confirm('Khởi động lại app để cập nhật? (mất khoảng 5 giây)')) NATIVE.restart();
+      ask('Khởi động lại app để cập nhật? (mất khoảng 5 giây)').then(function(ok){ if (ok) NATIVE.restart(); });
     });
   }
   var $ = function(id){ return document.getElementById(id); };
+  /* Hộp hỏi vẽ trong trang thay cho confirm() của Windows (hộp của Windows làm app mất bàn phím – 20/11/2026) */
+  var ASKQ = null, ASKED = 0;
+  function ask(msg, okTxt){
+    return new Promise(function(res){
+      var m = document.getElementById('askModal');
+      if (!m) {
+        m = document.createElement('div'); m.className = 'mask'; m.id = 'askModal'; m.style.zIndex = 90;
+        m.innerHTML = '<div style="background:#fff;border-radius:12px;padding:20px 22px;width:min(440px,92vw);box-shadow:0 10px 40px rgba(0,0,0,.35)">' +
+          '<div id="askMsg" style="font-size:17px;line-height:1.45;white-space:pre-line;color:#1C2B40;margin-bottom:18px"></div>' +
+          '<div style="display:flex;gap:10px;justify-content:flex-end"><button type="button" id="askNo" style="padding:10px 18px;border:1px solid #CBD3DE;background:#fff;border-radius:8px;font-size:15px;cursor:pointer">Không (Esc)</button>' +
+          '<button type="button" id="askYes" style="padding:10px 18px;border:0;background:#2F6FED;color:#fff;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">Đồng ý (Enter)</button></div></div>';
+        document.body.appendChild(m);
+        m.addEventListener('click', function(e){ if (e.target.id === 'askYes') done(true); else if (e.target.id === 'askNo' || e.target === m) done(false); });
+        document.addEventListener('keydown', function(e){
+          if (!ASKQ) return;
+          if (e.key === 'Enter') { e.preventDefault(); e.stopImmediatePropagation(); done(true); }
+          else if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); done(false); }
+          else if (!e.ctrlKey) { e.stopImmediatePropagation(); }
+        }, true);
+      }
+      if (ASKQ) ASKQ.res(false);
+      ASKQ = { res: res, prev: document.activeElement };
+      $('askMsg').textContent = msg; $('askYes').textContent = (okTxt || 'Đồng ý') + ' (Enter)';
+      m.hidden = false; setTimeout(function(){ try { $('askYes').focus(); } catch (x) {} }, 0);
+    });
+    function done(ok){
+      var q = ASKQ; if (!q) return; ASKQ = null; document.getElementById('askModal').hidden = true;
+      try { if (q.prev && q.prev.focus && q.prev.offsetParent) q.prev.focus(); } catch (x) {}
+      q.res(ok);
+    }
+  }
+  /* cần hỏi → mở hộp hỏi, đồng ý thì chạy lại việc đó (lần chạy lại không hỏi nữa) */
+  function needOk(cond, msg, redo){
+    if (!cond || ASKED) return false;
+    ask(msg).then(function(ok){ if (!ok) return; ASKED = 1; try { redo(); } finally { ASKED = 0; } });
+    return true;
+  }
   /* Bàn phím: sau hộp hỏi (confirm/alert) và khi bấm vào ô nhập mà ô không nhận, tự trả bàn phím về app */
   var RF = function(hard){ try { if (NATIVE && NATIVE.refocus) NATIVE.refocus(hard); } catch (e) {} };
   ['alert', 'confirm', 'prompt'].forEach(function(fn){
@@ -668,7 +705,7 @@
     if (!t) { var s = $('search'); t = s && s.offsetParent ? s : null; }
     RF(true);
     setTimeout(function(){ try { if (t) { t.blur(); t.focus(); } else window.focus(); } catch (e) {} }, 150);
-    if (!silent) toast('⌨ Đã lấy lại bàn phím' + (NATIVE && NATIVE.refocus ? '' : ' (nếu chưa được, tắt mở lại app 1 lần để cập nhật)'));
+    if (!silent) toast(NATIVE && NATIVE.refocus ? '⌨ Đã lấy lại bàn phím' : '⌨ App trên máy là bản cũ' + (NATIVE && NATIVE.version ? ' ' + NATIVE.version : '') + '. Nếu chưa gõ được: bấm sang cửa sổ khác dưới thanh tác vụ rồi bấm lại app Chata. Nên cài lại app bằng file CaiDatChataThuNgan.cmd.', NATIVE && NATIVE.refocus ? 2600 : 9000);
   }
   document.addEventListener('mousedown', function(e){
     var t = e.target;
@@ -950,7 +987,7 @@
   });
   $('lockBtn').addEventListener('click', lockNow);
   $('outBtn').addEventListener('click', function(){
-    if (!confirm('Đăng xuất khỏi máy thu ngân?')) return;
+    if (needOk(true, 'Đăng xuất khỏi máy thu ngân?', function(){ $('outBtn').click(); })) return;
     call('posLogout', [PIN]).catch(function(){}); ls('chata_cashier', null); ls('chata_pos_me', null); ls('chata_lock', null); LOCK = false; PIN = ''; D = null; $('who').textContent = 'Thu ngân'; show();
   });
   /* Việc cần quản lý duyệt: nếu máy chủ báo needApprove thì hỏi mã + PIN quản lý rồi gửi lại */
@@ -1181,7 +1218,7 @@
   });
   $('qrBtn').addEventListener('click', function(){
     if (!D) return; var on = !D.open;
-    if (!on && !confirm('Tắt nhận đơn QR? Khách quét mã sẽ được báo ra quầy gọi trực tiếp.')) return;
+    if (needOk(!on, 'Tắt nhận đơn QR? Khách quét mã sẽ được báo ra quầy gọi trực tiếp.', function(){ $('qrBtn').click(); })) return;
     needAp(on ? 'Bật nhận đơn QR' : 'Tắt nhận đơn QR', function(ap){ return call('cashierSetting', [PIN, 'open', on, ap]).then(function(r){ if (r && r.needApprove) return r; apply(r); return r; }); });
   });
 
@@ -1451,8 +1488,9 @@
     if (e.target.closest('#tabHome')) { goHome(); return; }
     if (x) { var i = +x.getAttribute('data-tx'), t = TABS[i];
       if (i === TCUR) { $('exitBtn').click(); return; }
-      if (tabDirty(t, i) && !confirm(t.O.id ? 'Đơn #' + t.O.code + ' có thay đổi chưa lưu. Đóng và bỏ thay đổi?' : 'Đóng và bỏ ' + tabLabel(t) + ' (' + (t.O.items || []).length + ' dòng món)?')) return;
-      TABS.splice(i, 1); if (i < TCUR) TCUR--; tabsSave(); drawTabs(); back(); return; }
+      var rmTab = function(){ var j = TABS.indexOf(t); if (j < 0) return; TABS.splice(j, 1); if (j < TCUR) TCUR--; tabsSave(); drawTabs(); back(); };
+      if (tabDirty(t, i)) ask(t.O.id ? 'Đơn #' + t.O.code + ' có thay đổi chưa lưu. Đóng và bỏ thay đổi?' : 'Đóng và bỏ ' + tabLabel(t) + ' (' + (t.O.items || []).length + ' dòng món)?').then(function(ok){ if (ok) rmTab(); }); else rmTab();
+      return; }
     if (b) { var k = +b.getAttribute('data-tab'); if (k === TCUR) return back(); tabStash(); tabShow(k); }
   });
   $('tStrip').addEventListener('click', function(e){ var b = e.target.closest('[data-tab]'); if (!b) return; if (needShift(function(){})) return; tabShow(+b.getAttribute('data-tab')); });
@@ -1494,7 +1532,7 @@
     else if ((t = e.target.closest('[data-ln]'))) { SEL = +t.getAttribute('data-ln'); drawCart(); back(); }
   });
   $('exitBtn').addEventListener('click', function(){
-    if (dirty() && !confirm(O.id ? 'Đơn #' + O.code + ' có thay đổi chưa lưu. Thoát và bỏ thay đổi?' : 'Thoát và bỏ đơn đang tạo?')) return;
+    if (needOk(dirty(), O.id ? 'Đơn #' + O.code + ' có thay đổi chưa lưu. Thoát và bỏ thay đổi?' : 'Thoát và bỏ đơn đang tạo?', function(){ $('exitBtn').click(); })) return;
     closeOrder();
   });
 
@@ -1780,7 +1818,7 @@
   function mgClose(){ $('mgModal').hidden = true; MG = null; back(); }
   function mgPick(k){
     if (!MG || !MG.L[k]) return; var x = MG.L[k], o = MG.o;
-    if (!confirm('Gộp đơn #' + x.code + (x.pager ? ' (thẻ ' + x.pager + ')' : '') + ' – ' + money(x.total) + 'đ vào đơn #' + o.code + '?\nĐơn #' + x.code + ' sẽ đóng lại, món chuyển hết sang #' + o.code + '.')) return;
+    if (needOk(true, 'Gộp đơn #' + x.code + (x.pager ? ' (thẻ ' + x.pager + ')' : '') + ' – ' + money(x.total) + 'đ vào đơn #' + o.code + '?\nĐơn #' + x.code + ' sẽ đóng lại, món chuyển hết sang #' + o.code + '.', function(){ mgPick(k); })) return;
     $('mgModal').hidden = true; MG = null; busy(true, 'Đang gộp đơn…');
     call('cashierMerge', [PIN, o.id, x.id]).then(function(r){
       busy(false);
@@ -2001,7 +2039,7 @@
   function pickTable(t){
     t = String(t || '').trim();
     var other = pagerBusy().filter(function(o){ return t && o.pager === t; });
-    if (other.length && !confirm('Bàn ' + t + ' đang có đơn ' + other.map(function(o){ return '#' + o.code; }).join(', ') + '. Vẫn gắn đơn này vào bàn ' + t + '?')) return;
+    if (needOk(other.length, 'Bàn ' + t + ' đang có đơn ' + other.map(function(o){ return '#' + o.code; }).join(', ') + '. Vẫn gắn đơn này vào bàn ' + t + '?', function(){ pickTable(t); })) return;
     O.pager = t; $('cPager').value = t; $('tblModal').hidden = true; (tblNext || saveNow)();
   }
   $('tblAreas').addEventListener('click', function(e){ var b = e.target.closest('[data-tb]'); if (b) pickTable(b.getAttribute('data-tb')); });
@@ -2015,7 +2053,7 @@
     var all = []; tablesOf().forEach(function(z){ all = all.concat(z.t); });
     var hit = all.find(function(t){ return t.toLowerCase() === v.toLowerCase(); });
     if (hit) return pickTable(hit);
-    if (confirm('Không có bàn "' + v + '" trong sơ đồ. Vẫn gắn số này?')) pickTable(v);
+    ask('Không có bàn "' + v + '" trong sơ đồ. Vẫn gắn số này?').then(function(ok){ if (ok) pickTable(v); });
   });
   $('tblFind').addEventListener('input', function(){
     var v = this.value.trim().toLowerCase();
@@ -2118,7 +2156,7 @@
   $('openSkip').addEventListener('click', function(){ openSkipped = true; $('openModal').hidden = true; var f = afterOpen; afterOpen = null; if (f) f(); });
   $('openForm').addEventListener('submit', function(e){
     e.preventDefault(); var v = +($('openCash').value.replace(/\D/g, '')) || 0;
-    if ($('openCash').value === '' && !confirm('Tiền mặt đầu ca là 0đ?')) return;
+    if (needOk($('openCash').value === '', 'Tiền mặt đầu ca là 0đ?', function(){ $('openForm').requestSubmit(); })) return;
     if (v !== flt() && !$('openNote').value.trim()) { $('openErr').textContent = 'Tủ có ' + money(v) + 'đ, khác quỹ ' + money(flt()) + 'đ – ghi lý do để quản lý biết.'; $('openErr').hidden = false; $('openNote').focus(); return; }
     busy(true, 'Đang mở ca…');
     call('shiftOpen', [PIN, v, v !== flt() ? $('openNote').value.trim() : '']).then(function(r){ busy(false); if (r.ok) { $('openModal').hidden = true; apply(r.data); toast('Đã mở ca'); var f = afterOpen; afterOpen = null; if (f) f(); } else { $('openErr').textContent = r.msg; $('openErr').hidden = false; } },
@@ -2149,7 +2187,7 @@
     e.preventDefault(); var raw = $('closeCash').value.replace(/\D/g, '');
     if (!raw) { $('closeErr').textContent = 'Nhập số tiền mặt đếm được trong két.'; $('closeErr').hidden = false; return; }
     var s = D.shift, d = +raw - s.expect;
-    if (d !== 0 && !$('closeNote').value.trim() && !confirm('Tiền lệch ' + money(d) + 'đ mà chưa ghi lý do. Vẫn kết ca?')) return;
+    if (needOk(d !== 0 && !$('closeNote').value.trim(), 'Tiền lệch ' + money(d) + 'đ mà chưa ghi lý do. Vẫn kết ca?', function(){ $('closeForm').requestSubmit(); })) return;
     busy(true, 'Đang kết ca…');
     call('shiftClose', [PIN, +raw, $('closeNote').value.trim()]).then(function(r){
       busy(false); if (!r.ok) { $('closeErr').textContent = r.msg; $('closeErr').hidden = false; return; }
