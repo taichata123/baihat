@@ -1332,14 +1332,14 @@
   var COLORS = ['#3E7CB1','#7A5BB5','#2E9D8F','#C0692B','#B2453E','#5A7D2B','#8A5A44','#2F6690','#9A4C95','#3B8D5A'];
   function color(g){ var h = 0; for (var i = 0; i < g.length; i++) h = (h * 31 + g.charCodeAt(i)) >>> 0; return COLORS[h % COLORS.length]; }
   /* Nhóm hiển thị (dg) chỉ để xếp màn chọn món; nhóm in (g) giữ nguyên để định tuyến bếp/bar */
-  var GCOL = { 'Trà - Trà sữa':'#7A5BB5', 'Ăn vặt':'#C0692B', 'Mì cay - Bánh mì chảo':'#B2453E', 'Nước ép - Soda - Nước chai':'#2E9D8F', 'Cà phê - Món nóng':'#6B4A2E', 'Sữa chua - Đá xay':'#2F6690', 'Đồ chiên':'#A0522D', 'Kem':'#C2477E', 'Khác':'#5A7D2B' };
-  var GICO = { 'Trà - Trà sữa':'🧋', 'Ăn vặt':'🍿', 'Mì cay - Bánh mì chảo':'🍜', 'Nước ép - Soda - Nước chai':'🍹', 'Cà phê - Món nóng':'☕', 'Sữa chua - Đá xay':'🥤', 'Đồ chiên':'🍗', 'Kem':'🍦', 'Khác':'🏊' };
+  var GCOL = { 'Trà - Trà sữa':'#7A5BB5', 'Ăn vặt':'#C0692B', 'Mì cay - Bánh mì chảo':'#B2453E', 'Nước ép - Soda':'#2E9D8F', 'Bia - Nước chai':'#B8860B', 'Cà phê - Món nóng':'#6B4A2E', 'Sữa chua - Đá xay':'#2F6690', 'Đồ chiên':'#A0522D', 'Kem':'#C2477E', 'Khác':'#5A7D2B' };
+  var GICO = { 'Trà - Trà sữa':'🧋', 'Ăn vặt':'🍿', 'Mì cay - Bánh mì chảo':'🍜', 'Nước ép - Soda':'🍹', 'Bia - Nước chai':'🍺', 'Cà phê - Món nóng':'☕', 'Sữa chua - Đá xay':'🥤', 'Đồ chiên':'🍗', 'Kem':'🍦', 'Khác':'🏊' };
   function gcol(g){ return GCOL[g] || color(g); }
   /* Dòng sản phẩm trong nhóm: mỗi dòng 1 hàng riêng (nhóm không có ở đây = 1 dòng) */
   var LINES = {
     'Trà - Trà sữa': [['Trà', /^(?!.*(sữa|latte|matcha)).*$/i], ['Trà sữa', /./]],
     'Cà phê - Món nóng': [['Cà phê', /^(cà phê|bạc xỉu)/i], ['Món nóng', /./]],
-    'Nước ép - Soda - Nước chai': [['Nước ép', /^ép/i], ['Soda', /^soda/i], ['Bia · Nước chai', /./]],
+    'Nước ép - Soda': [['Nước ép', /^ép/i], ['Soda', /./]],
     'Sữa chua - Đá xay': [['Sữa chua', /^sữa chua/i], ['Đá xay', /./]],
     'Mì cay - Bánh mì chảo': [['Mì cay', /^mì cay/i], ['Chảo · Bánh mì · Mì trộn', /./]]
   };
@@ -1659,7 +1659,7 @@
 
   /* cuộn cột Đồ uống → sáng nút nhóm đang xem */
   $('grid').addEventListener('scroll', function(e){ var c = e.target; if (!c.classList || !c.classList.contains('gcol') || c.classList.contains('food')) return;
-    var st = c.scrollTop + snkH(c) + 20, k = -1; c.querySelectorAll('.band:not(.snk)').forEach(function(b){ if (k < 0 || b.offsetTop <= st) { if (b.offsetTop <= st || k < 0) k = +b.id.slice(4); } }); if (k >= 0) markCat(k); }, true);
+    var st = c.scrollTop + snkH(c) + 20, k = -1; c.querySelectorAll('.band:not(.snk)').forEach(function(b){ if (k < 0 || b.offsetTop <= st) { if (b.offsetTop <= st || k < 0) k = +b.id.slice(4); } }); if (c.scrollTop + c.clientHeight >= c.scrollHeight - 2) { var bl = c.querySelectorAll('.band:not(.snk)'); if (bl.length) k = +bl[bl.length - 1].id.slice(4); } if (k >= 0) markCat(k); }, true);
   CATS().addEventListener('click', function(e){ var b = e.target.closest('[data-cat]'); if (!b) return; goBand(+b.getAttribute('data-cat')); back(); });
   $('grid').addEventListener('scroll', function(){ if ($('search').value.trim()) return; var st = this.scrollTop, k = 0; BANDS.forEach(function(B, i){ var el = $('band' + i); if (el && el.offsetTop - 40 <= st) k = i; }); markCat(k); });
   $('search').addEventListener('input', function(){ HL = 0; drawGrid(); });

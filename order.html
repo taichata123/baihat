@@ -292,9 +292,9 @@
   try { CART = JSON.parse(sessionStorage.getItem('chata_cart') || '[]') || []; } catch(e){ CART = []; }
 
   /* ---- Menu (bản B – Tài chốt 19/11/2026) ---- */
-  var ORDER = ['Trà - Trà sữa','Cà phê - Món nóng','Nước ép - Soda - Nước chai','Sữa chua - Đá xay','Mì cay - Bánh mì chảo','Đồ chiên','Ăn vặt','Kem','Khác'];
-  var ICO = {'Trà - Trà sữa':'🧋','Ăn vặt':'🍿','Mì cay - Bánh mì chảo':'🍜','Nước ép - Soda - Nước chai':'🍹','Cà phê - Món nóng':'☕','Sữa chua - Đá xay':'🥤','Đồ chiên':'🍗','Kem':'🍦','Khác':'🐰'};
-  var SHORT = {'Trà - Trà sữa':'Trà · Trà sữa','Mì cay - Bánh mì chảo':'Mì cay · Bánh mì chảo','Nước ép - Soda - Nước chai':'Nước ép · Soda','Cà phê - Món nóng':'Cà phê','Sữa chua - Đá xay':'Sữa chua · Đá xay'};
+  var ORDER = ['Trà - Trà sữa','Cà phê - Món nóng','Nước ép - Soda','Sữa chua - Đá xay','Mì cay - Bánh mì chảo','Đồ chiên','Ăn vặt','Kem','Khác','Bia - Nước chai'];
+  var ICO = {'Trà - Trà sữa':'🧋','Ăn vặt':'🍿','Mì cay - Bánh mì chảo':'🍜','Nước ép - Soda':'🍹','Bia - Nước chai':'🍺','Cà phê - Món nóng':'☕','Sữa chua - Đá xay':'🥤','Đồ chiên':'🍗','Kem':'🍦','Khác':'🐰'};
+  var SHORT = {'Trà - Trà sữa':'Trà · Trà sữa','Mì cay - Bánh mì chảo':'Mì cay · Bánh mì chảo','Nước ép - Soda':'Nước ép · Soda','Bia - Nước chai':'Bia · Nước chai','Cà phê - Món nóng':'Cà phê','Sữa chua - Đá xay':'Sữa chua · Đá xay'};
   var QN_DRINK = ['Ít đá','Không đá','Nhiều đá','Ít ngọt','Không đường'];
   function qnFor(g, n){
     if (/^Mì cay/.test(n)) return ['Cấp 0','Cấp 1','Cấp 2','Cấp 3','Cấp 4','Cấp 5','Cấp 6','Cấp 7'];
