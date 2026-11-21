@@ -278,7 +278,13 @@
   /* Món thêm (topping) – Tài 20/11 */
   .adq{margin-bottom:6px}.adq .adg{display:flex;flex:1 1 30%;gap:0}.adq .adg button{flex:1}.adq button.on{background:#E3F2EA;border-color:#16A34A;color:#14532D}.adq button b{color:#16A34A;margin-left:4px}.adq .adm{flex:0 0 34px!important;border-top-right-radius:0;border-bottom-right-radius:0;font-size:18px;padding:0}.adq .adm+button{border-top-left-radius:0;border-bottom-left-radius:0}
   /* Màn chọn món v4 (Tài 21/11): 2 cột – trái Đồ uống 70%, phải Đồ ăn 30%, mỗi cột cuộn riêng; bỏ cột nhóm và chữ tên nhóm */
-  .ord .cats{display:none}
+  /* cột nhóm chỉ còn nhóm Đồ uống, bấm để cuộn cột Đồ uống (Tài 21/11) */
+  /* cột nhóm nằm trong khối Đồ uống (Tài 21/11) */
+  .ord>.cats{display:none}
+  .gdr{display:flex;gap:6px;min-height:0;min-width:0}.gdr>.gcol{flex:1;min-width:0}
+  .gdr>.cats{display:flex;width:96px;flex:none;gap:4px;background:none;overflow:auto;padding-bottom:6px;scrollbar-width:none}
+  .gdr .cat{flex:none;min-height:48px;border:none;border-left:5px solid var(--c);border-radius:8px;background:color-mix(in srgb,var(--c) 22%,#22324A);color:#E8EEF7;font-size:13px;font-weight:600;padding:6px 6px}
+  .gdr .cat.on{background:var(--c);color:#fff;font-weight:700;box-shadow:0 0 0 2px #fff inset}
   .grid.two{overflow:hidden;padding:6px 8px 0}
   .gcols{display:grid;grid-template-columns:7fr 3fr;gap:8px;height:100%}
   .gcol{overflow:auto;min-height:0;position:relative;padding-bottom:40vh;scrollbar-width:thin}
@@ -1318,14 +1324,17 @@
     var ss = t.items.map(function(m){ return m.s || m.n; });
     return ss.length <= 3 && ss.every(function(x){ return x.length <= 4; }) ? ss.join(' / ') : t.items.length + ' loại';
   }
+  function CATS(){ return window.__cats || (window.__cats = document.getElementById('cats')); }
   function drawCats(){
     BANDS = makeBands();
-    $('cats').innerHTML = BANDS.map(function(B, i){ return '<button class="cat' + (i ? '' : ' on') + '" data-cat="' + i + '" type="button" style="--c:' + gcol(B.g) + '"><i>' + (i + 1) + '</i>' + esc(B.g) + '</button>'; }).join('');
+    var first = true;
+    CATS().innerHTML = BANDS.map(function(B, i){ if (FOOD_G[B.g]) return ''; var on = first; first = false; return '<button class="cat' + (on ? ' on' : '') + '" data-cat="' + i + '" type="button" style="--c:' + gcol(B.g) + '">' + esc(B.g) + '</button>'; }).join('');
     $('grid').scrollTop = 0;
   }
-  function goBand(i){ var el = $('band' + i); if (!el) return; $('search').value = ''; HL = 0; drawGrid(); el = $('band' + i); if (el.parentNode.classList.contains('gcol')) el.parentNode.scrollTop = el.offsetTop - 4; else $('grid').scrollTop = el.offsetTop - 8; markCat(i); }
+  function goBand(i){ var el = $('band' + i); if (!el) return; $('search').value = ''; HL = 0; drawGrid(); el = $('band' + i); if (el.parentNode.classList.contains('gcol')) el.parentNode.scrollTop = el.offsetTop - 4 - snkH(el.parentNode); else $('grid').scrollTop = el.offsetTop - 8; markCat(i); }
   var FOOD_G = { 'Mì cay - Bánh mì chảo': 1, 'Đồ chiên': 1, 'Ăn vặt': 1 }, GST = [0, 0];
-  function markCat(i){ Array.prototype.forEach.call($('cats').children, function(c, k){ c.classList.toggle('on', k === i); }); }
+  function markCat(i){ Array.prototype.forEach.call(CATS().children, function(c){ c.classList.toggle('on', +c.getAttribute('data-cat') === i); }); }
+  function snkH(col){ var s = col && col.querySelector('.snk'); return s ? s.offsetHeight + 8 : 0; }
   function qtyOf(n){ return O.items.filter(function(i){ return i.n === n; }).reduce(function(s, i){ return s + i.q; }, 0); }
   function drawGrid(){
     var q = norm($('search').value.trim()), qs = q.replace(/\s+/g, ''), g = $('grid'), st = g.scrollTop;
@@ -1366,7 +1375,8 @@
     dr = sn;
     BANDS.forEach(function(B, i){ if (!FOOD_G[B.g]) dr += bandHtml(B, i); });
     FO.forEach(function(gn){ BANDS.forEach(function(B, i){ if (B.g === gn) fo += bandHtml(B, i); }); });
-    g.innerHTML = '<div class="gcols"><div class="gcol" aria-label="Đồ uống">' + dr + '</div><div class="gcol food" aria-label="Đồ ăn">' + fo + '</div></div>';
+    g.innerHTML = '<div class="gcols"><div class="gdr"><div class="gcol" aria-label="Đồ uống">' + dr + '</div></div><div class="gcol food" aria-label="Đồ ăn">' + fo + '</div></div>';
+    var gd = g.querySelector('.gdr'); if (gd) gd.insertBefore(CATS(), gd.firstChild);
     g.querySelectorAll('.gcol').forEach(function(c, x){ c.scrollTop = GST[x] || 0; });
   }
   /* Món nhiều size / loại: hộp chọn, phím 1–9 */
@@ -1570,7 +1580,10 @@
   function snap(){ return JSON.stringify([O.items, $('cName').value.trim(), $('cPhone').value.trim(), $('cPager').value.trim(), $('cNote').value.trim(), O.disc || null, !!O.togo]); }
   function dirty(){ return !!O && snap() !== O0; }
 
-  $('cats').addEventListener('click', function(e){ var b = e.target.closest('[data-cat]'); if (!b) return; goBand(+b.getAttribute('data-cat')); back(); });
+  /* cuộn cột Đồ uống → sáng nút nhóm đang xem */
+  $('grid').addEventListener('scroll', function(e){ var c = e.target; if (!c.classList || !c.classList.contains('gcol') || c.classList.contains('food')) return;
+    var st = c.scrollTop + snkH(c) + 20, k = -1; c.querySelectorAll('.band:not(.snk)').forEach(function(b){ if (k < 0 || b.offsetTop <= st) { if (b.offsetTop <= st || k < 0) k = +b.id.slice(4); } }); if (k >= 0) markCat(k); }, true);
+  CATS().addEventListener('click', function(e){ var b = e.target.closest('[data-cat]'); if (!b) return; goBand(+b.getAttribute('data-cat')); back(); });
   $('grid').addEventListener('scroll', function(){ if ($('search').value.trim()) return; var st = this.scrollTop, k = 0; BANDS.forEach(function(B, i){ var el = $('band' + i); if (el && el.offsetTop - 40 <= st) k = i; }); markCat(k); });
   $('search').addEventListener('input', function(){ HL = 0; drawGrid(); });
   $('search').addEventListener('keydown', function(e){
