@@ -909,7 +909,7 @@
         });
       });
     },
-    shiftClose: function (tok, counted, note) {
+    shiftClose: function (tok, counted, note, bills) {
       return me().then(function (u) {
         return posReady().then(function () {
           var s = openShiftOf(u.c); if (!s) return { ok: false, msg: 'Bạn chưa mở ca nào.' };
@@ -917,12 +917,15 @@
           var src = s.openAt >= Date.now() - 30 * 3600000 ? Promise.resolve(allOrders())
             : db.collection('posOrders').where('created', '>=', s.openAt - 24 * 3600000).get().then(function (q) { var a = []; q.forEach(function (d) { a.push(d.data()); }); return a; });
           return src.then(function (all) {
+            /* đếm theo mệnh giá (Tài 21/11): có bảng tờ thì tổng tiền đếm = tổng bảng */
+            var bl = null; if (bills && typeof bills === 'object') { bl = {}; [500000, 200000, 100000, 50000, 20000, 10000, 5000, 2000, 1000, 500].forEach(function (v) { var n = Math.max(0, Math.min(9999, Math.round(Number(bills[v]) || 0))); if (n) bl[v] = n; }); counted = Object.keys(bl).reduce(function (a, v) { return a + v * bl[v]; }, 0); }
             var t = sumFor(all, u.c, s.openAt, now + 1), expect = s.openCash + t.cash, c = Math.max(0, Math.round(Number(counted) || 0));
             var fl = s.float != null ? s.float : floatCfg();
             /* tách: quỹ cố định để lại tủ · tiền mặt thu thực tế (đếm − tiền đầu ca) so với tiền mặt thu theo app · tiền nộp (đếm − quỹ) */
             var up = { closeAt: now, orders: t.orders, revenue: t.revenue, cash: t.cash, transfer: t.transfer, expect: expect, counted: c, diff: c - expect,
               float: fl, cashActual: c - s.openCash, handover: Math.max(0, c - fl), keep: Math.min(c, fl),
               cancels: t.cancels, refunds: t.refunds, refundAmt: t.refundAmt, unpaid: t.unpaid, unpaidAmt: t.unpaidAmt, note: clean(note, 200), status: 'Đã kết' };
+            if (bl) up.bills = bl;
             C.shifts = (C.shifts || []).filter(function (x) { return x.id !== s.id; });
             save(db.doc('posShifts/' + s.id), up, true);
             // tính lại doanh thu ngày cho báo cáo Web vận hành (phòng đơn cuối chưa kịp tính)

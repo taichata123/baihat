@@ -252,6 +252,14 @@
   .meth{border:2px solid var(--line);background:#fff;border-radius:8px;padding:14px;font-size:16px;font-weight:700}
   .meth.on{border-color:var(--blue);background:#E8F1FD;color:var(--blue)}
   .given{margin-top:12px}
+  /* đếm tiền theo mệnh giá khi kết ca (Tài 21/11) */
+  .bills{margin-top:6px;border:1px solid var(--line);border-radius:8px;padding:4px 10px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(5,auto);grid-auto-flow:column;column-gap:20px}
+  .bills .br{display:grid;grid-template-columns:72px 1fr 92px;gap:8px;align-items:center;padding:3px 0}
+  .bills .br b{font-size:16px}
+  .bills .br input{width:100%;font-size:18px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;text-align:right}
+  .bills .br span{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+  .bills .br.has span{color:inherit;font-weight:700}
+  .bills .bt{grid-column:1/-1;grid-row:6;display:flex;justify-content:space-between;border-top:1px dashed var(--line);margin-top:4px;padding:6px 0 2px;font-size:18px;font-weight:800}
   .given input{width:100%;font-size:22px;padding:10px;border:1px solid var(--line);border-radius:8px;text-align:right}
   .quick{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
   .tarea h4{margin:12px 0 6px;font-size:14px;color:var(--muted)}
@@ -655,12 +663,13 @@
 
 <!-- Kết ca -->
 <div class="mask" id="closeModal" hidden>
-  <form class="modal" id="closeForm" style="width:min(520px,94vw)" novalidate>
+  <form class="modal" id="closeForm" style="width:min(640px,94vw)" novalidate>
     <h3>Kết ca</h3>
     <div id="closeSum"></div>
     <div class="unp" id="closeUnp" hidden></div>
-    <label style="font-size:14px;color:var(--muted);display:block;margin-top:10px">Tổng tiền mặt đếm được trong tủ (cả quỹ tiền lẻ)</label>
-    <div class="given" style="margin-top:4px"><input id="closeCash" class="num" inputmode="numeric" placeholder="Nhập số tiền đếm được"></div>
+    <label style="font-size:14px;color:var(--muted);display:block;margin-top:10px">Đếm tiền mặt trong tủ (cả quỹ tiền lẻ) – nhập <b>số tờ</b> từng mệnh giá, Enter sang dòng dưới</label>
+    <div class="bills" id="closeBills"></div>
+    <input id="closeCash" type="hidden">
     <div class="fl-split" id="closeSplit"></div>
     <div class="change"><span>Chênh lệch tiền mặt thu (thực tế − theo app)</span><b class="num" id="closeDiff">–</b></div>
     <input id="closeNote" maxlength="200" placeholder="Ghi chú (nếu lệch tiền, ghi lý do)" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;margin-top:10px">
@@ -699,7 +708,7 @@
 <div class="toast" id="toast" hidden></div>
 <iframe id="printFrame" title="in"></iframe>
 
-<script src="chata-api.js?v=ct1"></script>
+<script src="chata-api.js?v=bl1"></script>
 <script>
 (function(){
   var API = ''; /* Apps Script cũ đã tắt 21/11/2026 */
@@ -2360,6 +2369,13 @@
     call('shiftOpen', [PIN, v, v !== flt() ? $('openNote').value.trim() : '']).then(function(r){ busy(false); if (r.ok) { $('openModal').hidden = true; apply(r.data); toast('Đã mở ca'); var f = afterOpen; afterOpen = null; if (f) f(); } else { $('openErr').textContent = r.msg; $('openErr').hidden = false; } },
       function(e){ busy(false); $('openErr').textContent = e.message; $('openErr').hidden = false; });
   });
+  var BILLS = [500000, 200000, 100000, 50000, 20000, 10000, 5000, 2000, 1000];
+  function billsDraw(){ $('closeBills').innerHTML = BILLS.map(function(v){ return '<div class="br"><b>' + money(v) + '</b><input data-bill="' + v + '" inputmode="numeric" maxlength="4" placeholder="0" autocomplete="off"><span>–</span></div>'; }).join('') + '<div class="bt"><span>Tổng tiền đếm</span><span class="num" id="billsTot">0đ</span></div>'; }
+  function billsGet(){ var o = {}, t = 0, any = false; Array.prototype.forEach.call(document.querySelectorAll('#closeBills [data-bill]'), function(i){ var n = +(i.value.replace(/\D/g, '')) || 0, v = +i.getAttribute('data-bill'); if (i.value !== '') any = true; if (n) o[v] = n; t += n * v; var row = i.parentNode; row.classList.toggle('has', n > 0); row.querySelector('span').textContent = n ? money(n * v) + 'đ' : '–'; }); return { bills: o, total: t, any: any }; }
+  function billsSync(){ var b = billsGet(); $('billsTot').textContent = money(b.total) + 'đ'; $('closeCash').value = b.any ? String(b.total) : ''; closeCalc(); }
+  billsDraw();
+  $('closeBills').addEventListener('input', function(e){ var i = e.target.closest('[data-bill]'); if (!i) return; var v = i.value.replace(/\D/g, ''); if (i.value !== v) i.value = v; billsSync(); });
+  $('closeBills').addEventListener('keydown', function(e){ if (e.key !== 'Enter') return; var a = Array.prototype.slice.call(document.querySelectorAll('#closeBills [data-bill]')), k = a.indexOf(e.target); if (k < 0) return; e.preventDefault(); if (k < a.length - 1) { a[k + 1].focus(); a[k + 1].select(); } else $('closeNote').focus(); });
   function closeCalc(){
     var s = D && D.shift; if (!s) return; var raw = $('closeCash').value.replace(/\D/g, '');
     var fl = s.float != null ? s.float : flt(), c = +raw || 0;
@@ -2382,20 +2398,20 @@
     $('closeUnp').innerHTML = P.length ? '<h4>⚠ Còn ' + P.length + ' đơn chưa thanh toán – đánh dấu đơn khách đã về</h4>' + P.map(function(o){
       return '<label><input type="checkbox" data-cu="' + o.id + '"' + (Date.now() - o.created > 3600000 ? ' checked' : '') + '><span><b>#' + esc(o.code) + '</b>' + (o.pager ? ' · Bàn ' + esc(o.pager) : '') + ' · ' + esc(o.name) + ' · <b class="num">' + money(o.total) + 'đ</b><br><small>' + hhmm(o.created) + ' · ' + esc(o.items.slice(0, 3).map(function(i){ return i.q + ' ' + i.n; }).join(', ')) + (o.items.length > 3 ? '…' : '') + '</small></span></label>';
     }).join('') + '<small>Đánh dấu = khách đã về chưa trả → chuyển sang "Chưa thu" khi kết ca. Bỏ đánh dấu = khách còn ở quán, ca sau thu tiếp.</small>' : '';
-    $('closeCash').value = ''; $('closeNote').value = ''; $('closeErr').hidden = true; $('closeSplit').innerHTML = ''; closeCalc();
-    $('closeModal').hidden = false; setTimeout(function(){ $('closeCash').focus(); }, 30);
+    billsDraw(); $('closeCash').value = ''; $('closeNote').value = ''; $('closeErr').hidden = true; $('closeSplit').innerHTML = ''; closeCalc();
+    $('closeModal').hidden = false; setTimeout(function(){ var f = document.querySelector('#closeBills [data-bill]'); if (f) f.focus(); }, 30);
   });
-  $('closeCash').addEventListener('input', function(){ var v = this.value.replace(/\D/g, ''); this.value = v ? money(+v) : ''; closeCalc(); });
   $('closeCancel').addEventListener('click', function(){ $('closeModal').hidden = true; });
   $('closeForm').addEventListener('submit', function(e){
     e.preventDefault(); var raw = $('closeCash').value.replace(/\D/g, '');
-    if (!raw) { $('closeErr').textContent = 'Nhập số tiền mặt đếm được trong két.'; $('closeErr').hidden = false; return; }
+    if (!raw) { $('closeErr').textContent = 'Nhập số tờ từng mệnh giá đếm được trong tủ (không có tờ nào thì để trống dòng đó).'; $('closeErr').hidden = false; var f = document.querySelector('#closeBills [data-bill]'); if (f) f.focus(); return; }
+    var BL = billsGet();
     var s = D.shift, d = +raw - s.expect;
     if (needOk(d !== 0 && !$('closeNote').value.trim(), 'Tiền lệch ' + money(d) + 'đ mà chưa ghi lý do. Vẫn kết ca?', function(){ $('closeForm').requestSubmit(); })) return;
     busy(true, 'Đang kết ca…');
     var cu = Array.prototype.map.call(document.querySelectorAll('#closeUnp [data-cu]:checked'), function(x){ return x.getAttribute('data-cu'); });
     cu.reduce(function(pr, id){ return pr.then(function(){ return call('cashierUpdate', [PIN, id, 'unpaid', { reason: 'Kết ca – khách về chưa trả' }]).then(function(r){ if (r.ok) { TABS = TABS.filter(function(t){ return t.O.id !== id; }); tabsSave(); } }); }); }, Promise.resolve()).then(function(){
-      return call('shiftClose', [PIN, +raw, $('closeNote').value.trim()]); }).then(function(r){
+      return call('shiftClose', [PIN, BL.total, $('closeNote').value.trim(), BL.bills]); }).then(function(r){
       busy(false); if (!r.ok) { $('closeErr').textContent = r.msg; $('closeErr').hidden = false; return; }
       $('closeModal').hidden = true;
       if ($('closePrint').checked) sendPrint('bill', shiftHtml(r.report));
@@ -2415,7 +2431,8 @@
       row('Số đơn đã thu', r.orders) + row('Doanh thu', money(r.revenue) + 'đ', true) + row('Chuyển khoản', money(r.transfer) + 'đ') + row('Tiền mặt thu', money(r.cash) + 'đ') + row('Đơn hủy', r.cancels) + (r.unpaid ? row('Khách về chưa trả (' + r.unpaid + ' đơn)', money(r.unpaidAmt) + 'đ') : '') + (r.refunds ? row('Hoàn tiền (' + r.refunds + ' đơn)', '-' + money(r.refundAmt) + 'đ') : '') +
       '<div style="border-top:.3mm dashed #000;margin:1.5mm 0"></div>' +
       row('Quỹ tiền lẻ cố định', money(r.float != null ? r.float : r.openCash) + 'đ') + row('Tiền mặt đầu ca (đếm)', money(r.openCash) + 'đ') + (r.openNote ? '<div>Lý do đầu ca: ' + esc(r.openNote) + '</div>' : '') +
-      row('Tổng tiền đếm trong tủ', money(r.counted) + 'đ') +
+      (r.bills ? Object.keys(r.bills).map(Number).sort(function(a, b){ return b - a; }).map(function(v){ return row('&nbsp;&nbsp;' + money(v) + ' × ' + r.bills[v], money(v * r.bills[v]) + 'đ'); }).join('') : '') +
+      row('Tổng tiền đếm trong tủ', money(r.counted) + 'đ', true) +
       '<div style="border-top:.3mm dashed #000;margin:1.5mm 0"></div>' +
       row('TM thu theo app', money(r.cash) + 'đ') + row('TM thu thực tế', money(r.cashActual != null ? r.cashActual : r.counted - r.openCash) + 'đ', true) +
       row('Chênh lệch', (r.diff > 0 ? '+' : '') + money(r.diff) + 'đ', true) +
