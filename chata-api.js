@@ -98,6 +98,10 @@
         // mọi đơn chưa thu, kể cả đơn cũ hơn 36 giờ
         watch('pend', db.collection('posOrders').where('status', '==', 'Chờ thanh toán'), function (s) {
           var m = {}; s.forEach(function (d) { m[d.id] = Object.assign({ id: d.id }, d.data()); }); C.pend = m;
+        }),
+        // đơn khách về chưa trả (Tài 21/11) – giữ tới khi khách quay lại thu
+        watch('debt', db.collection('posOrders').where('status', '==', 'Chưa thu'), function (s) {
+          var m = {}; s.forEach(function (d) { m[d.id] = Object.assign({ id: d.id }, d.data()); }); C.debt = m;
         })
       ]);
     });
@@ -264,7 +268,8 @@
       gross: o.gross || o.total || 0, discAmt: o.discAmt || 0, disc: o.disc || null, togo: !!o.togo,
       ack: o.ack && o.ack.at || 0, ackBy: o.ack && o.ack.by || '',
       ready: o.ready && o.ready.at || 0, readyBy: o.ready && o.ready.by || '', askPhone: o.askPhone || 0, more: o.more && o.more.at || 0, moreX: o.more && o.more.x || '',
-      nv: o.nvName || '', autoPrint: !!o.autoPrint };
+      nv: o.nvName || '', autoPrint: !!o.autoPrint,
+      unpaid: o.unpaid ? { at: o.unpaid.at || 0, by: o.unpaid.by || '', why: o.unpaid.why || '', pager: o.unpaid.pager || '' } : null };
   }
   function save(ref, data, merge) {
     var p = merge ? ref.set(data, { merge: true }) : ref.set(data);
@@ -345,7 +350,7 @@
   function payTxt(o) { return o.pay === PAY_SPLIT && o.split ? 'TM ' + Number(o.split.cash).toLocaleString('vi-VN') + ' + CK ' + Number(o.split.ck).toLocaleString('vi-VN') : (o.pay || ''); }
   function byCode(w, code) { return !!w && (w === code || w.indexOf('(' + code + ')') >= 0 || w.split(' (')[0] === code); }
   function sumFor(all, code, from, to) {
-    var s = { orders: 0, revenue: 0, cash: 0, transfer: 0, cancels: 0, refunds: 0, refundAmt: 0 };
+    var s = { orders: 0, revenue: 0, cash: 0, transfer: 0, cancels: 0, refunds: 0, refundAmt: 0, unpaid: 0, unpaidAmt: 0 };
     all.forEach(function (o) {
       if ((o.status === 'Đã thanh toán' || o.refundAt) && o.paidAt >= from && o.paidAt < to && byCode(o.cashier, code)) {
         var pp = payParts(o); s.orders++; s.revenue += o.total; s.transfer += pp.ck; s.cash += pp.cash;
@@ -355,12 +360,13 @@
         var rp = payParts(o); s.refunds++; s.refundAmt += o.total; s.revenue -= o.total; s.transfer -= rp.ck; s.cash -= rp.cash;
       }
       if (o.status === 'Đã hủy') (o.log || []).forEach(function (l) { if (l.a === 'huy' && l.at >= from && l.at < to && byCode(l.by, code)) s.cancels++; });
+      if (o.status === 'Chưa thu' && o.unpaid && o.unpaid.code === code && o.unpaid.at >= from && o.unpaid.at < to) { s.unpaid++; s.unpaidAmt += o.total || 0; }
     });
     return s;
   }
   function allOrders() {
     var m = {}, b = C.orders || {};
-    [C.keep, C.pend, C.paid].forEach(function (a) { Object.keys(a || {}).forEach(function (k) { m[k] = a[k]; }); });
+    [C.keep, C.pend, C.debt, C.paid].forEach(function (a) { Object.keys(a || {}).forEach(function (k) { m[k] = a[k]; }); });
     Object.keys(b).forEach(function (k) { m[k] = b[k]; }); // bản trong C.orders là bản mới nhất trên máy
     return Object.keys(m).map(function (k) { return m[k]; });
   }
@@ -371,7 +377,7 @@
     var s = openShiftOf(u.c); if (!s) return null;
     var t = sumFor(allOrders(), u.c, s.openAt, Date.now() + 60000);
     return { id: s.id, openAt: s.openAt, openCash: s.openCash, float: s.float != null ? s.float : floatCfg(), openNote: s.openNote || '', orders: t.orders, revenue: t.revenue, cash: t.cash, transfer: t.transfer,
-      cancels: t.cancels, refunds: t.refunds, refundAmt: t.refundAmt, expect: s.openCash + t.cash };
+      cancels: t.cancels, refunds: t.refunds, refundAmt: t.refundAmt, unpaid: t.unpaid, unpaidAmt: t.unpaidAmt, expect: s.openCash + t.cash };
   }
   function cashierPatch(id, fn) {
     return me().then(function (u) {
@@ -399,6 +405,7 @@
       mode: mode, modeSetting: modeSetting(), open: orderOpen(), tables: cleanTables(cfg().tables), promos: cleanPromos(cfg().promos),
       menu: menuFor(mode), night: mode === 'night' ? null : menuFor('night'), other: menuFor(mode === 'night' ? 'normal' : 'night'),
       pending: pending, events: eventsCfg(), float: floatCfg(), addons: addonsCfg(),
+      debt: all.filter(function (o) { return o.status === 'Chưa thu'; }).sort(function (a, b) { return ((b.unpaid || {}).at || 0) - ((a.unpaid || {}).at || 0); }).map(pub),
       /* đơn QR đã thu tiền nhưng chưa báo món xong (3 giờ gần đây) – để thu ngân bấm "Món xong" */
       waiting: paid.filter(function (o) { return o.src === 'QR' && !(o.ready && o.ready.at) && Date.now() - (o.paidAt || 0) < 3 * 3600000; }).sort(function (a, b) { return a.paidAt - b.paidAt; }).map(pub),
       paid: paid.sort(function (a, b) { return b.paidAt - a.paidAt; }).slice(0, 40).map(pub),
@@ -471,7 +478,7 @@
         var h = hhOf(o.paidAt), hh = r.hours[h] || (r.hours[h] = [0, 0]); hh[0]++; hh[1] += o.total;
       });
       return db.collection('posOrders').where('date', '==', d).get().then(function (q2) {
-        q2.forEach(function (x) { var o = x.data(); if (o.status === 'Đã hủy' && !o.mergedInto) { r.cancel++; r.cancelAmt += o.total || 0; } });
+        q2.forEach(function (x) { var o = x.data(); if (o.status === 'Đã hủy' && !o.mergedInto) { r.cancel++; r.cancelAmt += o.total || 0; } if (o.status === 'Chưa thu') { r.unpaid = (r.unpaid || 0) + 1; r.unpaidAmt = (r.unpaidAmt || 0) + (o.total || 0); } });
         r.items = Object.keys(it).map(function (k) { return it[k]; }).sort(function (a, b) { return b.a - a.a; });
         return db.doc('revenuePos/' + d).set(r).then(function () { return mirrorRev(d, r); });
       });
@@ -483,7 +490,7 @@
     var m = { date: b.date, total: 0, orders: 0, gross: 0, disc: 0, cancel: 0, cancelAmt: 0, pay: {}, hours: {}, cat: {}, items: [], src: a ? 'sapo+app' : 'app', at: Date.now(), salesAt: Date.now(), payAt: Date.now() }, it = {};
     [a, b].forEach(function (r) {
       if (!r) return;
-      ['total', 'orders', 'gross', 'disc', 'cancel', 'cancelAmt'].forEach(function (k) { m[k] += Number(r[k]) || 0; });
+      ['total', 'orders', 'gross', 'disc', 'cancel', 'cancelAmt', 'unpaid', 'unpaidAmt'].forEach(function (k) { m[k] = (m[k] || 0) + (Number(r[k]) || 0); });
       Object.keys(r.pay || {}).forEach(function (k) { m.pay[k] = (m.pay[k] || 0) + (Number(r.pay[k]) || 0); });
       Object.keys(r.hours || {}).forEach(function (h) { var v = r.hours[h] || [], x = m.hours[h] || (m.hours[h] = [0, 0]); x[0] += Number(v[0]) || 0; x[1] += Number(v[1]) || 0; });
       Object.keys(r.cat || {}).forEach(function (k) { m.cat[k] = (m.cat[k] || 0) + (Number(r.cat[k]) || 0); });
@@ -644,7 +651,7 @@
       return me().then(function (u) {
         return posReady().then(function () { return approve(u); }).then(function (ok) {
           if (!ok.ok) return ok;
-          var cur = C.orders[id] || (C.paid || {})[id] || (C.pend || {})[id] || C.keep[id], K = null;
+          var cur = C.orders[id] || (C.paid || {})[id] || (C.pend || {})[id] || (C.debt || {})[id] || C.keep[id], K = null;
           var get = cur ? Promise.resolve(cur) : db.doc('posOrders/' + id).get().then(function (s) { return s.exists ? Object.assign({ id: s.id }, s.data()) : null; });
           return get.then(function (o0) {
             if (!o0) return { ok: false, msg: 'Không tìm thấy đơn.' };
@@ -660,6 +667,13 @@
               var why = clean(d.reason, 120); if (!why) return { ok: false, msg: 'Ghi lý do hoàn/hủy đơn.' };
               o.status = 'Đã hủy'; o.refundAt = Date.now(); o.refundCode = u.c; o.refundBy = who(u); o.refundWhy = why;
               act(o, u, 'hoan', why); rv = ['Hoàn/hủy đơn đã thu', o.total, why, o.pay + ' · thu lúc ' + new Date(o.paidAt).toLocaleTimeString('vi-VN', { timeZone: TZ, hour: '2-digit', minute: '2-digit' })];
+            } else if (action === 'unpaid') {
+              /* Khách về chưa trả (Tài 21/11): đơn rời danh sách chờ, kho vẫn trừ, chưa tính doanh thu, nhả thẻ rung; thu sau ở mục "Chưa thu" */
+              if (o.status !== 'Chờ thanh toán') return { ok: false, msg: 'Chỉ đơn đang chờ thanh toán mới chuyển sang chưa thu.' };
+              if (!why0) return { ok: false, msg: 'Ghi lý do.' };
+              var pg0 = o.pager || '';
+              o.status = 'Chưa thu'; o.unpaid = { at: Date.now(), by: who(u), code: u.c, why: why0, pager: pg0 }; o.pager = '';
+              act(o, u, 'chuathu', why0); rv = ['Khách về chưa trả', o.total, why0, (pg0 ? 'Bàn ' + pg0 + ' · ' : '') + (o.src === 'Quầy' ? 'Tại quầy' : o.src === 'NV' ? 'NV order' : 'Đơn QR')];
             } else if (action === 'cancel') {
               if (o.status === 'Đã thanh toán') return { ok: false, msg: 'Đơn đã thanh toán, không hủy ở đây được.' };
               if (!why0) return { ok: false, msg: 'Ghi lý do hủy đơn.' };
@@ -679,6 +693,7 @@
               if (d.togo !== undefined) o.togo = !!d.togo;
               if (action === 'pay') {
                 var PO2 = payOf(d, o.total);
+                if (o.status === 'Chưa thu' && o.unpaid) { o.unpaid.paidAt = Date.now(); o.unpaid.paidBy = who(u); act(o, u, 'thuno', 'khách quay lại trả'); }
                 o.status = 'Đã thanh toán'; o.pay = PO2.pay; if (PO2.split) o.split = PO2.split; else delete o.split; o.paidAt = Date.now(); o.paidDate = today(); o.cashier = who(u); o.cashierCode = u.c; act(o, u, 'thu', payTxt(o));
               }
               if (d.kitchen) { K = kitchenDelta(L.items, o.sent); o.sent = K.sent; if (K.items.length) act(o, u, 'bep'); }
@@ -690,7 +705,7 @@
             else if (A) discReview(u, C.orders[id], A, L, old0, clean(d.idr, 160));
             if (action === 'pay' || action === 'method') dayLater(o.paidDate);
             else if (action === 'refund') { dayLater(o.paidDate); if (o.date !== o.paidDate) dayLater(o.date); }
-            else if (action === 'cancel') dayLater(o.date);
+            else if (action === 'cancel' || action === 'unpaid') dayLater(o.date);
             else if (o.status === 'Đã thanh toán' && o.paidDate) dayLater(o.paidDate);
             return { ok: true, total: o.total, order: pub(C.orders[id]), kitchen: K ? K.items : [], data: cashierData(u) };
           });
@@ -790,7 +805,7 @@
     cashierAck: function (tok, id, pager, askPhone) {
       return me().then(function (u) {
         return posReady().then(function () {
-          var c = C.orders[id] || (C.pend || {})[id] || C.keep[id];
+          var c = C.orders[id] || (C.pend || {})[id] || (C.debt || {})[id] || C.keep[id];
           var get = c ? Promise.resolve(JSON.parse(JSON.stringify(c))) : db.doc('posOrders/' + id).get().then(function (s) { return s.exists ? Object.assign({ id: s.id }, s.data()) : null; });
           return get.then(function (o) {
             if (!o) return { ok: false, msg: 'Không tìm thấy đơn.' };
@@ -907,7 +922,7 @@
             /* tách: quỹ cố định để lại tủ · tiền mặt thu thực tế (đếm − tiền đầu ca) so với tiền mặt thu theo app · tiền nộp (đếm − quỹ) */
             var up = { closeAt: now, orders: t.orders, revenue: t.revenue, cash: t.cash, transfer: t.transfer, expect: expect, counted: c, diff: c - expect,
               float: fl, cashActual: c - s.openCash, handover: Math.max(0, c - fl), keep: Math.min(c, fl),
-              cancels: t.cancels, refunds: t.refunds, refundAmt: t.refundAmt, note: clean(note, 200), status: 'Đã kết' };
+              cancels: t.cancels, refunds: t.refunds, refundAmt: t.refundAmt, unpaid: t.unpaid, unpaidAmt: t.unpaidAmt, note: clean(note, 200), status: 'Đã kết' };
             C.shifts = (C.shifts || []).filter(function (x) { return x.id !== s.id; });
             save(db.doc('posShifts/' + s.id), up, true);
             // tính lại doanh thu ngày cho báo cáo Web vận hành (phòng đơn cuối chưa kịp tính)
@@ -957,6 +972,8 @@
             cashiers: Object.keys(cashiers).map(function (k) { return cashiers[k]; }).sort(function (a, b) { return b.revenue - a.revenue; }),
             items: Object.keys(items).map(function (k) { return items[k]; }).sort(function (a, b) { return b.a - a.a; }).slice(0, 15),
             hours: Object.keys(hours).sort().map(function (k) { return hours[k]; }),
+            unpaid: all.filter(function (o) { return o.status === 'Chưa thu' || (o.unpaid && o.unpaid.paidAt); }).filter(function (o) { return mgr || byCode(o.unpaid.by, u.c); }).map(function (o) {
+              return { id: o.id, code: o.code, name: o.name, total: o.total, by: o.unpaid.by || '', why: o.unpaid.why || '', at: o.unpaid.at || 0, pager: o.unpaid.pager || '', paidAt: o.unpaid.paidAt || 0, paidBy: o.unpaid.paidBy || '' }; }),
             cancels: cancels, shifts: shifts };
         });
       });

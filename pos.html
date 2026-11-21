@@ -55,6 +55,15 @@
   #readyBtn{background:#E67E22;color:#fff;border:none;border-radius:6px;padding:6px 10px;font-weight:700;cursor:pointer;white-space:nowrap}
   .ackbar button{margin-left:auto;background:#0A8F5F;color:#fff;border:none;border-radius:6px;padding:7px 12px;font-weight:700;font-size:13.5px;cursor:pointer;white-space:nowrap}
   .oc.late{box-shadow:0 0 0 3px var(--red)}
+  /* đơn treo quá 3 giờ + đơn khách về chưa trả (Tài 21/11) */
+  .oc .stl{margin:4px 0;background:#FDECEA;border:1.5px solid #E5534B;border-radius:8px;padding:4px 8px;font-weight:700;font-size:13px;color:#A12A22;display:flex;gap:6px;align-items:center;justify-content:space-between}
+  .oc .stl button{border:none;background:#C0392B;color:#fff;border-radius:6px;padding:4px 8px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+  .oc.debt{border-top-color:#C0392B;opacity:.95}
+  .oc.debt .why{font-size:12.5px;color:#A12A22;margin:2px 0}
+  .unp{margin:10px 0 4px;border:1.5px solid #E5534B;border-radius:8px;padding:8px 10px;background:#FFF6F5}
+  .unp h4{margin:0 0 6px;font-size:14.5px;color:#A12A22}
+  .unp label{display:flex;gap:8px;align-items:flex-start;font-size:14px;padding:3px 0;cursor:pointer}
+  .unp small{color:var(--muted)}
   .oc .h{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;font-size:13px;color:var(--muted);background:#F4F6F9}
   .oc .src{font-weight:700;font-size:12px;padding:2px 7px;border-radius:5px;background:#E3EEFC;color:var(--blue)}
   .oc.qr .src{background:#FDEBD8;color:#B85F0F}
@@ -589,7 +598,8 @@
     <button type="button" data-op="check"><i>4</i>In phiếu kiểm đồ</button>
     <button type="button" data-op="table"><i>5</i>Thay đổi bàn / thẻ rung</button>
     <button type="button" data-op="merge"><i>6</i>Gộp đơn khác vào đơn này</button>
-    <button type="button" data-op="cancel" class="red"><i>7</i>Hủy đơn</button>
+    <button type="button" data-op="unpaid" class="red"><i>7</i>Khách về chưa trả<small>chuyển sang Chưa thu</small></button>
+    <button type="button" data-op="cancel" class="red"><i>8</i>Hủy đơn</button>
     <div class="ft" id="opsFt"></div>
   </div>
 </div>
@@ -648,6 +658,7 @@
   <form class="modal" id="closeForm" style="width:min(520px,94vw)" novalidate>
     <h3>Kết ca</h3>
     <div id="closeSum"></div>
+    <div class="unp" id="closeUnp" hidden></div>
     <label style="font-size:14px;color:var(--muted);display:block;margin-top:10px">Tổng tiền mặt đếm được trong tủ (cả quỹ tiền lẻ)</label>
     <div class="given" style="margin-top:4px"><input id="closeCash" class="num" inputmode="numeric" placeholder="Nhập số tiền đếm được"></div>
     <div class="fl-split" id="closeSplit"></div>
@@ -688,7 +699,7 @@
 <div class="toast" id="toast" hidden></div>
 <iframe id="printFrame" title="in"></iframe>
 
-<script src="chata-api.js?v=ad1"></script>
+<script src="chata-api.js?v=ct1"></script>
 <script>
 (function(){
   var API = 'https://script.google.com/macros/s/AKfycbxvRhb0Jjbrokyew1RBqWwBTCiqSIsvciWx_Vns9LeOs9LLCvTJcxOk71-7CMKuI1I/exec';
@@ -1150,6 +1161,7 @@
       return '<div class="oc' + (qr ? ' qr' : '') + (qr && !o.ack ? ' qnew' : '') + (Date.now() - o.created > 30 * 60000 ? ' late' : '') + '" data-open="' + o.id + '">' +
         '<div class="h"><span class="src">' + (nvo ? '🧾 NV · ' + esc(o.nv || '') : qr ? (o.ack ? 'QR ✓' : 'QR · chưa xác nhận') + (o.pager ? ' · trả khi lấy món' : '') : 'Tại quầy') + (o.togo ? ' · 🥡 Mang đi' : '') + '</span><span>⏱ ' + ago(o.created) + '</span></div>' +
         '<div class="c">#' + esc(o.code) + (o.pager ? ' <small style="font-size:13px;color:#0A8F5F">· Bàn ' + esc(o.pager) + '</small>' : '') + '</div><div class="n">' + esc(o.name) + '</div>' +
+        (Date.now() - o.created > 3 * 3600000 ? '<div class="stl"><span>⚠ Treo ' + ago(o.created) + ' – khách còn ở quán?</span><button type="button" data-unp="' + o.id + '">Khách về chưa trả</button></div>' : '') +
         (qr && !nvo ? ctTag(o) : '') + (qr && !o.ack && o.more ? '<div style="margin:4px 0;background:#FFF3C4;border:1.5px solid #F2B544;border-radius:8px;padding:3px 8px;font-weight:700;font-size:13px">➕ Khách gọi thêm món</div>' : '') +
         '<div class="it">' + o.items.map(function(i){ return i.q + '× ' + esc(i.n); }).join(', ') + '</div>' +
         '<div class="f"><span>' + o.items.reduce(function(s, i){ return s + i.q; }, 0) + ' món</span><b class="num">' + money(o.total) + 'đ</b></div>' +
@@ -1164,6 +1176,33 @@
         '<div class="it">' + o.items.map(function(i){ return i.q + '× ' + esc(i.n); }).join(', ') + '</div>' +
         '<div class="a"><button type="button" data-ct="' + o.id + '">Thẻ / SĐT</button>' + rdyBtn(o) + '</div></div>';
     }).join('');
+    drawDebt();
+  }
+  /* Đơn khách về chưa trả (Tài 21/11): thu khi khách quay lại */
+  function drawDebt(){
+    var B = (D && D.debt) || []; if (!B.length || TAB !== 'all') return;
+    $('orders').innerHTML += '<div class="whd">💸 Đơn chưa thu – khách về chưa trả (' + B.length + ' đơn · ' + money(B.reduce(function(s, o){ return s + o.total; }, 0)) + 'đ)</div>' + B.map(function(o){
+      var u = o.unpaid || {};
+      return '<div class="oc debt" data-debt="' + o.id + '">' +
+        '<div class="h"><span class="src">Chưa thu · ' + (u.at ? hhmm(u.at) + ' ' + dmy(u.at).slice(0, 5) : '') + '</span><span>' + esc(String(u.by || '').replace(/ \(.*\)$/, '')) + '</span></div>' +
+        '<div class="c">#' + esc(o.code) + (u.pager ? ' <small style="font-size:13px;color:#A12A22">· Bàn ' + esc(u.pager) + '</small>' : '') + '</div><div class="n">' + esc(o.name) + (o.phone ? ' · 📞 ' + esc(o.phone) : '') + '</div>' +
+        '<div class="why">' + esc(u.why || '') + '</div>' +
+        '<div class="it">' + o.items.map(function(i){ return i.q + '× ' + esc(i.n); }).join(', ') + '</div>' +
+        '<div class="f"><span>Tạo ' + hhmm(o.created) + ' ' + dmy(o.created).slice(0, 5) + '</span><b class="num">' + money(o.total) + 'đ</b></div>' +
+        '<div class="a"><button type="button" data-debt="' + o.id + '">💵 Thu tiền</button></div></div>';
+    }).join('');
+  }
+  function markUnpaid(o, cb){
+    if (!o) return;
+    askReason({ title: 'Khách về chưa trả · đơn #' + o.code, what: o.name + ' · ' + money(o.total) + 'đ' + (o.pager ? ' · Bàn ' + o.pager : ''), ph: 'Bấm số 1–3 hoặc gõ lý do / đặc điểm khách',
+      list: ['Khách quên thanh toán', 'Khách bỏ về, không liên lạc được', 'Khác'],
+      hint: 'Đơn chuyển sang mục "Chưa thu" (kho vẫn trừ, chưa tính doanh thu, nhả thẻ rung). Khách quay lại thì bấm Thu tiền. Việc này được ghi lại cho quản lý xem.' }, function(why){
+      call('cashierUpdate', [PIN, o.id, 'unpaid', { reason: why }]).then(function(r){
+        if (!r.ok) return toast(r.msg, 4000);
+        if (O && O.id === o.id) closeOrder(); else { TABS = TABS.filter(function(t){ return t.O.id !== o.id; }); tabsSave(); }
+        apply(r.data); toast('Đơn #' + o.code + ' đã chuyển sang Chưa thu'); if (cb) cb();
+      }, function(e){ toast('⚠️ ' + e.message, 4000); });
+    });
   }
   /* Liên lạc với khách QR (Tài 19/11): chưa có thẻ rung, chưa có SĐT → nhắc thu ngân */
   function ctTag(o){
@@ -1216,6 +1255,9 @@
     if (e.target.closest('[data-rdone]')) return;
     var ct = e.target.closest('[data-ct]'); if (ct) return openCt(ct.getAttribute('data-ct'));
     if (e.target.closest('[data-wid]')) return;
+    var un = e.target.closest('[data-unp]'); if (un) { e.stopPropagation(); return markUnpaid(D.pending.find(function(x){ return x.id === un.getAttribute('data-unp'); })); }
+    var db = e.target.closest('[data-debt]');
+    if (db) { var dor = (D.debt || []).find(function(x){ return x.id === db.getAttribute('data-debt'); }); if (dor) { openOrder(dor); PAYM = 'Tiền mặt'; openPay(true); } return; }
     var p = e.target.closest('[data-pay]'), o = e.target.closest('[data-open]');
     var id = p ? p.getAttribute('data-pay') : (o ? o.getAttribute('data-open') : null); if (!id) return;
     var ord = D.pending.find(function(x){ return x.id === id; }); if (!ord) return;
@@ -1535,7 +1577,7 @@
   }
   function tabShow(i){
     var t = TABS[i]; if (!t) return;
-    if (t.O.id && D) { var fresh = D.pending.filter(function(x){ return x.id === t.O.id; })[0];
+    if (t.O.id && D) { var fresh = D.pending.concat(D.debt || []).filter(function(x){ return x.id === t.O.id; })[0];
       if (!fresh) { TABS.splice(i, 1); tabsSave(); toast('Đơn #' + t.O.code + ' đã được thanh toán / hủy ở nơi khác – đã đóng tab.', 4000); if (TABS.length) return tabShow(Math.min(i, TABS.length - 1)); return goHome(); }
       if (!tabDirty(t, -1)) { t.O = JSON.parse(JSON.stringify(fresh)); t.O0 = undefined; } }
     TCUR = i; fillOrder(t.O.id ? t.O : null, t.O);
@@ -1580,7 +1622,7 @@
   function fillOrder(ord, nO){
     O = nO;
     O.togo = !!O.togo; SEL = O.items.length - 1; HL = 0; ITEM_DR = {};
-    $('oTitle').textContent = ord ? ('Đơn #' + ord.code + ' · ' + (ord.src === 'Quầy' ? 'Tại quầy' : ord.src === 'NV' ? 'NV order · ' + (ord.nv || '') : 'QR')) : 'Đơn mới · Tại quầy';
+    $('oTitle').textContent = ord ? ('Đơn #' + ord.code + ' · ' + (ord.src === 'Quầy' ? 'Tại quầy' : ord.src === 'NV' ? 'NV order · ' + (ord.nv || '') : 'QR') + (ord.status === 'Chưa thu' ? ' · 💸 Khách về chưa trả' : '')) : 'Đơn mới · Tại quầy';
     $('oTime').textContent = ord ? 'gửi ' + hhmm(ord.created) : '';
     $('cName').value = O.name === 'Khách lẻ' ? '' : O.name; $('cPhone').value = O.phone || ''; $('cPager').value = O.pager || ''; $('cNote').value = O.note || '';
     $('search').value = ''; $('menuPick').value = 'cur'; $('menuPick').hidden = !(D && D.other && D.other.length);
@@ -1944,6 +1986,7 @@
     var o = savedOrd(); if (!o) return;
     if (k === 'send') return $('moreBtn').click();
     if (k === 'cancel') return $('cancelBtn').click();
+    if (k === 'unpaid') { if (dirty()) return toast('Lưu đơn trước (F3) rồi mới chuyển sang chưa thu.'); return markUnpaid(o); }
     if (k === 'tem' || k === 'bep') return openReprint(o, k);
     if (k === 'merge') return openMerge(o);
     if (k === 'check') {
@@ -2334,8 +2377,14 @@
     var s = D && D.shift; if (!s) return;
     $('closeSum').innerHTML = '<table style="width:100%;font-size:14.5px;border-collapse:collapse">' + [
       ['Mở ca lúc', hhmm(s.openAt) + ' ' + dmy(s.openAt)], ['Số đơn đã thu', s.orders], ['Doanh thu', money(s.revenue) + 'đ'], ['Chuyển khoản', money(s.transfer) + 'đ'],
-      ['<b>Tiền mặt thu trong ca (theo app)</b>', '<b>' + money(s.cash) + 'đ</b>'], ['Quỹ tiền lẻ cố định', money(s.float != null ? s.float : flt()) + 'đ'], ['Tiền mặt đầu ca (đếm lúc mở)', money(s.openCash) + 'đ' + (s.openNote ? ' <small>(' + esc(s.openNote) + ')</small>' : '')], ['Đơn hủy', s.cancels]].concat(s.refunds ? [['Hoàn tiền (' + s.refunds + ' đơn)', '−' + money(s.refundAmt) + 'đ']] : []).concat([['<b>Tiền mặt phải có trong tủ</b>', '<b>' + money(s.expect) + 'đ</b>']
+      ['<b>Tiền mặt thu trong ca (theo app)</b>', '<b>' + money(s.cash) + 'đ</b>'], ['Quỹ tiền lẻ cố định', money(s.float != null ? s.float : flt()) + 'đ'], ['Tiền mặt đầu ca (đếm lúc mở)', money(s.openCash) + 'đ' + (s.openNote ? ' <small>(' + esc(s.openNote) + ')</small>' : '')], ['Đơn hủy', s.cancels]].concat(s.unpaid ? [['Khách về chưa trả (' + s.unpaid + ' đơn)', money(s.unpaidAmt) + 'đ']] : []).concat(s.refunds ? [['Hoàn tiền (' + s.refunds + ' đơn)', '−' + money(s.refundAmt) + 'đ']] : []).concat([['<b>Tiền mặt phải có trong tủ</b>', '<b>' + money(s.expect) + 'đ</b>']
     ]).map(function(r){ return '<tr><td style="padding:4px 0">' + r[0] + '</td><td style="text-align:right">' + r[1] + '</td></tr>'; }).join('') + '</table>';
+    /* Kết ca: đơn còn chờ thanh toán → chọn đơn khách đã về để chuyển sang "Chưa thu" (Tài 21/11) */
+    var P = (D.pending || []).slice().sort(function(a, b){ return a.created - b.created; });
+    $('closeUnp').hidden = !P.length;
+    $('closeUnp').innerHTML = P.length ? '<h4>⚠ Còn ' + P.length + ' đơn chưa thanh toán – đánh dấu đơn khách đã về</h4>' + P.map(function(o){
+      return '<label><input type="checkbox" data-cu="' + o.id + '"' + (Date.now() - o.created > 3600000 ? ' checked' : '') + '><span><b>#' + esc(o.code) + '</b>' + (o.pager ? ' · Bàn ' + esc(o.pager) : '') + ' · ' + esc(o.name) + ' · <b class="num">' + money(o.total) + 'đ</b><br><small>' + hhmm(o.created) + ' · ' + esc(o.items.slice(0, 3).map(function(i){ return i.q + ' ' + i.n; }).join(', ')) + (o.items.length > 3 ? '…' : '') + '</small></span></label>';
+    }).join('') + '<small>Đánh dấu = khách đã về chưa trả → chuyển sang "Chưa thu" khi kết ca. Bỏ đánh dấu = khách còn ở quán, ca sau thu tiếp.</small>' : '';
     $('closeCash').value = ''; $('closeNote').value = ''; $('closeErr').hidden = true; $('closeSplit').innerHTML = ''; closeCalc();
     $('closeModal').hidden = false; setTimeout(function(){ $('closeCash').focus(); }, 30);
   });
@@ -2347,7 +2396,9 @@
     var s = D.shift, d = +raw - s.expect;
     if (needOk(d !== 0 && !$('closeNote').value.trim(), 'Tiền lệch ' + money(d) + 'đ mà chưa ghi lý do. Vẫn kết ca?', function(){ $('closeForm').requestSubmit(); })) return;
     busy(true, 'Đang kết ca…');
-    call('shiftClose', [PIN, +raw, $('closeNote').value.trim()]).then(function(r){
+    var cu = Array.prototype.map.call(document.querySelectorAll('#closeUnp [data-cu]:checked'), function(x){ return x.getAttribute('data-cu'); });
+    cu.reduce(function(pr, id){ return pr.then(function(){ return call('cashierUpdate', [PIN, id, 'unpaid', { reason: 'Kết ca – khách về chưa trả' }]).then(function(r){ if (r.ok) { TABS = TABS.filter(function(t){ return t.O.id !== id; }); tabsSave(); } }); }); }, Promise.resolve()).then(function(){
+      return call('shiftClose', [PIN, +raw, $('closeNote').value.trim()]); }).then(function(r){
       busy(false); if (!r.ok) { $('closeErr').textContent = r.msg; $('closeErr').hidden = false; return; }
       $('closeModal').hidden = true;
       if ($('closePrint').checked) sendPrint('bill', shiftHtml(r.report));
@@ -2364,7 +2415,7 @@
       '<div style="text-align:center;font-weight:800;margin:1mm 0 2mm">PHIẾU KẾT CA</div>' +
       row('Thu ngân', esc(r.name) + ' (' + esc(r.code) + ')') + row('Mở ca', hhmm(r.openAt) + ' ' + dmy(r.openAt)) + row('Kết ca', hhmm(r.closeAt) + ' ' + dmy(r.closeAt)) +
       '<div style="border-top:.3mm dashed #000;margin:1.5mm 0"></div>' +
-      row('Số đơn đã thu', r.orders) + row('Doanh thu', money(r.revenue) + 'đ', true) + row('Chuyển khoản', money(r.transfer) + 'đ') + row('Tiền mặt thu', money(r.cash) + 'đ') + row('Đơn hủy', r.cancels) + (r.refunds ? row('Hoàn tiền (' + r.refunds + ' đơn)', '-' + money(r.refundAmt) + 'đ') : '') +
+      row('Số đơn đã thu', r.orders) + row('Doanh thu', money(r.revenue) + 'đ', true) + row('Chuyển khoản', money(r.transfer) + 'đ') + row('Tiền mặt thu', money(r.cash) + 'đ') + row('Đơn hủy', r.cancels) + (r.unpaid ? row('Khách về chưa trả (' + r.unpaid + ' đơn)', money(r.unpaidAmt) + 'đ') : '') + (r.refunds ? row('Hoàn tiền (' + r.refunds + ' đơn)', '-' + money(r.refundAmt) + 'đ') : '') +
       '<div style="border-top:.3mm dashed #000;margin:1.5mm 0"></div>' +
       row('Quỹ tiền lẻ cố định', money(r.float != null ? r.float : r.openCash) + 'đ') + row('Tiền mặt đầu ca (đếm)', money(r.openCash) + 'đ') + (r.openNote ? '<div>Lý do đầu ca: ' + esc(r.openNote) + '</div>' : '') +
       row('Tổng tiền đếm trong tủ', money(r.counted) + 'đ') +
@@ -2434,6 +2485,8 @@
         (r.discounts || []).map(function(x){ return '<tr>' + td('#' + esc(x.code)) + td(esc(x.name)) + td(money(x.gross), 1) + td('-' + money(x.amt), 1) + td(money(x.total), 1) + td(esc(x.why)) + td(esc(x.by)) + '</tr>'; })) +
       '<h3>Đơn hủy</h3>' + tbl([['Mã'], ['Khách'], ['Nguồn'], ['Tiền', 1], ['Người hủy'], ['Lý do'], ['Lúc']],
         r.cancels.map(function(c){ return '<tr>' + td('#' + esc(c.code)) + td(esc(c.name)) + td(esc(c.src)) + td(money(c.total), 1) + td(esc(c.by)) + td(esc(String(c.x || '').replace(/^duyệt: /, ''))) + td(c.at ? hhmm(c.at) : '') + '</tr>'; })) +
+      ((r.unpaid || []).length ? '<h3>Khách về chưa trả</h3>' + tbl([['Mã'], ['Khách'], ['Bàn'], ['Tiền', 1], ['Người ghi'], ['Lý do'], ['Lúc'], ['Thu lại']],
+        r.unpaid.map(function(c){ return '<tr>' + td('#' + esc(c.code)) + td(esc(c.name)) + td(esc(c.pager)) + td(money(c.total), 1) + td(esc(String(c.by).replace(/ \(.*\)$/, ''))) + td(esc(c.why)) + td(c.at ? hhmm(c.at) : '') + td(c.paidAt ? '✓ ' + hhmm(c.paidAt) + ' ' + esc(String(c.paidBy).replace(/ \(.*\)$/, '')) : '<b style="color:#E5534B">Chưa thu</b>') + '</tr>'; })) : '') +
       '<h3>Món bán chạy</h3>' + tbl([['Món'], ['Nhóm'], ['SL', 1], ['Doanh thu', 1]],
         r.items.map(function(i){ return '<tr>' + td(esc(i.n)) + td(esc(i.g)) + td(i.q, 1) + td(money(i.a), 1) + '</tr>'; })) +
       '<h3>Theo giờ</h3>' + tbl([['Giờ'], ['Đơn', 1], ['Doanh thu', 1]],

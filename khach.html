@@ -50,13 +50,15 @@
   .order h2{margin:0 0 1.5vh;font-size:3.4vh;font-weight:800;display:flex;justify-content:space-between;align-items:baseline}
   .order h2 small{font-size:2.2vh;font-weight:600;color:var(--muted)}
   .togo{display:inline-block;margin-left:1vw;background:var(--sun);color:#2b2118;border-radius:999px;padding:.3vh 1vw;font-size:2.2vh;vertical-align:middle}
-  .rows{flex:1;overflow:hidden;display:flex;flex-direction:column}
-  .row{display:grid;grid-template-columns:7vh 1fr auto;gap:1.6vw;align-items:center;padding:1.5vh 0;border-top:1px solid var(--line);font-size:3vh}
-  .row .q{width:6vh;height:6vh;border-radius:1.2vh;background:var(--ac-s);color:var(--ac-d);font-weight:800;display:flex;align-items:center;justify-content:center;font-size:3vh}
-  .row .n{font-weight:700;line-height:1.25}
-  .row .n small{display:block;font-weight:500;color:var(--muted);font-size:2.2vh}
+  /* hiện đủ mọi món: chữ tự nhỏ dần cho vừa, từ 9 món chia 2 cột (Tài 21/11) */
+  .rows{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;--fs:3vh}
+  .rows.two{display:grid;grid-auto-flow:column;grid-template-columns:1fr 1fr;column-gap:3vw;align-content:start}
+  .row{display:grid;grid-template-columns:2.3em 1fr auto;gap:1.6vw;align-items:center;padding:.5em 0;border-top:1px solid var(--line);font-size:var(--fs)}
+  .row .q{width:2em;height:2em;border-radius:.4em;background:var(--ac-s);color:var(--ac-d);font-weight:800;display:flex;align-items:center;justify-content:center;font-size:1em}
+  .row .n{font-weight:700;line-height:1.25;min-width:0}
+  .row .n small{display:block;font-weight:500;color:var(--muted);font-size:.73em}
   .row .p{font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
-  .row .p s{display:block;font-size:2vh;color:var(--muted);font-weight:500}
+  .row .p s{display:block;font-size:.67em;color:var(--muted);font-weight:500}
   .row.new{animation:hi 1.6s ease-out}
   @keyframes hi{from{background:var(--sun-s)}to{background:transparent}}
   .more{font-size:2.2vh;color:var(--muted);padding:1vh 0;border-top:1px solid var(--line)}
@@ -203,8 +205,10 @@
       if ($('vqr').getAttribute('src') !== st.qr) $('vqr').src = st.qr || '';
       return view('Pay');
     }
-    var items = st.items || [], max = 8, extra = items.length > max ? items.length - max : 0, list = extra ? items.slice(-max) : items, n = items.length;
-    $('rows').innerHTML = (extra ? '<div class="more">… và ' + extra + ' món phía trên</div>' : '') + list.map(function(i, k){
+    var items = st.items || [], list = items, n = items.length, two = n >= 9;
+    $('rows').classList.toggle('two', two);
+    $('rows').style.gridTemplateRows = two ? 'repeat(' + Math.ceil(n / 2) + ', auto)' : '';
+    $('rows').innerHTML = list.map(function(i, k){
       return '<div class="row' + (n > lastN && k === list.length - 1 ? ' new' : '') + '"><span class="q">' + i.q + '</span><span class="n">' + esc(i.n) + (i.t ? '<small>✎ ' + esc(i.t) + '</small>' : '') + '</span><span class="p">' + (i.g && i.g !== i.s ? '<s>' + money(i.g) + '</s>' : '') + money(i.s) + '</span></div>';
     }).join('');
     lastN = n;
@@ -212,8 +216,15 @@
     $('oMeta').textContent = (st.cashier ? 'Thu ngân: ' + st.cashier + ' · ' : '') + (st.cnt || 0) + ' món';
     $('sum').innerHTML = (st.disc ? '<span class="lb">Tạm tính</span><span class="v">' + money(st.gross) + '</span><span class="lb">Giảm giá' + (st.dl ? ' (' + esc(st.dl) + ')' : '') + '</span><span class="v">−' + money(st.disc) + '</span>' : '') +
       '<span class="tl">Tổng cộng</span><span class="v tot">' + money(st.total) + '</span>';
-    view('Order');
+    view('Order'); fitRows();
   }
+  /* thu nhỏ chữ danh sách món tới khi vừa khung (tối thiểu 1,5vh) */
+  function fitRows(){
+    var el = $('rows'), vh = innerHeight / 100, fs = 3;
+    el.style.setProperty('--fs', fs + 'vh');
+    while (fs > 1.5 && el.scrollHeight > el.clientHeight + 1) { fs = Math.round((fs - 0.1) * 10) / 10; el.style.setProperty('--fs', fs + 'vh'); }
+  }
+  addEventListener('resize', fitRows);
   var bc = null;
   try { bc = new BroadcastChannel('chata_khach'); bc.onmessage = function(e){ show(e.data); }; bc.postMessage({ t: 'hello' }); } catch (e) {}
   window.addEventListener('storage', function(e){ if (e.key === 'chata_khach' && e.newValue) try { show(JSON.parse(e.newValue)); } catch (x) {} });
