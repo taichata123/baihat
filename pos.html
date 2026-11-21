@@ -164,8 +164,17 @@
   .otab .x{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;opacity:.7}
   .otab .x:hover{background:rgba(0,0,0,.15);opacity:1}
   .otab .dt{width:7px;height:7px;border-radius:50%;background:var(--orange);flex:none}
+  /* đang chờ chuyển khoản: thanh tab vẫn bấm được (Tài 21/11) */
+  .otab .ck{display:inline-block;background:var(--orange);color:#fff;border-radius:4px;padding:0 5px;margin-right:4px;font-size:11px;font-weight:700}
+  .otab.on .ck{background:#B36B00}
   .otadd,.othome{flex:none;border:none;border-radius:8px 8px 0 0;background:var(--green);color:#fff;font-weight:800;font-size:18px;padding:0 14px;cursor:pointer}
   .othome{background:transparent;color:#C9D6EA;font-size:18px;margin-left:auto;padding:0 10px}
+  /* thanh tab đơn dời lên trên cùng khu chọn món, rộng hơn (Tài 21/11) */
+  .mid .otabs{padding:6px 8px 0;gap:6px;min-height:50px}
+  .mid .otab{max-width:260px;min-width:150px;border-radius:8px 8px 0 0;padding:6px 8px 6px 12px}
+  .mid .otab b{font-size:14.5px}.mid .otab small{font-size:12.5px}
+  .mid .otab.on{background:var(--nav);color:#fff;box-shadow:inset 0 3px 0 var(--green)}
+  .mid .otadd{padding:0 18px}
   .tstrip{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--yellow);border-radius:10px;padding:8px 10px;margin:0 0 10px}
   .tstrip>span{font-weight:700;font-size:13.5px;color:#6B4A00}
   .tstrip button{border:1.5px solid #F2B544;background:#fff;border-radius:8px;padding:5px 10px;cursor:pointer;font:inherit;font-size:13px}
@@ -375,6 +384,7 @@
 <div class="ord" id="ordView" hidden>
   <div class="cats" id="cats"></div>
   <div class="mid">
+    <div class="otabs" id="oTabs"></div>
     <div class="mtop">
       <input id="search" placeholder="Chọn món (F2): gõ tên hoặc chữ đầu (VD: ts) + Enter · ↑↓ chọn" autocomplete="off">
       <button type="button" class="kbFix" title="Ô nhập không gõ được chữ? Bấm đây (Ctrl+K)" style="flex:none;padding:0 12px;border:1px solid #D5DCE6;border-radius:8px;background:#fff;font-size:18px;cursor:pointer">⌨</button>
@@ -383,7 +393,6 @@
     <div class="grid" id="grid"></div>
   </div>
   <div class="cart">
-    <div class="otabs" id="oTabs"></div>
     <div class="chead">
       <div class="ocode"><span id="oTitle">Đơn mới · Tại quầy</span><span id="oTime"></span></div>
       <div class="ackbar" id="ackBar" hidden><span>🔔 Đơn QR chưa xác nhận – kiểm tra món rồi bấm xác nhận để báo khách</span><button type="button" id="ackAsk" title="Khách chưa có thẻ rung, chưa để lại SĐT: trang QR của khách hiện ô nhập SĐT">📱 Xác nhận + xin SĐT</button><button type="button" id="ackBtn">✓ Xác nhận đơn (F4)</button></div>
@@ -1517,12 +1526,12 @@
     $('oTabs').innerHTML = TABS.map(function(t, i){
       var it = t.O.items || [], n = it.reduce(function(s, x){ return s + x.q; }, 0), tot = it.reduce(function(s, x){ return s + x.p * x.q; }, 0);
       return '<button type="button" class="otab' + (i === TCUR ? ' on' : '') + '" data-tab="' + i + '" title="' + esc(tabLabel(t)) + '">' + (tabDirty(t, i) && !t.O.id ? '' : tabDirty(t, i) ? '<span class="dt" title="Có thay đổi chưa lưu"></span>' : '') +
-        '<span style="min-width:0"><b>' + esc(tabLabel(t)) + '</b><small>' + (n ? n + ' món · ' + money(tot) + 'đ' : 'chưa có món') + '</small></span><span class="x" data-tx="' + i + '" title="Đóng đơn này">✕</span></button>';
+        '<span style="min-width:0"><b>' + (t.pay ? '<span class="ck">⏳ Chờ CK</span>' : '') + esc(tabLabel(t)) + '</b><small>' + (n ? n + ' món · ' + money(tot) + 'đ' : 'chưa có món') + '</small></span><span class="x" data-tx="' + i + '" title="Đóng đơn này">✕</span></button>';
     }).join('') + '<button type="button" class="otadd" id="tabAdd" title="Tạo đơn mới (F1) – đơn đang làm vẫn giữ ở tab">＋</button><button type="button" class="othome" id="tabHome" title="Về danh sách đơn – các tab vẫn giữ">🏠</button>';
   }
   function drawStrip(){
     var el = $('tStrip'); if (!el) return; el.hidden = !TABS.length;
-    el.innerHTML = TABS.length ? '<span>📝 Đơn đang làm dở:</span>' + TABS.map(function(t, i){ var n = (t.O.items || []).reduce(function(s, x){ return s + x.q; }, 0); return '<button type="button" data-tab="' + i + '">' + esc(tabLabel(t)) + ' · ' + n + ' món</button>'; }).join('') : '';
+    el.innerHTML = TABS.length ? '<span>📝 Đơn đang làm dở:</span>' + TABS.map(function(t, i){ var n = (t.O.items || []).reduce(function(s, x){ return s + x.q; }, 0); return '<button type="button" data-tab="' + i + '">' + (t.pay ? '⏳ Chờ CK · ' : '') + esc(tabLabel(t)) + ' · ' + n + ' món</button>'; }).join('') : '';
   }
   function tabShow(i){
     var t = TABS[i]; if (!t) return;
@@ -1533,7 +1542,32 @@
     if (t.O0 !== undefined) O0 = t.O0; else { O0 = snap(); t.O0 = O0; }
     if (t.SEL != null) { SEL = t.SEL; drawCart(); }
     tabsSave();
+    if (t.pay) payResume(t);
   }
+  /* Chờ khách chuyển khoản mà bấm ＋ / F1 / tab khác: tự giữ đơn ở tab (nhãn ⏳ Chờ CK), mở lại tab là hiện lại mã QR (Tài 21/11) */
+  function payPark(){
+    if ($('payModal').hidden) return;
+    var t = TABS[TCUR];
+    if (t && (METHOD === 'Chuyển khoản' || METHOD === PAY_SPLIT)) t.pay = { m: METHOD, c: METHOD === PAY_SPLIT ? $('spCash').value : '' };
+    else if (t) delete t.pay;
+    $('payModal').hidden = true; tabsSave();
+  }
+  function payResume(t){
+    var p = t.pay; if (!p || !O || !O.items.length) { delete t.pay; return; }
+    PAYM = p.m === PAY_SPLIT ? 'Tiền mặt' : p.m; openPay(true);
+    if (p.m === PAY_SPLIT) { setMethod(PAY_SPLIT); $('spCash').value = p.c || ''; spCalc(); }
+  }
+  /* khoét lỗ trên lớp tối của hộp thanh toán đúng chỗ thanh tab → bấm được tab / ＋ khi hộp đang mở */
+  function payHole(){
+    var m = $('payModal'), tb = $('oTabs');
+    if (m.hidden || !tb || $('ordView').hidden) { m.style.clipPath = ''; m.style.paddingTop = ''; m.querySelector('.modal').style.maxHeight = ''; return; }
+    var r = tb.getBoundingClientRect(), W = innerWidth, H = innerHeight;
+    m.style.paddingTop = Math.round(r.bottom) + 'px';
+    m.querySelector('.modal').style.maxHeight = (H - r.bottom - 16) + 'px';
+    var L = r.left + 'px ', R = r.right + 'px ', T = r.top + 'px', B = r.bottom + 'px';
+    m.style.clipPath = 'polygon(0 0,' + L + '0,' + L + T + ',' + L + B + ',' + R + B + ',' + R + T + ',' + L + T + ',' + L + '0,100% 0,100% 100%,0 100%)';
+  }
+  addEventListener('resize', payHole);
   function goHome(){ tabStash(); O = null; TCUR = -1; $('ordView').hidden = true; drawHome(); }
   function openOrder(ord){
     if (needShift(function(){ openOrder(ord); })) return;
@@ -1565,6 +1599,7 @@
   }
   $('oTabs').addEventListener('click', function(e){
     var x = e.target.closest('[data-tx]'), b = e.target.closest('[data-tab]');
+    if (!$('payModal').hidden) { if (b && !x && +b.getAttribute('data-tab') === TCUR) return; payPark(); drawTabs(); }
     if (e.target.closest('#tabAdd')) { openOrder(null); return; }
     if (e.target.closest('#tabHome')) { goHome(); return; }
     if (x) { var i = +x.getAttribute('data-tx'), t = TABS[i];
@@ -1769,7 +1804,8 @@
     $('quick').innerHTML = opts.map(function(v){ return '<button type="button" data-g="' + v + '">' + money(v) + '</button>'; }).join('');
     $('pBill').checked = !!S.bill_on; $('pTem').checked = !!(S.bep_on || S.tem_on);
     $('givenBox').hidden = false; $('ckBox').hidden = true; $('spBox').hidden = true; $('spCash').value = ''; $('payErr').hidden = true;
-    $('payModal').hidden = false;
+    $('payModal').hidden = false; payHole();
+    if (TABS[TCUR] && TABS[TCUR].pay) { delete TABS[TCUR].pay; tabsSave(); drawTabs(); }
     var pm = PAYM; PAYM = 'Tiền mặt';
     if (pm === 'Chuyển khoản') setMethod(pm); else setTimeout(function(){ $('given').focus(); }, 30);
   }
@@ -2004,6 +2040,7 @@
     if (!$('payModal').hidden) {
       if (e.key === 'Enter') { e.preventDefault(); doPay(); }
       else if (e.key === 'Escape') { $('payModal').hidden = true; back(); }
+      else if (e.key === 'F1') { e.preventDefault(); payPark(); openOrder(null); }
       else if (e.key === 'F10' || e.key === 'F9') { e.preventDefault(); setMethod(e.key === 'F10' ? 'Chuyển khoản' : 'Tiền mặt'); }
       else if (!e.ctrlKey && !e.altKey && /^[cCtT]$/.test(e.key)) { e.preventDefault(); setMethod(/[cC]/.test(e.key) ? 'Chuyển khoản' : 'Tiền mặt'); }
       else if (!e.ctrlKey && !e.altKey && /^[sS]$/.test(e.key)) { e.preventDefault(); setMethod(PAY_SPLIT); }
