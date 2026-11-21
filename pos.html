@@ -110,7 +110,7 @@
   .mtop input{flex:1;border:none;border-radius:6px;padding:10px 12px;font-size:15px}
   .mtop select{border-radius:6px;padding:0 8px}
   .grid{flex:1;overflow:auto;padding:0 8px 8px;position:relative}
-  .grid::after{content:'';display:block;height:70vh}
+  .grid.srch::after{content:'';display:block;height:70vh}
   #varList.two{display:grid;grid-template-columns:1fr 1fr;gap:0 8px}
   /* Màn chọn món v2 (Tài duyệt 19/11): mỗi nhóm một dải ngang, hàng trên 8 món bán chạy có hình, còn lại ô nhỏ */
   .band{margin-top:8px;background:rgba(255,255,255,.04);border-radius:6px;padding:6px}
@@ -277,6 +277,25 @@
   #printFrame{position:fixed;width:0;height:0;border:0;left:-9999px}
   /* Món thêm (topping) – Tài 20/11 */
   .adq{margin-bottom:6px}.adq .adg{display:flex;flex:1 1 30%;gap:0}.adq .adg button{flex:1}.adq button.on{background:#E3F2EA;border-color:#16A34A;color:#14532D}.adq button b{color:#16A34A;margin-left:4px}.adq .adm{flex:0 0 34px!important;border-top-right-radius:0;border-bottom-right-radius:0;font-size:18px;padding:0}.adq .adm+button{border-top-left-radius:0;border-bottom-left-radius:0}
+  /* Màn chọn món v4 (Tài 21/11): 2 cột – trái Đồ uống 70%, phải Đồ ăn 30%, mỗi cột cuộn riêng; bỏ cột nhóm và chữ tên nhóm */
+  .ord .cats{display:none}
+  .grid.two{overflow:hidden;padding:6px 8px 0}
+  .gcols{display:grid;grid-template-columns:7fr 3fr;gap:8px;height:100%}
+  .gcol{overflow:auto;min-height:0;position:relative;padding-bottom:40vh;scrollbar-width:thin}
+  /* ngăn cách nhóm lớn (Tài chọn 21/11): nền màu nhóm + viền trên + nhãn tên nhóm nhỏ + cách 14px */
+  .gcol .band{margin:0 0 14px;padding:0 6px 6px;border-radius:0 0 8px 8px;background:color-mix(in srgb,var(--c) 24%,#2B3A52);border-top:3px solid var(--c)}
+  .gcol .band::before{content:attr(title);display:inline-block;background:var(--c);color:#fff;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:1px 10px 2px;border-radius:0 0 6px 6px;margin:0 0 5px}
+  .gcol .tg{grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:5px}.gcol .tg+.tg{margin-top:5px}
+  .gcol .tl{height:140px}
+  /* hàng Ăn vặt cố định trên cùng cột Đồ uống (Tài 21/11) */
+  .gcol .snk{position:sticky;top:0;z-index:3;box-shadow:0 4px 10px rgba(0,0,0,.4)}
+  /* cột Đồ ăn: ô nhỏ còn ~80% (Tài 21/11) */
+  .gcol.food .tg{grid-template-columns:repeat(auto-fill,minmax(106px,1fr));gap:4px}.gcol.food .tg+.tg{margin-top:4px}
+  .gcol.food .tl{height:116px}.gcol.food .tl .nm{height:44px;padding:2px 6px 3px}.gcol.food .tl .nm b{font-size:13px}.gcol.food .tl .nm small{font-size:10px}
+  .gcol.food .tl .bd{font-size:11px;padding:1px 5px;top:3px;left:3px}.gcol.food .tl.noimg .im{font-size:30px}.gcol.food .tl .qy{min-width:26px;height:26px;font-size:14px;top:3px;right:3px}
+  .gcol .snk .tg{grid-template-columns:repeat(auto-fit,minmax(86px,1fr));gap:5px}
+  .gcol .snk .tl{height:96px}.gcol .snk .tl .im{margin:3px 3px 0}.gcol .snk .tl.noimg .im{font-size:24px}
+  .gcol .snk .tl .nm{height:34px;padding:2px 6px 4px}.gcol .snk .tl .nm b{font-size:13px;-webkit-line-clamp:2}.gcol .snk .tl .bd{font-size:11px;padding:1px 5px;top:3px;left:3px}.gcol .snk .tl .qy{min-width:24px;height:24px;font-size:14px;top:3px;right:3px}
 </style>
 </head>
 <body>
@@ -1304,11 +1323,14 @@
     $('cats').innerHTML = BANDS.map(function(B, i){ return '<button class="cat' + (i ? '' : ' on') + '" data-cat="' + i + '" type="button" style="--c:' + gcol(B.g) + '"><i>' + (i + 1) + '</i>' + esc(B.g) + '</button>'; }).join('');
     $('grid').scrollTop = 0;
   }
-  function goBand(i){ var el = $('band' + i); if (!el) return; $('search').value = ''; HL = 0; drawGrid(); el = $('band' + i); $('grid').scrollTop = el.offsetTop - 8; markCat(i); }
+  function goBand(i){ var el = $('band' + i); if (!el) return; $('search').value = ''; HL = 0; drawGrid(); el = $('band' + i); if (el.parentNode.classList.contains('gcol')) el.parentNode.scrollTop = el.offsetTop - 4; else $('grid').scrollTop = el.offsetTop - 8; markCat(i); }
+  var FOOD_G = { 'Mì cay - Bánh mì chảo': 1, 'Đồ chiên': 1, 'Ăn vặt': 1 }, GST = [0, 0];
   function markCat(i){ Array.prototype.forEach.call($('cats').children, function(c, k){ c.classList.toggle('on', k === i); }); }
   function qtyOf(n){ return O.items.filter(function(i){ return i.n === n; }).reduce(function(s, i){ return s + i.q; }, 0); }
   function drawGrid(){
     var q = norm($('search').value.trim()), qs = q.replace(/\s+/g, ''), g = $('grid'), st = g.scrollTop;
+    g.querySelectorAll('.gcol').forEach(function(c, x){ GST[x] = c.scrollTop; });
+    g.classList.toggle('two', !q); g.classList.toggle('srch', !!q);
     BANDS = makeBands();
     function score(m){
       var n = norm(m.n), ini = n.split(/\s+/).map(function(w){ return w.charAt(0); }).join('');
@@ -1325,20 +1347,27 @@
       g.scrollTop = 0; return;
     }
     GRID = [];
-    g.innerHTML = BANDS.map(function(B, i){
+    var bandHtml = function(B, i){
       var col = gcol(B.g), L = LINES[B.g], groups;
       if (L) {
         groups = L.map(function(x){ return { lb: x[0], re: x[1], ts: [] }; });
         B.tiles.forEach(function(t, j){ t.dg = B.g; for (var k = 0; k < groups.length; k++) if (groups[k].re.test(t.b)) { groups[k].ts.push(j); return; } });
         groups = groups.filter(function(x){ return x.ts.length; });
       } else { B.tiles.forEach(function(t){ t.dg = B.g; }); groups = [{ lb: '', ts: B.tiles.map(function(t, j){ return j; }) }]; }
-      return '<div class="band" id="band' + i + '" style="--c:' + col + '"><h3><b>' + (i + 1) + ' · ' + esc(B.g) + '</b><small>' + B.tiles.length + ' món · Alt+' + (i + 1) + '</small></h3>' +
+      return '<div class="band" id="band' + i + '" style="--c:' + col + '" title="' + esc(B.g) + '">' +
         groups.map(function(G){
-          return (G.lb && groups.length > 1 ? '<div class="lnl">' + esc(G.lb) + '</div>' : '') + '<div class="tg">' +
+          return '<div class="tg">' +
             G.ts.map(function(j){ return tileHtml(B.tiles[j], 'data-tile="' + i + ':' + j + '"', col); }).join('') + '</div>';
         }).join('') + '</div>';
-    }).join('');
-    g.scrollTop = st;
+    };
+    var dr = '', fo = '';
+    var FO = ['Mì cay - Bánh mì chảo', 'Đồ chiên'], sn = '';
+    BANDS.forEach(function(B, i){ if (B.g === 'Ăn vặt') sn = bandHtml(B, i).replace('class="band"', 'class="band snk"'); });
+    dr = sn;
+    BANDS.forEach(function(B, i){ if (!FOOD_G[B.g]) dr += bandHtml(B, i); });
+    FO.forEach(function(gn){ BANDS.forEach(function(B, i){ if (B.g === gn) fo += bandHtml(B, i); }); });
+    g.innerHTML = '<div class="gcols"><div class="gcol" aria-label="Đồ uống">' + dr + '</div><div class="gcol food" aria-label="Đồ ăn">' + fo + '</div></div>';
+    g.querySelectorAll('.gcol').forEach(function(c, x){ c.scrollTop = GST[x] || 0; });
   }
   /* Món nhiều size / loại: hộp chọn, phím 1–9 */
   function openVar(t){
