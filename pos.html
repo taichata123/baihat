@@ -2209,12 +2209,11 @@
   window.addEventListener('beforeunload', function(e){ if (dirty()) { e.preventDefault(); e.returnValue = ''; } });
 
   /* ================= Sơ đồ bàn / thẻ rung ================= */
-  /* thẻ rung đang dùng: đơn chờ thu + đơn vừa thu trong 30 phút (khách còn cầm thẻ chờ món) */
+  /* thẻ rung đang dùng: chỉ đơn đang chờ thu (đơn đã thu thì thẻ coi như trống) */
   var PAGER_HOLD = 30 * 60000;
   function pagerBusy(){
     var now = Date.now(), out = [];
     (D && D.pending || []).forEach(function(o){ if (o.pager && (!O || o.id !== O.id)) out.push(o); });
-    (D && D.paid || []).forEach(function(o){ if (o.pager && o.paidAt && now - o.paidAt < PAGER_HOLD && (!O || o.id !== O.id)) out.push(o); });
     return out;
   }
   function tablesOf(){ return (D && D.tables && D.tables.length) ? D.tables : [{ a: 'Thẻ rung', t: ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20'] }]; }
@@ -2239,8 +2238,6 @@
   }
   function pickTable(t){
     t = String(t || '').trim();
-    var other = pagerBusy().filter(function(o){ return t && o.pager === t; });
-    if (needOk(other.length, 'Bàn ' + t + ' đang có đơn ' + other.map(function(o){ return '#' + o.code; }).join(', ') + '. Vẫn gắn đơn này vào bàn ' + t + '?', function(){ pickTable(t); })) return;
     O.pager = t; $('cPager').value = t; $('tblModal').hidden = true; (tblNext || saveNow)();
   }
   $('tblAreas').addEventListener('click', function(e){ var b = e.target.closest('[data-tb]'); if (b) pickTable(b.getAttribute('data-tb')); });
