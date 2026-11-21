@@ -475,7 +475,7 @@
   var $ = function(id){ return document.getElementById(id); };
 
   /* ---- Xem trước khi chưa chạy trên Google Apps Script ---- */
-  var API = 'https://script.google.com/macros/s/AKfycbxvRhb0Jjbrokyew1RBqWwBTCiqSIsvciWx_Vns9LeOs9LLCvTJcxOk71-7CMKuI1I/exec';
+  var API = 'firebase'; /* Apps Script cũ đã tắt 21/11/2026 – trang dùng chata-api.js (Firebase) */
   var PREVIEW = !API && (typeof google === 'undefined' || !google.script);
   if (PREVIEW) { $('previewBar').hidden = false; }
   var mock = { open:true, done:12, rows:[

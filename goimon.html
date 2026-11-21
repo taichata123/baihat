@@ -254,7 +254,7 @@
 <script src="goimon-api.js?v=2"></script>
 <script>
 (function(){
-  var API = 'https://script.google.com/macros/s/AKfycbxvRhb0Jjbrokyew1RBqWwBTCiqSIsvciWx_Vns9LeOs9LLCvTJcxOk71-7CMKuI1I/exec';
+  var API = ''; /* Apps Script cũ đã tắt 21/11/2026 */
   var $ = function(id){ return document.getElementById(id); };
   function call(fn, args){ return ChataAPI.call(fn, args || []); }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
