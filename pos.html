@@ -814,13 +814,15 @@
 
   /* ================= Cài đặt in ================= */
   var DEF = { bill_on:false, bill_p:'', bill_w:'80', bill_c:'1', bep_on:true, bep_p:'', bep_w:'80', bep_c:'1', tem_on:true, tem_p:'', tem_s:'50x30', tem_ink:'Vừa',
-    groups:{ 'Đồ ăn':'bep', 'Lai rai':'bep', 'Mì cay':'bep', 'Đồ chiên':'bep', 'Bia':'none', 'Ăn vặt':'none', 'Khác':'none', 'Nước chai':'none' },
+    groups:{ 'Đồ ăn':'bep', 'Lai rai':'bep', 'Mì cay':'bep', 'Đồ chiên':'bep', 'Bia':'quay', 'Ăn vặt':'none', 'Khác':'none', 'Nước chai':'bar' },
     rs_disc:'Khách quen\nBù món lỗi / chờ lâu\nNhân viên quán\nNgười quen quản lý\nKhác',
     rs_cancel:'Khách đổi ý\nNhập trùng đơn\nBấm nhầm món\nKhách QR không ra quầy\nHết món\nKhác',
     rs_refund:'Thu nhầm món\nLàm sai món\nHết nguyên liệu\nKhách đổi ý\nKhác',
     qr_bank:'970426', qr_acc:'', qr_name:'', lock_min:'0', shop:'CHATA COFFEE', addr:'Bàu Cạn, Gia Lai', foot:'Cảm ơn quý khách – Hẹn gặp lại!' };
   var S = {}; try { S = JSON.parse(ls('chata_pos_set') || '{}'); } catch(e){}
   Object.keys(DEF).forEach(function(k){ if (S[k] === undefined) S[k] = DEF[k]; });
+  /* Tài 22/11: Monster (Nước chai) in tem ly; Bia in phiếu như phiếu bếp nhưng ra máy in hóa đơn ở quầy */
+  if (S.grpv !== 2) { S.groups = S.groups || {}; S.groups['Nước chai'] = 'bar'; S.groups['Bia'] = 'quay'; S.grpv = 2; try { localStorage.setItem('chata_pos_set', JSON.stringify(S)); } catch(e){} }
   function saveS(){ ls('chata_pos_set', JSON.stringify(S)); }
   function rsList(k){ return String(S['rs_' + k] || '').split(/\n/).map(function(x){ return x.trim(); }).filter(Boolean).slice(0, 9); }
   /* Nút lý do chọn nhanh: bấm hoặc gõ phím số 1–9 trong ô lý do */
@@ -880,10 +882,10 @@
       '<div style="text-align:center;margin-top:3mm">' + esc(S.foot) + '</div></div>';
     return { html: h, w: w, h: null, copies: +S.bill_c };
   }
-  function bepHtml(o, items){
-    var w = +S.bep_w, fs = w === 80 ? 4 : 3.4, pad = w === 80 ? 4 : 2;
+  function bepHtml(o, items, quay){
+    var w = +(quay ? S.bill_w : S.bep_w), fs = w === 80 ? 4 : 3.4, pad = w === 80 ? 4 : 2;
     var h = '<div style="width:' + w + 'mm;padding:3mm ' + pad + 'mm 6mm;font-size:' + fs + 'mm">' +
-      '<div style="text-align:center;font-weight:800">PHIẾU BẾP · ' + esc(S.shop) + '</div>' +
+      '<div style="text-align:center;font-weight:800">' + (quay ? 'PHIẾU QUẦY' : 'PHIẾU BẾP') + ' · ' + esc(S.shop) + '</div>' +
       /* Tài 20/11: số to ở giữa là THẺ rung (bếp giao món theo thẻ), mã đơn in nhỏ bên phải; không có thẻ thì giữ mã đơn to */
       '<div style="text-align:center;font-size:' + (fs * 2.4) + 'mm;font-weight:900;line-height:1.15;margin-top:1.5mm">' + (o.pager ? 'THẺ ' + esc(o.pager) : '#' + esc(o.code)) + '</div>' +
       '<div style="display:flex;justify-content:space-between;font-weight:700"><span>' + esc(o.name) + '</span><span>' + (o.pager ? 'Mã đơn #' + esc(o.code) : '') + '</span></div>' +
@@ -1013,13 +1015,14 @@
     return printQ;
   }
   function split(o){
-    var bar = [], bep = [];
-    (o.items || []).forEach(function(i){ var w = where(i.g); if (w === 'bep') bep.push(i); else if (w === 'bar') bar.push(i); });
-    return { bar: bar, bep: bep };
+    var bar = [], bep = [], quay = [];
+    (o.items || []).forEach(function(i){ var w = where(i.g); if (w === 'bep') bep.push(i); else if (w === 'bar') bar.push(i); else if (w === 'quay') quay.push(i); });
+    return { bar: bar, bep: bep, quay: quay };
   }
   function printOrder(o, what, extra, kItems){
     var p = split(kItems ? { items: kItems } : o);
     if (what.bep && p.bep.length) sendPrint('bep', bepHtml(o, p.bep));
+    if (what.bep && p.quay.length) sendPrint('bill', bepHtml(o, p.quay, true)); /* Bia: phiếu ra máy in hóa đơn ở quầy */
     if (what.tem && p.bar.length) sendPrint('tem', temHtml(o, p.bar));
     if (what.bill) sendPrint('bill', billHtml(o, extra));
   }
@@ -1280,7 +1283,7 @@
     var b = e.target.closest('[data-rp]'); if (!b) return;
     var o = D.paid.find(function(x){ return x.id === b.getAttribute('data-id'); }); if (!o) return;
     var k = b.getAttribute('data-rp'), w = {}; w[k] = true;
-    if (k !== 'bill' && !split(o)[k === 'bep' ? 'bep' : 'bar'].length) return toast('Đơn này không có món cần in ' + (k === 'bep' ? 'phiếu bếp' : 'tem ly') + '.');
+    if (k !== 'bill' && !(k === 'bep' ? split(o).bep.concat(split(o).quay) : split(o).bar).length) return toast('Đơn này không có món cần in ' + (k === 'bep' ? 'phiếu bếp' : 'tem ly') + '.');
     printOrder(o, w); toast('Đã gửi lệnh in');
   });
   /* Hỏi lý do (hủy đơn, hoàn đơn, đổi TT, không đồng ý...) – việc được ghi lại để quản lý xem sau */
@@ -1819,8 +1822,8 @@
     /* Lưu đơn = báo bếp luôn: in phiếu bếp + tem ly cho các món chưa in (gọi thêm thì chỉ in món thêm) */
     save('', true).then(function(o){
       busy(false); var k = (o && o._k) || [], p = split({ items: k });
-      if (o && (p.bep.length || p.bar.length)) printOrder(o, { bep: true, tem: true }, null, k);
-      toast('Đã lưu đơn #' + (o ? o.code : '') + (p.bep.length || p.bar.length ? ' · đã in ' + k.reduce(function(s, i){ return s + i.q; }, 0) + ' món' : ''));
+      if (o && (p.bep.length || p.bar.length || p.quay.length)) printOrder(o, { bep: true, tem: true }, null, k);
+      toast('Đã lưu đơn #' + (o ? o.code : '') + (p.bep.length || p.bar.length || p.quay.length ? ' · đã in ' + k.reduce(function(s, i){ return s + i.q; }, 0) + ' món' : ''));
       closeOrder(); },
       function(e){ busy(false); if (e.message !== 'empty') toast('⚠️ ' + e.message, 4000); });
   }
@@ -1831,7 +1834,7 @@
     save('', true).then(function(o){
       busy(false); var k = (o && o._k) || [], p = split({ items: k });
       O0 = snap();
-      if (!p.bep.length && !p.bar.length) return toast(k.length ? 'Món mới không cần in bếp/tem.' : 'Đã báo bếp đủ rồi, không có món mới.');
+      if (!p.bep.length && !p.bar.length && !p.quay.length) return toast(k.length ? 'Món mới không cần in bếp/tem.' : 'Đã báo bếp đủ rồi, không có món mới.');
       printOrder(o, { bep: true, tem: true }, null, k);
       toast('Đã báo bếp ' + k.reduce(function(s, i){ return s + i.q; }, 0) + ' món mới');
     }, function(e){ busy(false); if (e.message !== 'empty') toast('⚠️ ' + e.message, 4000); });
@@ -2048,7 +2051,7 @@
   });
   var RP = null;
   function openReprint(o, k){
-    var L = split(o)[k === 'bep' ? 'bep' : 'bar'];
+    var L = k === 'bep' ? split(o).bep.concat(split(o).quay) : split(o).bar;
     if (!L.length) return toast('Đơn này không có món cần in ' + (k === 'bep' ? 'phiếu bếp' : 'tem ly') + '.');
     if (dirty()) toast('Đơn có thay đổi chưa lưu – chỉ in lại các món đã lưu.', 3500);
     RP = { o: o, k: k, L: L };
@@ -2180,7 +2183,7 @@
     $('s_promos').value = ((D && D.promos) || []).map(function(x){ return x.n + ': ' + (x.t === '%' ? x.v + '%' : x.v + 'đ'); }).join('\n');
     var gs = []; (D ? D.menu.concat(D.other || []) : []).forEach(function(m){ if (gs.indexOf(m.g) < 0) gs.push(m.g); });
     $('s_grp').innerHTML = gs.map(function(g){ var w = where(g);
-      return '<label>' + esc(g) + '<select data-g="' + esc(g) + '"><option value="bar"' + (w === 'bar' ? ' selected' : '') + '>Tem ly (Bar)</option><option value="bep"' + (w === 'bep' ? ' selected' : '') + '>Phiếu bếp</option><option value="none"' + (w === 'none' ? ' selected' : '') + '>Không in</option></select></label>'; }).join('');
+      return '<label>' + esc(g) + '<select data-g="' + esc(g) + '"><option value="bar"' + (w === 'bar' ? ' selected' : '') + '>Tem ly (Bar)</option><option value="bep"' + (w === 'bep' ? ' selected' : '') + '>Phiếu bếp</option><option value="quay"' + (w === 'quay' ? ' selected' : '') + '>Phiếu ở máy in hóa đơn</option><option value="none"' + (w === 'none' ? ' selected' : '') + '>Không in</option></select></label>'; }).join('');
     fillPrinters();
     if (NATIVE) NATIVE.printers().then(function(list){ PRINTERS = list || []; fillPrinters(); });
     $('setModal').hidden = false;
