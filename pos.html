@@ -361,6 +361,7 @@
         <option value="Tự động">Menu: Tự động</option><option value="Đêm nhạc">Menu: Đêm nhạc</option><option value="Thường">Menu: Thường</option>
       </select>
       <button class="tbtn" id="qrBtn" type="button">QR: Đang nhận</button>
+      <button class="tbtn" id="expBtn" type="button" hidden title="Lấy tiền trong tủ để trả hàng, mua đồ">💸 Chi từ két</button>
       <button class="tbtn" id="shiftBtn" type="button" hidden>⏱ Kết ca</button>
       <button class="tbtn" id="updBtn" type="button" hidden style="background:#13C48A;color:#fff;border-color:#13C48A">⬆ Cập nhật app</button>
       <button class="tbtn" id="khBtn" type="button" title="Mở / tắt màn hình phụ quay ra khách">🖥 Màn hình khách</button>
@@ -672,11 +673,31 @@
     <input id="closeCash" type="hidden">
     <div class="fl-split" id="closeSplit"></div>
     <div class="change"><span>Chênh lệch tiền mặt thu (thực tế − theo app)</span><b class="num" id="closeDiff">–</b></div>
+    <div id="closeWhy" hidden style="margin-top:10px;padding:10px 12px;border:1px solid #F0C36D;background:#FFF8E6;border-radius:8px;font-size:14px">
+      <b>Lệch từ 20.000đ – chọn lý do:</b>
+      <label class="chk"><input type="radio" name="cw" value="chi"> Có khoản chi chưa nhập <button type="button" id="closeAddExp" style="margin-left:8px;padding:4px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer">💸 Nhập khoản chi</button></label>
+      <label class="chk"><input type="radio" name="cw" value="sai"> Tính tiền / thối tiền sai</label>
+      <label class="chk"><input type="radio" name="cw" value="chuaro"> Chưa rõ</label>
+    </div>
     <input id="closeNote" maxlength="200" placeholder="Ghi chú (nếu lệch tiền, ghi lý do)" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;margin-top:10px">
     <label class="chk"><input type="checkbox" id="closePrint" checked> In phiếu kết ca</label>
     <label class="chk"><input type="checkbox" id="closeOut" checked> Đăng xuất sau khi kết ca</label>
     <div class="err" id="closeErr" hidden></div>
     <div class="mbtns"><button type="button" id="closeCancel">Quay lại</button><button type="submit" class="ok">Kết ca</button></div>
+  </form>
+</div>
+
+<!-- Chi từ két (Tài 22/11) -->
+<div class="mask" id="expModal" hidden>
+  <form class="modal" id="expForm" style="width:min(460px,94vw)" novalidate>
+    <h3>💸 Chi từ két</h3>
+    <p style="margin:0 0 10px;color:var(--muted);font-size:13px">Lấy tiền trong tủ để trả hàng, mua đồ… ghi ngay để kết ca không bị lệch. Quản lý duyệt trên Web vận hành.</p>
+    <select id="expCat" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font-size:16px;margin-bottom:8px"></select>
+    <input id="expAmt" inputmode="numeric" placeholder="Số tiền (gõ 150 = 150.000đ)" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font-size:16px;margin-bottom:8px">
+    <input id="expNote" maxlength="200" placeholder="Chi cho việc gì (VD: trả tiền rau cô Lan)" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font-size:16px;margin-bottom:8px">
+    <div class="err" id="expErr" hidden></div>
+    <div id="expList" style="font-size:13px;color:var(--muted);margin-top:4px"></div>
+    <div class="mbtns"><button type="button" id="expCancel">Quay lại</button><button type="submit" class="ok">Lưu khoản chi</button></div>
   </form>
 </div>
 
@@ -708,7 +729,7 @@
 <div class="toast" id="toast" hidden></div>
 <iframe id="printFrame" title="in"></iframe>
 
-<script src="chata-api.js?v=bl1"></script>
+<script src="chata-api.js?v=kc1"></script>
 <script>
 (function(){
   var API = ''; /* Apps Script cũ đã tắt 21/11/2026 */
@@ -2352,7 +2373,7 @@
   }
   function drawShift(){
     var s = D && D.shift;
-    $('shiftBtn').hidden = !s; $('shiftBox').hidden = !s;
+    $('shiftBtn').hidden = !s; $('expBtn').hidden = !s; $('shiftBox').hidden = !s;
     if (!s) { if (D && D.me && D.me.role !== 'manager' && $('openModal').hidden && $('ordView').hidden) showOpen(); return; }
     $('shiftBtn').textContent = '⏱ Kết ca (mở ' + hhmm(s.openAt) + ')';
     $('shiftBox').innerHTML = '<h4>Ca của bạn · từ ' + hhmm(s.openAt) + '</h4><div><span>Đơn đã thu</span><b>' + s.orders + '</b></div><div><span>Doanh thu</span><b class="num">' + money(s.revenue) + '</b></div>' +
@@ -2379,6 +2400,32 @@
   billsDraw();
   $('closeBills').addEventListener('input', function(e){ var i = e.target.closest('[data-bill]'); if (!i) return; var v = i.value.replace(/\D/g, ''); if (i.value !== v) i.value = v; billsSync(); });
   $('closeBills').addEventListener('keydown', function(e){ if (e.key !== 'Enter') return; var a = Array.prototype.slice.call(document.querySelectorAll('#closeBills [data-bill]')), k = a.indexOf(e.target); if (k < 0) return; e.preventDefault(); if (k < a.length - 1) { a[k + 1].focus(); a[k + 1].select(); } else $('closeNote').focus(); });
+  /* Chi từ két (Tài 22/11) */
+  var EXPC = null, expAfter = null;
+  function expAmtV(){ var v = +String($('expAmt').value).replace(/\D/g, ''); return v && v < 1000 ? v * 1000 : v; }
+  function openExp(after){
+    expAfter = after || null; $('expErr').hidden = true; $('expAmt').value = ''; $('expNote').value = '';
+    var s = D && D.shift, L = (s && s.expList) || [];
+    $('expList').innerHTML = L.length ? 'Đã chi trong ca: ' + L.map(function(x){ return esc(x.cat) + ' ' + money(x.amount) + 'đ'; }).join(' · ') : '';
+    var fill = function(cats){ var cur = $('expCat').value; $('expCat').innerHTML = cats.map(function(c){ return '<option>' + esc(c) + '</option>'; }).join(''); if (cur && cats.indexOf(cur) >= 0) $('expCat').value = cur; };
+    if (EXPC) fill(EXPC); else { fill(['Mua nguyên liệu nhập kho', 'Chi khác']); call('cashierExpCats', []).then(function(r){ if (r && r.cats && r.cats.length) { EXPC = r.cats; fill(EXPC); } }).catch(function(){}); }
+    $('expModal').hidden = false; setTimeout(function(){ $('expAmt').focus(); }, 30);
+  }
+  function expDone(){ var f = expAfter; expAfter = null; if (f) setTimeout(f, 700); }
+  $('expBtn').addEventListener('click', function(){ openExp(); });
+  $('expCancel').addEventListener('click', function(){ $('expModal').hidden = true; expDone(); });
+  $('expForm').addEventListener('submit', function(e){
+    e.preventDefault(); var a = expAmtV(), n = $('expNote').value.trim();
+    if (!a) { $('expErr').textContent = 'Nhập số tiền.'; $('expErr').hidden = false; $('expAmt').focus(); return; }
+    if (n.length < 3) { $('expErr').textContent = 'Ghi rõ chi cho việc gì.'; $('expErr').hidden = false; $('expNote').focus(); return; }
+    busy(true, 'Đang lưu khoản chi…');
+    call('cashierExpense', [PIN, $('expCat').value, a, n]).then(function(r){
+      busy(false); if (!r.ok) { $('expErr').textContent = r.msg; $('expErr').hidden = false; return; }
+      $('expModal').hidden = true; toast('✓ Đã ghi khoản chi ' + money(a) + 'đ từ két', 5000); load(); expDone();
+    }, function(err){ busy(false); $('expErr').textContent = err.message; $('expErr').hidden = false; });
+  });
+  function closeRefresh(){ var s = D && D.shift; if (!s) return; var x = $('closeExpAmt'), y = $('closeExpect'); if (x) x.textContent = '−' + money(s.exp || 0) + 'đ'; if (y) y.textContent = money(s.expect) + 'đ'; closeCalc(); }
+  $('closeAddExp').addEventListener('click', function(){ var r = document.querySelector('[name=cw][value=chi]'); if (r) r.checked = true; openExp(closeRefresh); });
   function closeCalc(){
     var s = D && D.shift; if (!s) return; var raw = $('closeCash').value.replace(/\D/g, '');
     var fl = s.float != null ? s.float : flt(), c = +raw || 0;
@@ -2386,14 +2433,14 @@
       '<div><span>Tiền mặt thu thực tế (đếm − đầu ca)</span><b class="num">' + money(c - s.openCash) + 'đ</b></div>' +
       '<div><span>Tiền mặt thu theo app</span><b class="num">' + money(s.cash) + 'đ</b></div>' +
       '<div class="hl"><span>Tiền nộp (đếm − quỹ)</span><b class="num">' + money(Math.max(0, c - fl)) + 'đ</b></div>' + (c < fl ? '<div style="color:#C0392B"><span>⚠ Tủ thiếu quỹ</span><b class="num">' + money(fl - c) + 'đ</b></div>' : '');
-    if (!raw) { $('closeDiff').textContent = '–'; $('closeDiff').className = 'num'; return; }
-    var d = +raw - s.expect; $('closeDiff').textContent = (d > 0 ? '+' : '') + money(d) + 'đ'; $('closeDiff').className = 'num ' + (d < 0 ? 'neg' : d > 0 ? 'pos' : '');
+    if (!raw) { $('closeDiff').textContent = '–'; $('closeDiff').className = 'num'; $('closeWhy').hidden = true; return; }
+    var d = +raw - s.expect; $('closeWhy').hidden = Math.abs(d) < 20000; $('closeDiff').textContent = (d > 0 ? '+' : '') + money(d) + 'đ'; $('closeDiff').className = 'num ' + (d < 0 ? 'neg' : d > 0 ? 'pos' : '');
   }
   $('shiftBtn').addEventListener('click', function(){
     var s = D && D.shift; if (!s) return;
     $('closeSum').innerHTML = '<table style="width:100%;font-size:14.5px;border-collapse:collapse">' + [
       ['Mở ca lúc', hhmm(s.openAt) + ' ' + dmy(s.openAt)], ['Số đơn đã thu', s.orders], ['Doanh thu', money(s.revenue) + 'đ'], ['Chuyển khoản', money(s.transfer) + 'đ'],
-      ['<b>Tiền mặt thu trong ca (theo app)</b>', '<b>' + money(s.cash) + 'đ</b>'], ['Quỹ tiền lẻ cố định', money(s.float != null ? s.float : flt()) + 'đ'], ['Tiền mặt đầu ca (đếm lúc mở)', money(s.openCash) + 'đ' + (s.openNote ? ' <small>(' + esc(s.openNote) + ')</small>' : '')], ['Đơn hủy', s.cancels]].concat(s.unpaid ? [['Khách về chưa trả (' + s.unpaid + ' đơn)', money(s.unpaidAmt) + 'đ']] : []).concat(s.refunds ? [['Hoàn tiền (' + s.refunds + ' đơn)', '−' + money(s.refundAmt) + 'đ']] : []).concat([['<b>Tiền mặt phải có trong tủ</b>', '<b>' + money(s.expect) + 'đ</b>']
+      ['<b>Tiền mặt thu trong ca (theo app)</b>', '<b>' + money(s.cash) + 'đ</b>'], ['Quỹ tiền lẻ cố định', money(s.float != null ? s.float : flt()) + 'đ'], ['Tiền mặt đầu ca (đếm lúc mở)', money(s.openCash) + 'đ' + (s.openNote ? ' <small>(' + esc(s.openNote) + ')</small>' : '')], ['Đơn hủy', s.cancels]].concat(s.unpaid ? [['Khách về chưa trả (' + s.unpaid + ' đơn)', money(s.unpaidAmt) + 'đ']] : []).concat(s.refunds ? [['Hoàn tiền (' + s.refunds + ' đơn)', '−' + money(s.refundAmt) + 'đ']] : []).concat([['Chi từ két (đã ghi)', '<span id="closeExpAmt">−' + money(s.exp || 0) + 'đ</span>'], ['<b>Tiền mặt phải có trong tủ</b>', '<b id="closeExpect">' + money(s.expect) + 'đ</b>']
     ]).map(function(r){ return '<tr><td style="padding:4px 0">' + r[0] + '</td><td style="text-align:right">' + r[1] + '</td></tr>'; }).join('') + '</table>';
     /* Kết ca: đơn còn chờ thanh toán → chọn đơn khách đã về để chuyển sang "Chưa thu" (Tài 21/11) */
     var P = (D.pending || []).slice().sort(function(a, b){ return a.created - b.created; });
@@ -2401,6 +2448,7 @@
     $('closeUnp').innerHTML = P.length ? '<h4>⚠ Còn ' + P.length + ' đơn chưa thanh toán – đánh dấu đơn khách đã về</h4>' + P.map(function(o){
       return '<label><input type="checkbox" data-cu="' + o.id + '"' + (Date.now() - o.created > 3600000 ? ' checked' : '') + '><span><b>#' + esc(o.code) + '</b>' + (o.pager ? ' · Bàn ' + esc(o.pager) : '') + ' · ' + esc(o.name) + ' · <b class="num">' + money(o.total) + 'đ</b><br><small>' + hhmm(o.created) + ' · ' + esc(o.items.slice(0, 3).map(function(i){ return i.q + ' ' + i.n; }).join(', ')) + (o.items.length > 3 ? '…' : '') + '</small></span></label>';
     }).join('') + '<small>Đánh dấu = khách đã về chưa trả → chuyển sang "Chưa thu" khi kết ca. Bỏ đánh dấu = khách còn ở quán, ca sau thu tiếp.</small>' : '';
+    Array.prototype.forEach.call(document.querySelectorAll('[name=cw]'), function(x){ x.checked = false; }); $('closeWhy').hidden = true;
     billsDraw(); $('closeCash').value = ''; $('closeNote').value = ''; $('closeErr').hidden = true; $('closeSplit').innerHTML = ''; closeCalc();
     $('closeModal').hidden = false; setTimeout(function(){ var f = document.querySelector('#closeBills [data-bill]'); if (f) f.focus(); }, 30);
   });
@@ -2410,11 +2458,16 @@
     if (!raw) { $('closeErr').textContent = 'Nhập số tờ từng mệnh giá đếm được trong tủ (không có tờ nào thì để trống dòng đó).'; $('closeErr').hidden = false; var f = document.querySelector('#closeBills [data-bill]'); if (f) f.focus(); return; }
     var BL = billsGet();
     var s = D.shift, d = +raw - s.expect;
-    if (needOk(d !== 0 && !$('closeNote').value.trim(), 'Tiền lệch ' + money(d) + 'đ mà chưa ghi lý do. Vẫn kết ca?', function(){ $('closeForm').requestSubmit(); })) return;
+    var cw = document.querySelector('[name=cw]:checked'), why = null;
+    if (Math.abs(d) >= 20000) {
+      if (!cw) { $('closeErr').textContent = 'Tiền lệch ' + money(d) + 'đ – chọn lý do lệch (có khoản chi chưa nhập thì bấm 💸 Nhập khoản chi).'; $('closeErr').hidden = false; return; }
+      if (cw.value === 'chi') { $('closeErr').textContent = 'Vẫn lệch ' + money(d) + 'đ sau khi nhập khoản chi – nhập thêm khoản chi, hoặc chọn "Tính tiền sai" / "Chưa rõ" cho phần còn lại.'; $('closeErr').hidden = false; return; }
+      why = { k: cw.value, t: $('closeNote').value.trim() };
+    } else if (needOk(d !== 0 && !$('closeNote').value.trim(), 'Tiền lệch ' + money(d) + 'đ mà chưa ghi lý do. Vẫn kết ca?', function(){ $('closeForm').requestSubmit(); })) return;
     busy(true, 'Đang kết ca…');
     var cu = Array.prototype.map.call(document.querySelectorAll('#closeUnp [data-cu]:checked'), function(x){ return x.getAttribute('data-cu'); });
     cu.reduce(function(pr, id){ return pr.then(function(){ return call('cashierUpdate', [PIN, id, 'unpaid', { reason: 'Kết ca – khách về chưa trả' }]).then(function(r){ if (r.ok) { TABS = TABS.filter(function(t){ return t.O.id !== id; }); tabsSave(); } }); }); }, Promise.resolve()).then(function(){
-      return call('shiftClose', [PIN, BL.total, $('closeNote').value.trim(), BL.bills]); }).then(function(r){
+      return call('shiftClose', [PIN, BL.total, $('closeNote').value.trim(), BL.bills, why]); }).then(function(r){
       busy(false); if (!r.ok) { $('closeErr').textContent = r.msg; $('closeErr').hidden = false; return; }
       $('closeModal').hidden = true;
       if ($('closePrint').checked) sendPrint('bill', shiftHtml(r.report));
@@ -2431,14 +2484,14 @@
       '<div style="text-align:center;font-weight:800;margin:1mm 0 2mm">PHIẾU KẾT CA</div>' +
       row('Thu ngân', esc(r.name) + ' (' + esc(r.code) + ')') + row('Mở ca', hhmm(r.openAt) + ' ' + dmy(r.openAt)) + row('Kết ca', hhmm(r.closeAt) + ' ' + dmy(r.closeAt)) +
       '<div style="border-top:.3mm dashed #000;margin:1.5mm 0"></div>' +
-      row('Số đơn đã thu', r.orders) + row('Doanh thu', money(r.revenue) + 'đ', true) + row('Chuyển khoản', money(r.transfer) + 'đ') + row('Tiền mặt thu', money(r.cash) + 'đ') + row('Đơn hủy', r.cancels) + (r.unpaid ? row('Khách về chưa trả (' + r.unpaid + ' đơn)', money(r.unpaidAmt) + 'đ') : '') + (r.refunds ? row('Hoàn tiền (' + r.refunds + ' đơn)', '-' + money(r.refundAmt) + 'đ') : '') +
+      row('Số đơn đã thu', r.orders) + row('Doanh thu', money(r.revenue) + 'đ', true) + row('Chuyển khoản', money(r.transfer) + 'đ') + row('Tiền mặt thu', money(r.cash) + 'đ') + (r.exp ? row('Chi từ két', '-' + money(r.exp) + 'đ') : '') + row('Đơn hủy', r.cancels) + (r.unpaid ? row('Khách về chưa trả (' + r.unpaid + ' đơn)', money(r.unpaidAmt) + 'đ') : '') + (r.refunds ? row('Hoàn tiền (' + r.refunds + ' đơn)', '-' + money(r.refundAmt) + 'đ') : '') +
       '<div style="border-top:.3mm dashed #000;margin:1.5mm 0"></div>' +
       row('Quỹ tiền lẻ cố định', money(r.float != null ? r.float : r.openCash) + 'đ') + row('Tiền mặt đầu ca (đếm)', money(r.openCash) + 'đ') + (r.openNote ? '<div>Lý do đầu ca: ' + esc(r.openNote) + '</div>' : '') +
       (r.bills ? Object.keys(r.bills).map(Number).sort(function(a, b){ return b - a; }).map(function(v){ return row('&nbsp;&nbsp;' + money(v) + ' × ' + r.bills[v], money(v * r.bills[v]) + 'đ'); }).join('') : '') +
       row('Tổng tiền đếm trong tủ', money(r.counted) + 'đ', true) +
       '<div style="border-top:.3mm dashed #000;margin:1.5mm 0"></div>' +
       row('TM thu theo app', money(r.cash) + 'đ') + row('TM thu thực tế', money(r.cashActual != null ? r.cashActual : r.counted - r.openCash) + 'đ', true) +
-      row('Chênh lệch', (r.diff > 0 ? '+' : '') + money(r.diff) + 'đ', true) +
+      row('Chênh lệch', (r.diff > 0 ? '+' : '') + money(r.diff) + 'đ', true) + (r.why ? '<div>Lý do lệch: ' + ({ chi: 'Chi chưa nhập', sai: 'Tính / thối tiền sai', chuaro: 'Chưa rõ' }[r.why.k] || '') + '</div>' : '') +
       '<div style="border-top:.3mm dashed #000;margin:1.5mm 0"></div>' +
       row('Để lại tủ (quỹ)', money(r.keep != null ? r.keep : 0) + 'đ', true) + row('TIỀN NỘP', money(r.handover || 0) + 'đ', true) +
       (r.note ? '<div style="margin-top:1.5mm">Ghi chú: ' + esc(r.note) + '</div>' : '') +

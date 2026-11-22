@@ -372,12 +372,16 @@
   }
   /* Quỹ tiền lẻ cố định trong tủ (Tài chốt 20/11/2026: 500.000đ để thối, giữ lại tủ khi kết ca) */
   function floatCfg() { var v = Number(cfg().float); return v >= 0 && cfg().float !== undefined && cfg().float !== '' ? Math.round(v) : 500000; }
+  /* Chi từ két (Tài 22/11): khoản chi thu ngân lấy tiền trong tủ → cash (src pos, shiftId) – trừ vào tiền mặt phải có khi kết ca */
+  var KX = {};
+  function kExpLoad(sid) { if (!sid || KX[sid]) return; KX[sid] = []; db.collection('cash').where('shiftId', '==', sid).get().then(function (q) { var cur = KX[sid] || []; q.forEach(function (d) { var x = d.data(); if (x.type === 'chi' && x.src === 'pos' && x.status !== 'tu_choi' && x.status !== 'xoa' && !cur.some(function (y) { return y.id === d.id; })) cur.push(Object.assign({ id: d.id }, x)); }); KX[sid] = cur; }).catch(function () { delete KX[sid]; }); }
+  function kExpSum(sid) { kExpLoad(sid); return (KX[sid] || []).reduce(function (s, x) { return s + (+x.amount || 0); }, 0); }
   function openShiftOf(code) { return (C.shifts || []).filter(function (s) { return s.code === code; }).sort(function (a, b) { return a.openAt - b.openAt; }).pop() || null; }
   function shiftLive(u) {
     var s = openShiftOf(u.c); if (!s) return null;
     var t = sumFor(allOrders(), u.c, s.openAt, Date.now() + 60000);
     return { id: s.id, openAt: s.openAt, openCash: s.openCash, float: s.float != null ? s.float : floatCfg(), openNote: s.openNote || '', orders: t.orders, revenue: t.revenue, cash: t.cash, transfer: t.transfer,
-      cancels: t.cancels, refunds: t.refunds, refundAmt: t.refundAmt, unpaid: t.unpaid, unpaidAmt: t.unpaidAmt, expect: s.openCash + t.cash };
+      cancels: t.cancels, refunds: t.refunds, refundAmt: t.refundAmt, unpaid: t.unpaid, unpaidAmt: t.unpaidAmt, exp: kExpSum(s.id), expList: (KX[s.id] || []).map(function (x) { return { cat: x.cat, amount: x.amount, note: x.note }; }), expect: s.openCash + t.cash - kExpSum(s.id) };
   }
   function cashierPatch(id, fn) {
     return me().then(function (u) {
@@ -909,23 +913,50 @@
         });
       });
     },
-    shiftClose: function (tok, counted, note, bills) {
+    cashierExpCats: function () {
+      return db.doc('config/fin').get().then(function (d) { var f = d.exists ? d.data() : {}; var c = (f.chi || []).map(function (x) { return x.name; }).filter(function (n) { return n && !/^(Lương|Thưởng|Đầu tư|Nhân công|Chi cá nhân|Trả nhà cung cấp|Chênh lệch|Thuê mặt bằng)/.test(n); }); return { ok: true, cats: c }; })
+        .catch(function () { return { ok: true, cats: ['Mua nguyên liệu nhập kho', 'Vật tư tiêu hao (ly, ống hút, túi)', 'Gas', 'Vận chuyển', 'Chi khác'] }; });
+    },
+    cashierExpense: function (tok, cat, amount, note) {
+      return me().then(function (u) {
+        return posReady().then(function () {
+          var s = openShiftOf(u.c); if (!s) return { ok: false, msg: 'Bạn chưa mở ca nào.' };
+          var a = Math.round(Number(amount) || 0); if (a < 1000 || a > 50000000) return { ok: false, msg: 'Số tiền không hợp lệ.' };
+          var n = clean(note, 200); if (n.length < 3) return { ok: false, msg: 'Ghi rõ chi cho việc gì.' };
+          var c = clean(cat, 80) || 'Chi khác';
+          return db.doc('config/fin').get().then(function (d) { var f = d.exists ? d.data() : {}; var k = (f.chi || []).filter(function (x) { return x.name === c; })[0]; return k ? k.pl !== false : true; }, function () { return true; }).then(function (pl) {
+            var id = 'kc-' + s.id + '-' + Date.now().toString(36);
+            var doc = { date: today(), type: 'chi', cat: c, amount: a, method: 'tm', acct: 'Tiền mặt', note: n + ' · chi từ két (app thu ngân)', photos: [], by: u.c, byName: u.n, status: 'cho_duyet', pl: pl, src: 'pos', shiftId: s.id, at: Date.now() };
+            kExpLoad(s.id); (KX[s.id] = KX[s.id] || []).push(Object.assign({ id: id }, doc));
+            return db.doc('cash/' + id).set(doc).then(function () { return { ok: true, id: id }; });
+          });
+        });
+      });
+    },
+    shiftClose: function (tok, counted, note, bills, why) {
       return me().then(function (u) {
         return posReady().then(function () {
           var s = openShiftOf(u.c); if (!s) return { ok: false, msg: 'Bạn chưa mở ca nào.' };
           var now = Date.now();
           var src = s.openAt >= Date.now() - 30 * 3600000 ? Promise.resolve(allOrders())
             : db.collection('posOrders').where('created', '>=', s.openAt - 24 * 3600000).get().then(function (q) { var a = []; q.forEach(function (d) { a.push(d.data()); }); return a; });
-          return src.then(function (all) {
+          return Promise.all([src, db.collection('cash').where('shiftId', '==', s.id).get().catch(function () { return null; })]).then(function (rr) {
+            var all = rr[0], ex = 0;
+            if (rr[1]) rr[1].forEach(function (d) { var x = d.data(); if (x.type === 'chi' && x.src === 'pos' && x.status !== 'tu_choi' && x.status !== 'xoa') ex += +x.amount || 0; }); else ex = kExpSum(s.id);
             /* đếm theo mệnh giá (Tài 21/11): có bảng tờ thì tổng tiền đếm = tổng bảng */
             var bl = null; if (bills && typeof bills === 'object') { bl = {}; [500000, 200000, 100000, 50000, 20000, 10000, 5000, 2000, 1000, 500].forEach(function (v) { var n = Math.max(0, Math.min(9999, Math.round(Number(bills[v]) || 0))); if (n) bl[v] = n; }); counted = Object.keys(bl).reduce(function (a, v) { return a + v * bl[v]; }, 0); }
-            var t = sumFor(all, u.c, s.openAt, now + 1), expect = s.openCash + t.cash, c = Math.max(0, Math.round(Number(counted) || 0));
+            var t = sumFor(all, u.c, s.openAt, now + 1), expect = s.openCash + t.cash - ex, c = Math.max(0, Math.round(Number(counted) || 0));
             var fl = s.float != null ? s.float : floatCfg();
             /* tách: quỹ cố định để lại tủ · tiền mặt thu thực tế (đếm − tiền đầu ca) so với tiền mặt thu theo app · tiền nộp (đếm − quỹ) */
             var up = { closeAt: now, orders: t.orders, revenue: t.revenue, cash: t.cash, transfer: t.transfer, expect: expect, counted: c, diff: c - expect,
               float: fl, cashActual: c - s.openCash, handover: Math.max(0, c - fl), keep: Math.min(c, fl),
               cancels: t.cancels, refunds: t.refunds, refundAmt: t.refundAmt, unpaid: t.unpaid, unpaidAmt: t.unpaidAmt, note: clean(note, 200), status: 'Đã kết' };
             if (bl) up.bills = bl;
+            up.exp = ex;
+            /* lệch từ 20.000đ phải chọn lý do (Tài 22/11) */
+            var W = why && typeof why === 'object' ? { k: ['chi', 'sai', 'chuaro'].indexOf(why.k) >= 0 ? why.k : 'chuaro', t: clean(why.t, 200) } : null;
+            if (Math.abs(up.diff) >= 20000 && !W) return { ok: false, needWhy: true, diff: up.diff, msg: 'Tiền lệch ' + up.diff.toLocaleString('vi-VN') + 'đ – chọn lý do lệch.' };
+            if (W) up.why = W;
             C.shifts = (C.shifts || []).filter(function (x) { return x.id !== s.id; });
             save(db.doc('posShifts/' + s.id), up, true);
             // tính lại doanh thu ngày cho báo cáo Web vận hành (phòng đơn cuối chưa kịp tính)
