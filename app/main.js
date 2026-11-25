@@ -4,15 +4,18 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
-const DEFAULT_URL = 'https://taichata123.github.io/baihat/pos.html';
-const UPDATE_BASE = process.env.CHATA_UPDATE_BASE || 'https://taichata123.github.io/baihat/app/';
+/* 1.4.0 (25/11/2026): trang bán hàng chuyển sang chata-checklist.web.app. Lần đầu vẫn mở bản cũ để mang cài đặt máy in sang, sau đó mở thẳng bản mới. */
+const OLD_URL = 'https://taichata123.github.io/baihat/pos.html';
+const NEW_URL = 'https://chata-checklist.web.app/pos.html';
+const UPDATE_BASE = process.env.CHATA_UPDATE_BASE || 'https://chata-checklist.web.app/app/';
 const UPDATABLE = ['main.js', 'preload.js', 'package.json'];
 let win = null;
 
 function config() {
   try { return JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), 'config.json'), 'utf8')); } catch (e) { return {}; }
 }
-function startUrl() { return config().url || DEFAULT_URL; }
+function startUrl() { const c = config(); return c.url || (c.mig ? NEW_URL : OLD_URL); }
+function markMig(url) { try { if (String(url).indexOf('https://chata-checklist.web.app/') !== 0) return; const c = config(); if (c.mig) return; c.mig = 1; fs.writeFileSync(path.join(app.getPath('userData'), 'config.json'), JSON.stringify(c)); } catch (e) {} }
 
 if (!app.requestSingleInstanceLock()) { app.quit(); }
 app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); } });
@@ -39,11 +42,12 @@ function createWindow() {
   Menu.setApplicationMenu(null);
   win.maximize(); win.show();
   win.loadURL(startUrl());
+  win.webContents.on('did-navigate', (e, url) => markMig(url));
   win.webContents.once('did-finish-load', () => { try { fs.unlinkSync(path.join(__dirname, 'update.pending')); } catch (e) {} if (updateReady) win.webContents.send('update-ready', updateReady); });
   win.webContents.on('did-fail-load', (e, code, desc, url, isMain) => { if (isMain && code !== -3) offlinePage(desc + ' (' + code + ')'); });
   win.webContents.setWindowOpenHandler(({ url }) => {
     /* Màn hình khách (khach.html): mở trong app, toàn màn hình trên màn thứ hai nếu có (từ 1.2.0) */
-    if (/^https:\/\/taichata123\.github\.io\/baihat\/khach\.html(\?|#|$)/.test(url)) {
+    if (/^https:\/\/(taichata123\.github\.io\/baihat|chata-checklist\.web\.app)\/khach\.html(\?|#|$)/.test(url)) {
       const ext = otherDisplay(), b = (ext || screen.getPrimaryDisplay()).workArea;
       return { action: 'allow', overrideBrowserWindowOptions: {
         x: b.x, y: b.y, width: ext ? b.width : Math.min(1280, b.width), height: ext ? b.height : Math.min(720, b.height),

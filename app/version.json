@@ -1,8 +1,8 @@
 {
- "version": "1.3.1",
+ "version": "1.4.0",
  "files": {
-  "main.js": "f70cd8a3e8ef0745bbda827398e227bbd72efeeb0ec847562e1be986073d2621",
-  "preload.js": "26fe8915860526e3434f24fc74f98842bd1f7cdfc07ad1cf7fc2050878721038",
-  "package.json": "73c58f86c306d69e624cd92c9608ea17530d8d2cf2e65db82016cc57b22fac0b"
+  "main.js": "eaa69a898ab79a8666f13cbccb4d7dec36eee79c406161e45316f0405fd11e96",
+  "preload.js": "9f861d460de4728c29128ba93a1aa5e4c9214315604b7dd73c8e20be169918a0",
+  "package.json": "a20246fc0b20012c787ecb4f01c7c252622b73284bcb277ce539cd1bc2278c54"
  }
 }
