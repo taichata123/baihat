@@ -143,12 +143,15 @@
     var p = vnParts(Date.now()); return p.dow === 2 && p.hour >= 16 ? 'night' : 'normal';
   }
   /* Trường thêm của món (19/11/2026): dg nhóm hiển thị, b tên ô, s size/loại, img ảnh, vid mã biến thể Sapo (định lượng), r số bán, nq không hiện ở trang gọi món QR */
-  var XF = ['dg', 'b', 's', 'img', 'vid', 'r', 'nq'];
+  var XF = ['dg', 'b', 's', 'img', 'vid', 'r', 'nq', 'nn', 'nc'];
   function menuList(k) {
     return (C.menu[k] || []).filter(function (m) { return m && m.n && Number(m.p) > 0 && m.on !== false; })
       .map(function (m) { var o = { g: String(m.g || 'Khác'), n: String(m.n).trim(), p: Number(m.p) }; XF.forEach(function (k) { if (m[k] != null && m[k] !== '') o[k] = m[k]; }); return o; });
   }
   function menuFor(mode) { return menuList(mode === 'night' ? 'night' : 'normal'); }
+  function noC(m) { return !m.nc; }
+  /* Quản lý (đăng nhập PIN quản lý hoặc nhân viên vị trí Quản lý) mới được sửa giá – Tài 25/11/2026 */
+  function canPrice(u) { return !!u && (u.r === 'manager' || u.ro === 'Quản lý'); }
   function defTables() { var t = []; for (var i = 1; i <= 20; i++) t.push(String(i)); return [{ a: 'Thẻ rung', t: t }]; }
   function cleanTables(v) {
     try { if (typeof v === 'string') v = JSON.parse(v); } catch (e) { return defTables(); }
@@ -305,7 +308,7 @@
       if (s.me.r === 'staff' && Date.now() - (s.chk || 0) > 3600000) {
         staffDoc(s.me.c).then(function (st) {
           if (!(s.me.o ? st && st.active : posAllowed(st))) { setSes(null); auth.signOut(); return; }
-          s.me.n = st.name; s.chk = Date.now(); setSes(s);
+          s.me.n = st.name; s.me.ro = st.role || ''; s.chk = Date.now(); setSes(s);
         }).catch(function () {});
       }
       return s.me;
@@ -407,7 +410,8 @@
     return {
       me: { code: u.c, name: u.n, role: u.r }, shift: shiftLive(u), revPending: u.r === 'manager' ? Object.keys(C.rev || {}).filter(function (k) { return C.rev[k].status === 'Chờ duyệt'; }).length : 0,
       mode: mode, modeSetting: modeSetting(), open: orderOpen(), tables: cleanTables(cfg().tables), promos: cleanPromos(cfg().promos),
-      menu: menuFor(mode), night: mode === 'night' ? null : menuFor('night'), other: menuFor(mode === 'night' ? 'normal' : 'night'),
+      menu: menuFor(mode).filter(noC), night: mode === 'night' ? null : menuFor('night').filter(noC), other: menuFor(mode === 'night' ? 'normal' : 'night').filter(noC),
+      canPrice: canPrice(u),
       pending: pending, events: eventsCfg(), float: floatCfg(), addons: addonsCfg(),
       debt: all.filter(function (o) { return o.status === 'Chưa thu'; }).sort(function (a, b) { return ((b.unpaid || {}).at || 0) - ((a.unpaid || {}).at || 0); }).map(pub),
       /* đơn QR đã thu tiền nhưng chưa báo món xong (3 giờ gần đây) – để thu ngân bấm "Món xong" */
@@ -587,7 +591,7 @@
           if (kind === 'manager') return { c: r.r.code || code || 'QL', n: r.r.name || 'Quản lý', r: 'manager' };
           return staffDoc(r.r.code || code).then(function (st) {
             if (!(any ? st && st.active : posAllowed(st))) return null;
-            return { c: st.code, n: st.name, r: 'staff', o: any ? 1 : 0 };
+            return { c: st.code, n: st.name, r: 'staff', o: any ? 1 : 0, ro: st.role || '' };
           });
         }).then(function (u) {
           if (!u) { setSes(null); resetSubs(); return auth.signOut().then(function () { return auth.signInAnonymously(); }).then(function () { return { ok: false, msg: 'Tài khoản này chưa được dùng app thu ngân. Nhờ quản lý bật quyền trong Web vận hành (Nhân viên → App thu ngân).' }; }); }
@@ -723,7 +727,7 @@
     staffMe: function () { return me().then(function (u) { return { ok: true, me: { code: u.c, name: u.n, role: u.r } }; }); },
     staffMenu: function () {
       return me().then(function () { return wantCfg(); }).then(function () {
-        var mode = orderMode(); return { ok: true, open: true, mode: mode, events: [], menu: menuFor(mode), addons: addonsCfg() };
+        var mode = orderMode(); return { ok: true, open: true, mode: mode, events: [], menu: menuFor(mode).filter(function (m) { return !m.nn; }), addons: addonsCfg() };
       });
     },
     staffOrder: function (tok, d) {
@@ -1029,11 +1033,75 @@
             var o = { g: g, n: n, p: Math.max(0, p), on: m.on !== false };
             if (m.dg) o.dg = clean(m.dg, 40); if (m.b) o.b = clean(m.b, 80); if (m.s) o.s = clean(m.s, 40);
             if (m.img && /^https:\/\//.test(m.img)) o.img = String(m.img).slice(0, 300); if (m.vid) o.vid = clean(m.vid, 60);
-            if (+m.r > 0) o.r = Math.round(+m.r); if (m.nq) o.nq = true;
+            if (+m.r > 0) o.r = Math.round(+m.r); if (m.nq) o.nq = true; if (m.nn) o.nn = true; if (m.nc) o.nc = true; if (m.wait) o.wait = true;
             out.push(o);
           });
           C.menu[key] = out;
           return db.doc('posMenu/' + key).set({ items: out, updatedBy: ok.by, updatedAt: Date.now() }).then(function () { return { ok: true, count: out.length }; });
+        });
+      });
+    },
+    /* ===== Màn Menu trên app thu ngân (Tài 25/11/2026) =====
+       Sản phẩm tạo ở Web vận hành → posMenu/normal (giá 0, chưa bán). Ở đây: quản lý sửa giá; thu ngân/pha chế bật–tắt món và chọn kênh (nc quầy, nq QR, nn NV order).
+       Menu đêm nhạc (posMenu/night): chọn món từ menu thường, 1 size, giá riêng – quản lý thêm/bỏ/sửa giá. */
+    menuAdmin: function () {
+      return me().then(function (u) { return wantCfg().then(function () {
+        return { ok: true, me: { code: u.c, name: u.n, role: u.r }, canPrice: canPrice(u), mode: orderMode(), normal: (C.menu.normal || []).slice(), night: (C.menu.night || []).slice() };
+      }); });
+    },
+    menuEdit: function (key, n, patch) {
+      return me().then(function (u) {
+        if (key !== 'normal' && key !== 'night') return { ok: false, msg: 'Bảng giá không hợp lệ.' };
+        patch = patch || {}; var P = canPrice(u), fields = Object.keys(patch);
+        if (!fields.length) return { ok: false, msg: 'Không có gì để lưu.' };
+        for (var i = 0; i < fields.length; i++) {
+          var f = fields[i];
+          if (['on', 'nq', 'nn', 'nc'].indexOf(f) >= 0) continue;
+          if ((f === 'p' || f === 'del') && P) continue;
+          return { ok: false, msg: f === 'p' ? 'Chỉ quản lý được sửa giá.' : 'Không được sửa mục này.' };
+        }
+        var ref = db.doc('posMenu/' + key), by = who(u);
+        return db.runTransaction(function (t) {
+          return t.get(ref).then(function (s) {
+            var items = (s.exists ? s.data().items : null) || [], ix = -1;
+            items.forEach(function (m, j) { if (m && m.n === n) ix = j; });
+            if (ix < 0) return { ok: false, msg: 'Không tìm thấy món "' + n + '".' };
+            var m = Object.assign({}, items[ix]), x = [];
+            if (patch.del) { if (key !== 'night') return { ok: false, msg: 'Món menu thường xóa ở Web vận hành.' }; items.splice(ix, 1); x.push('bỏ khỏi menu'); }
+            else {
+              if ('p' in patch) { var p = Math.round(Number(patch.p) || 0); if (p < 0 || p > 5000000) return { ok: false, msg: 'Giá không hợp lệ.' }; x.push('giá ' + (m.p || 0) + '→' + p); m.p = p; if (p > 0) delete m.wait; }
+              if ('on' in patch) { m.on = !!patch.on; x.push(m.on ? 'bật bán' : 'tắt bán'); if (m.on && !(Number(m.p) > 0)) return { ok: false, msg: 'Món chưa có giá – nhờ quản lý đặt giá trước khi bật bán.' }; }
+              ['nc', 'nq', 'nn'].forEach(function (k) { if (k in patch) { if (patch[k]) m[k] = true; else delete m[k]; x.push({ nc: 'quầy', nq: 'QR', nn: 'NV order' }[k] + (patch[k] ? ' ẩn' : ' hiện')); } });
+              items[ix] = m;
+            }
+            var hist = ((s.exists && s.data().hist) || []).slice(-79).concat([{ n: n, x: x.join(', '), by: by, at: Date.now() }]);
+            t.set(ref, { items: items, hist: hist, updatedBy: by, updatedAt: Date.now() }, { merge: true });
+            C.menu[key] = items;
+            return { ok: true, item: patch.del ? null : m };
+          });
+        });
+      });
+    },
+    menuNightAdd: function (n, p) {
+      return me().then(function (u) {
+        if (!canPrice(u)) return { ok: false, msg: 'Chỉ quản lý được thêm món vào menu đêm nhạc.' };
+        p = Math.round(Number(p) || 0); if (!(p > 0)) return { ok: false, msg: 'Nhập giá đêm nhạc.' };
+        var src = (C.menu.normal || []).filter(function (m) { return m && m.n === n; })[0];
+        if (!src) return { ok: false, msg: 'Không tìm thấy món trong menu thường.' };
+        var ref = db.doc('posMenu/night'), by = who(u);
+        return db.runTransaction(function (t) {
+          return t.get(ref).then(function (s) {
+            var items = (s.exists ? s.data().items : null) || [];
+            var nm = clean(src.b || src.n, 80);   // 1 size: dùng tên gốc (bỏ size)
+            if (items.some(function (m) { return m && (m.n === nm || (src.vid && m.vid === src.vid)); })) return { ok: false, msg: 'Món này đã có trong menu đêm nhạc.' };
+            var o = { g: src.g || 'Khác', n: nm, p: p, on: true };
+            ['dg', 'img', 'vid'].forEach(function (k) { if (src[k]) o[k] = src[k]; });
+            items.push(o);
+            var hist = ((s.exists && s.data().hist) || []).slice(-79).concat([{ n: nm, x: 'thêm vào đêm nhạc, giá ' + p, by: by, at: Date.now() }]);
+            t.set(ref, { items: items, hist: hist, updatedBy: by, updatedAt: Date.now() }, { merge: true });
+            C.menu.night = items;
+            return { ok: true, item: o };
+          });
         });
       });
     },
