@@ -1095,8 +1095,11 @@
             var nm = clean(src.b || src.n, 80);   // 1 size: dùng tên gốc (bỏ size)
             if (items.some(function (m) { return m && (m.n === nm || (src.vid && m.vid === src.vid)); })) return { ok: false, msg: 'Món này đã có trong menu đêm nhạc.' };
             var o = { g: src.g || 'Khác', n: nm, p: p, on: true };
-            ['dg', 'img', 'vid'].forEach(function (k) { if (src[k]) o[k] = src[k]; });
+            ['dg', 'img', 'vid', 'r'].forEach(function (k) { if (src[k]) o[k] = src[k]; });
             items.push(o);
+            /* xếp theo thứ tự menu thường (nhóm hiển thị, thứ hạng) */
+            var ord = {}; (C.menu.normal || []).forEach(function (x, i) { if (x && x.vid && !(x.vid in ord)) ord[x.vid] = i; });
+            items = items.map(function (x, i) { return { x: x, k: i }; }).sort(function (a, b) { var A = a.x.vid in ord ? ord[a.x.vid] : 1e9, B = b.x.vid in ord ? ord[b.x.vid] : 1e9; return A - B || a.k - b.k; }).map(function (z) { return z.x; });
             var hist = ((s.exists && s.data().hist) || []).slice(-79).concat([{ n: nm, x: 'thêm vào đêm nhạc, giá ' + p, by: by, at: Date.now() }]);
             t.set(ref, { items: items, hist: hist, updatedBy: by, updatedAt: Date.now() }, { merge: true });
             C.menu.night = items;
