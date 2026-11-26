@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đêm nhạc Chata – Thứ 3 Hát Cùng Chata</title>
+<meta name="description" content="Tối thứ 3 hằng tuần 19:15–21:15 tại Chata Bàu Cạn: hát cùng ban nhạc, kèn saxophone sống, mỗi bài hát là một câu chuyện.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700&family=Lora:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#1e0d15;--bg2:#2b1420;--card:#2f1723;--ink:#f6e9e4;--mute:#c8a9b1;--acc:#f0a8a0;--sax:#e6b26a;--ok:#8fd19e;--bad:#ff8f87;--line:#4a2634;--paper:#fbf6f4;--pink:#b0475d}
+*{box-sizing:border-box;min-width:0}
+html{scroll-padding-top:70px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Be Vietnam Pro",system-ui,sans-serif;overflow-x:clip}
+a{color:var(--acc)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.wrap{max-width:1080px;margin:0 auto;padding:0 max(4vw,16px)}
+h1,h2,h3{font-family:Lora,Georgia,serif;font-weight:600;line-height:1.12;margin:0;text-wrap:balance}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 20px;border-radius:999px;border:0;background:var(--acc);color:#2a0f19;font-weight:700;text-decoration:none}
+.btn.gh{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.sm{min-height:38px;padding:0 14px;font-size:14px}
+.btn:focus-visible,.chip:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--sax);outline-offset:2px}
+.muted{color:var(--mute)}
+.hide{display:none!important}
+/* ===== trang khách ===== */
+.hero{position:relative;overflow:hidden;padding:clamp(28px,6vw,72px) 0 clamp(30px,5vw,60px)}
+.hero::before{content:"";position:absolute;inset:-30% -10% auto auto;width:70vw;height:70vw;max-width:820px;max-height:820px;border-radius:50%;
+background:radial-gradient(closest-side,rgba(240,168,160,.28),transparent);pointer-events:none}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:32px;align-items:center}
+.kick{font-size:14px;color:var(--sax);font-weight:500;margin-bottom:10px}
+.hero h1{font-size:clamp(34px,6vw,58px)}
+.hero p.lead{font-size:clamp(16px,2vw,19px);color:var(--mute);max-width:36em;margin:16px 0 22px}
+.when{display:flex;flex-wrap:wrap;gap:10px 22px;margin:0 0 24px;font-size:15px}
+.when b{display:block;font-size:22px;color:var(--ink);font-family:Lora,serif}
+.cta{display:flex;flex-wrap:wrap;gap:10px}
+.poster{position:relative;aspect-ratio:4/5;border-radius:26px;background:linear-gradient(160deg,#3b1a29,#1a0a11);box-shadow:0 40px 80px -40px #000;overflow:hidden}
+.poster svg{position:absolute;inset:0;width:100%;height:100%}
+.poster .pt{position:absolute;left:0;right:0;bottom:0;padding:60px 22px 20px;background:linear-gradient(transparent,rgba(20,6,12,.92) 55%)}
+.poster .pt small{color:var(--sax);font-size:13px}
+.poster .pt strong{display:block;font-family:Lora,serif;font-size:clamp(22px,3vw,30px);line-height:1.15;margin-top:4px}
+.sec{padding:clamp(28px,5vw,56px) 0;border-top:1px solid var(--line)}
+.sec h2{font-size:clamp(26px,4vw,36px);margin-bottom:8px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:22px}
+.feat{background:var(--bg2);border-radius:18px;padding:20px}
+.feat h3{font-size:20px;margin-bottom:6px}
+.feat p{margin:0;color:var(--mute);font-size:15px}
+.steps{counter-reset:s;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:22px;padding:0;list-style:none}
+.steps li{counter-increment:s;background:var(--bg2);border-radius:18px;padding:20px 20px 20px 66px;position:relative}
+.steps li::before{content:counter(s);position:absolute;left:18px;top:18px;width:34px;height:34px;border-radius:50%;background:var(--acc);color:#2a0f19;display:grid;place-items:center;font-weight:700}
+.cal{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:20px}
+.night{background:var(--bg2);border-radius:16px;padding:16px 18px;border-left:4px solid var(--line)}
+.night.next{border-left-color:var(--acc);background:linear-gradient(120deg,#3a1b29,var(--bg2))}
+.night .dt{font-size:13px;color:var(--mute)}
+.night .th{font-family:Lora,serif;font-size:19px;margin:4px 0 2px}
+.night .gs{font-size:14px;color:var(--sax)}
+.foot{padding:30px 0 50px;color:var(--mute);font-size:14px;border-top:1px solid var(--line)}
+.foot .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center}
+.lk{background:none;border:0;color:var(--mute);text-decoration:underline;padding:8px 0}
+/* ===== đăng nhập ===== */
+.mask{position:fixed;inset:0;background:rgba(10,3,7,.72);display:grid;place-items:center;z-index:50;padding:16px}
+.box{background:var(--bg2);border-radius:22px;padding:24px;width:min(420px,100%);border:1px solid var(--line)}
+.box h3{font-size:24px;margin-bottom:6px}
+label.f{display:block;font-size:14px;color:var(--mute);margin:14px 0 6px}
+input.i,select.i,textarea.i{width:100%;min-height:46px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#1a0a11;font-size:16px}
+textarea.i{min-height:84px;resize:vertical;line-height:1.5}
+.err{color:var(--bad);font-size:14px;min-height:20px;margin-top:8px}
+/* ===== khu quản lý ===== */
+.app{display:none;min-height:100vh;background:var(--paper);color:#2a1019}
+body.in .app{display:block}
+body.in .pub{display:none}
+.app{--ink2:#2a1019;--mute2:#7d5b66;--line2:#ead9de;--card2:#fff}
+.top{position:sticky;top:0;z-index:20;background:#2a1019;color:#f6e9e4}
+.top .wrap{display:flex;align-items:center;gap:12px;min-height:58px;flex-wrap:wrap}
+.top .brand{font-family:Lora,serif;font-size:19px;font-weight:600;margin-right:auto}
+.top .who{font-size:14px;color:#e8c9cf}
+.tabs{display:flex;gap:4px;overflow-x:auto;padding:0 max(4vw,16px);background:#2a1019;border-top:1px solid #4a2634}
+.tabs button{flex:none;background:none;border:0;color:#e8c9cf;padding:12px 14px;border-bottom:3px solid transparent;font-weight:500;font-size:15px}
+.tabs button.on{color:#fff;border-bottom-color:var(--acc)}
+.main{padding-top:22px;padding-bottom:60px}
+.main h2{font-size:clamp(24px,3.4vw,32px);color:var(--ink2)}
+.sub{color:var(--mute2);margin:6px 0 18px}
+.ncards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.nc{background:#fff;border:1px solid var(--line2);border-radius:18px;padding:16px 18px;text-align:left;color:var(--ink2);display:block;width:100%}
+.nc:hover{border-color:#d9a8b3}
+.nc.next{border:2px solid var(--pink)}
+.nc .dt{font-size:13px;color:var(--mute2);display:flex;justify-content:space-between;gap:8px}
+.nc .th{font-family:Lora,serif;font-size:20px;margin:6px 0 10px}
+.bar{height:8px;border-radius:9px;background:#f1e4e8;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--pink);border-radius:9px}
+.nc .pc{font-size:13px;color:var(--mute2);margin-top:6px;display:flex;justify-content:space-between}
+.tag{display:inline-block;font-size:12px;padding:2px 9px;border-radius:999px;background:#f6e6ea;color:var(--pink);font-weight:500;white-space:nowrap}
+.tag.ok{background:#e5f4e4;color:#2e7a3b}.tag.warn{background:#fbebeb;color:#b23a3a}
+.nhead{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;margin-bottom:12px}
+.back{background:none;border:0;color:var(--pink);font-weight:500;padding:6px 0;margin-bottom:6px}
+.stabs{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 18px}
+.chip{border:1px solid var(--line2);background:#fff;color:var(--ink2);border-radius:999px;padding:8px 14px;min-height:40px;font-size:14px}
+.chip.on{background:var(--ink2);color:#fff;border-color:var(--ink2)}
+.panel{background:#fff;border:1px solid var(--line2);border-radius:18px;padding:18px}
+.panel+.panel{margin-top:14px}
+.panel h3{font-size:19px;color:var(--ink2);margin-bottom:10px}
+.app input.i,.app select.i,.app textarea.i{background:#fff;border-color:var(--line2);color:var(--ink2)}
+.app label.f{color:var(--mute2)}
+.row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.seg{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:12px;padding:14px 0;border-top:1px solid var(--line2);align-items:start}
+.seg:first-child{border-top:0}
+.seg .tm{font-variant-numeric:tabular-nums;font-weight:700;color:var(--pink);white-space:nowrap}
+.seg .tt{font-weight:700}
+.seg .ds{color:#4d3640;font-size:15px;white-space:pre-line}
+.seg .wh{font-size:13px;color:var(--mute2);margin-top:4px}
+.ico{background:none;border:1px solid var(--line2);border-radius:10px;min-width:38px;min-height:38px;color:var(--mute2)}
+.ico:hover{color:var(--pink);border-color:#d9a8b3}
+.song{border-top:1px solid var(--line2);padding:14px 0}
+.song:first-child{border-top:0}
+.song .sh{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+.song .sn{font-weight:700;font-size:17px}
+.song .meta{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.song .intro{background:#fbf3f5;border-left:3px solid var(--pink);border-radius:8px;padding:10px 12px;font-family:Lora,serif;font-style:italic;color:#3a1c26;white-space:pre-line}
+.song .sax{font-size:14px;color:#8a5a14;margin-top:6px}
+.task{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line2)}
+.task:first-child{border-top:0}
+.task .ck{width:34px;height:34px;border-radius:10px;border:2px solid #d9b9c2;background:#fff;display:grid;place-items:center;font-weight:700;color:#fff}
+.task.done .ck{background:#3c9a51;border-color:#3c9a51}
+.task.done .tn{text-decoration:line-through;color:var(--mute2)}
+.task .tw{font-size:13px;color:var(--mute2)}
+.task .late{color:#b23a3a;font-weight:500}
+.prog{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.prog .bar{flex:1}
+.empty{color:var(--mute2);padding:12px 0}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#2a1019;color:#fff;padding:10px 18px;border-radius:999px;z-index:60;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none}
+.toast.on{opacity:1}
+.edit .box{width:min(560px,100%);max-height:90vh;overflow:auto}
+.app .box{background:#fff;color:var(--ink2);border-color:var(--line2)}
+.app .box label.f{color:var(--mute2)}
+.acts{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+.app .btn.gh{background:transparent;color:var(--ink2);border:1px solid var(--line2)}
+.top .btn.gh{background:transparent;color:#f6e9e4;border:1px solid #6b3a4b}
+.app .btn{background:var(--pink);color:#fff}
+.lib{border-top:1px solid var(--line2);padding:14px 0}
+.lib:first-child{border-top:0}
+@media(max-width:820px){.hero .wrap{grid-template-columns:1fr}.poster{max-width:420px;aspect-ratio:16/11}.grid3,.steps{grid-template-columns:1fr}}
+@media(max-width:600px){.seg{grid-template-columns:1fr auto}.seg .tm{grid-column:1/-1}.row2{grid-template-columns:1fr}.top .who{width:100%;order:3;padding-bottom:6px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<!-- ================= TRANG CHO KHÁCH ================= -->
+<div class="pub">
+  <header class="hero">
+    <div class="wrap">
+      <div>
+        <div class="kick">Chata · Bàu Cạn, Gia Lai</div>
+        <h1>Thứ 3 Hát Cùng Chata</h1>
+        <p class="lead" id="pIntro">Mỗi tối thứ 3, sân khấu nhỏ ở Chata là của bạn. Lên hát cùng ban nhạc thật, tiếng kèn saxophone nối từng bài, và mỗi bài hát là một câu chuyện.</p>
+        <div class="when">
+          <div><span class="muted">Khi nào</span><b>Tối thứ 3 hằng tuần</b></div>
+          <div><span class="muted">Giờ</span><b id="pTime">19:15 – 21:15</b></div>
+          <div><span class="muted">Đêm tới</span><b id="pNext">…</b></div>
+        </div>
+        <div class="cta">
+          <a class="btn" href="https://chata-checklist.web.app/baihat.html">🎤 Đăng ký hát</a>
+          <a class="btn gh" href="https://chata-checklist.web.app/baihat.html">Đặt bàn · gửi bài tặng</a>
+        </div>
+      </div>
+      <div class="poster" aria-hidden="true">
+        <svg viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <radialGradient id="spot" cx="50%" cy="0%" r="90%"><stop offset="0" stop-color="#f0a8a0" stop-opacity=".55"/><stop offset=".6" stop-color="#f0a8a0" stop-opacity="0"/></radialGradient>
+            <linearGradient id="brass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6d08a"/><stop offset=".55" stop-color="#d79a3c"/><stop offset="1" stop-color="#8a5a14"/></linearGradient>
+          </defs>
+          <path d="M120 0 L280 0 L380 420 L20 420 Z" fill="url(#spot)"/>
+          <ellipse cx="200" cy="420" rx="190" ry="26" fill="#000" opacity=".35"/>
+          <g transform="translate(160 40) rotate(18) scale(.88)">
+            <path d="M40 0 C40 0 44 120 46 190 C48 250 40 300 70 322 C100 344 140 330 150 300 C156 280 150 262 138 256" fill="none" stroke="url(#brass)" stroke-width="22" stroke-linecap="round"/>
+            <path d="M120 238 C150 236 178 262 172 300 C166 336 128 352 104 344" fill="none" stroke="url(#brass)" stroke-width="10" opacity=".7"/>
+            <ellipse cx="148" cy="262" rx="26" ry="16" fill="#1a0a11" stroke="url(#brass)" stroke-width="6"/>
+            <path d="M40 0 L18 -24 L-6 -30" fill="none" stroke="#2b1420" stroke-width="7" stroke-linecap="round"/>
+            <g fill="#f6d08a">
+              <circle cx="56" cy="70" r="7"/><circle cx="58" cy="102" r="7"/><circle cx="60" cy="134" r="7"/><circle cx="62" cy="176" r="7"/><circle cx="64" cy="208" r="7"/><circle cx="68" cy="240" r="7"/>
+            </g>
+          </g>
+          <g fill="#f6e9e4" opacity=".75">
+            <path d="M60 120 q8 -10 0 -24 v40 a8 6 0 1 1 -4 -5z"/><path d="M330 180 v34 a7 5 0 1 1 -4 -4 v-22 l20 -5 v26 a7 5 0 1 1 -4 -4 v-20z"/>
+            <circle cx="90" cy="250" r="2"/><circle cx="320" cy="90" r="2.5"/><circle cx="300" cy="300" r="1.8"/><circle cx="70" cy="330" r="2"/>
+          </g>
+        </svg>
+        <div class="pt"><small>Đêm tới</small><strong id="pPoster">Thứ 3 Hát Cùng Chata</strong></div>
+      </div>
+    </div>
+  </header>
+
+  <section class="sec"><div class="wrap">
+    <h2>Đêm nhạc ở Chata có gì</h2>
+    <div class="grid3">
+      <div class="feat"><h3>Bạn là ca sĩ một đêm</h3><p>Ban nhạc đệm trực tiếp cho bạn. Không phải karaoke, là sân khấu thật.</p></div>
+      <div class="feat"><h3>Kèn saxophone sống</h3><p>Hết một bài, tiếng kèn nối sang bài tiếp, MC kể câu chuyện của bài hát trên nền kèn.</p></div>
+      <div class="feat"><h3>Không hát cũng vui</h3><p>Gửi bài nhờ ban nhạc hát tặng người đi cùng, kèm một lời nhắn.</p></div>
+    </div>
+  </div></section>
+
+  <section class="sec"><div class="wrap">
+    <h2>Lịch các đêm sắp tới</h2>
+    <p class="muted">Mỗi đêm một chủ đề. Bạn vẫn được đăng ký bài ngoài chủ đề.</p>
+    <div class="cal" id="pCal"><div class="muted">Đang tải lịch…</div></div>
+  </div></section>
+
+  <section class="sec"><div class="wrap">
+    <h2>Tham gia thế nào</h2>
+    <ol class="steps">
+      <li><b>Đăng ký trước</b><br><span class="muted">Nhắn Fanpage Chata hoặc bấm “Đăng ký hát”, ghi tên bài và một kỷ niệm của bạn với bài hát (nếu muốn).</span></li>
+      <li><b>Đến trước 19:15</b><br><span class="muted">Quét mã QR ở cổng để gọi món, chọn chỗ ngồi gần sân khấu.</span></li>
+      <li><b>Nghe gọi tên</b><br><span class="muted">Ban nhạc mời bạn chuẩn bị trước một lượt. Kèn vang lên, MC kể chuyện, và đến lượt bạn.</span></li>
+    </ol>
+  </div></section>
+
+  <footer class="foot"><div class="wrap">
+    <span>Chata · Bàu Cạn, Gia Lai · Tối thứ 3 hằng tuần</span>
+    <button class="lk" id="openLogin" type="button">Ban nhạc / Quản lý đăng nhập</button>
+  </div></footer>
+</div>
+
+<!-- ================= ĐĂNG NHẬP ================= -->
+<div class="mask hide" id="login">
+  <form class="box" id="loginForm">
+    <h3>Đăng nhập</h3>
+    <div class="muted" style="font-size:14px">Dùng mã nhân viên và PIN của Web vận hành. Quản lý: để trống mã, nhập PIN quản lý.</div>
+    <label class="f" for="lCode">Mã nhân viên</label>
+    <input class="i" id="lCode" autocomplete="username" autocapitalize="characters" maxlength="20" placeholder="VD: HAU">
+    <label class="f" for="lPin">PIN</label>
+    <input class="i" id="lPin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12">
+    <div class="err" id="lErr"></div>
+    <div class="acts"><button type="button" class="btn gh" id="lCancel">Đóng</button><button class="btn" id="lGo">Đăng nhập</button></div>
+  </form>
+</div>
+
+<!-- ================= KHU QUẢN LÝ ================= -->
+<div class="app">
+  <div class="top"><div class="wrap">
+    <div class="brand">🎷 Đêm nhạc Chata</div>
+    <span class="who" id="who"></span>
+    <button class="btn gh sm" id="viewPub" type="button">Trang khách</button>
+    <button class="btn gh sm" id="logout" type="button">Đăng xuất</button>
+  </div></div>
+  <nav class="tabs" id="tabs">
+    <button data-t="lich" class="on">Lịch các đêm</button>
+    <button data-t="mau">Mẫu kịch bản & việc</button>
+    <button data-t="kho">Kho lời dẫn</button>
+    <button data-t="gt">Trang giới thiệu</button>
+  </nav>
+  <div class="wrap main" id="view"></div>
+</div>
+
+<div class="mask hide edit" id="ed"><form class="box" id="edForm"></form></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+{
+/* ---------- cấu hình ---------- */
+const CFG={apiKey:'AIzaSyCFiq2ErjvnmPplyF1_A7GPsfx7dvFn3WU',authDomain:'chata-checklist.firebaseapp.com',projectId:'chata-checklist',
+  storageBucket:'chata-checklist.firebasestorage.app',messagingSenderId:'29868386580',appId:'1:29868386580:web:8e95949c92b1a962537a01'};
+const FN='https://asia-southeast1-chata-checklist.cloudfunctions.net/';
+const COL='demNhac', SES='chata_dn_ses', TZ='Asia/Ho_Chi_Minh';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9);
+function toast(t){const el=$('toast');el.textContent=t;el.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>el.classList.remove('on'),2200)}
+
+/* ---------- ngày ---------- */
+const ymd=t=>new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(t));
+const todayS=()=>ymd(Date.now());
+const dObj=s=>new Date(s+'T12:00:00+07:00');
+const addD=(s,n)=>ymd(dObj(s).getTime()+n*864e5);
+const dow=s=>dObj(s).getUTCDay();
+const DOW=['CN','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
+const fmtD=s=>{const p=s.split('-');return `${DOW[dow(s)]} ${+p[2]}/${+p[1]}`};
+function nextTues(n){let s=todayS();while(dow(s)!==2)s=addD(s,1);const r=[];for(let i=0;i<n;i++)r.push(addD(s,7*i));return r}
+
+/* ---------- mẫu mặc định ---------- */
+const DEF_SEGS=[
+ {t:'18:45',title:'Chuẩn bị',desc:'Test âm, micro không dây. Nhạc nền theo chủ đề. Nhân viên mời khách quét QR gọi món và đăng ký hát.',who:'Ban nhạc · Phục vụ'},
+ {t:'19:15',title:'1. Mở màn',desc:'Song ca 1 bài đinh của chủ đề. Chào khách, hỏi vui “ai lần đầu đến Chata”. Giới thiệu ban nhạc và người thổi sax, cách đăng ký hát. Mỗi ca sĩ hát thêm 1 bài.',who:'MC A'},
+ {t:'19:30',title:'2. Khách lên hát lượt 1',desc:'4 khách. Sau mỗi 2 khách, ban nhạc hát 1 bài yêu cầu, đọc lời tặng. Chuyển bài bằng kèn sax + lời dẫn.',who:'A dẫn · B gọi khách'},
+ {t:'20:00',title:'3. Minigame giữa giờ',desc:'Đoán tên bài qua tiếng kèn sax (3 câu, thưởng món lai rai). Nhắc gọi món QR, đăng ký bài cho lượt 2.',who:'MC B · Sax'},
+ {t:'20:10',title:'4. Khách lên hát lượt 2',desc:'4–5 khách, có 1 lượt khách song ca cùng ca sĩ. Xen 2 bài yêu cầu. Ca sĩ xuống bàn mời người cùng bàn hát chung điệp khúc.',who:'B dẫn · A gọi khách'},
+ {t:'20:45',title:'5. Cao trào',desc:'“Cả quán cùng hát” 2 bài ai cũng thuộc, chia 2 phe. Vỗ tay bình chọn Giọng ca đêm nay. Quay clip đoạn này.',who:'A + B'},
+ {t:'21:00',title:'6. Kết đêm',desc:'Trao quà Giọng ca đêm nay. Công bố chủ đề tuần sau, mời đăng ký trước, mời góp ý và đánh giá Google. Chụp ảnh chung, song ca bài kết.',who:'A + B'}
+];
+const DEF_TASKS=[
+ {n:'Đăng recap đêm trước (album + 1 clip)',who:'Fanpage',off:-6},
+ {n:'Chốt chủ đề và danh sách bài của ban nhạc',who:'Ban nhạc',off:-6},
+ {n:'Đăng poster chủ đề + link đăng ký hát',who:'Fanpage',off:-4},
+ {n:'Mời / xác nhận khách mời (nếu có)',who:'Quản lý',off:-4},
+ {n:'Ghi tông, nhịp, câu kèn cho từng bài',who:'Sax',off:-1},
+ {n:'Viết lời dẫn cho các bài của ban nhạc',who:'MC',off:-1},
+ {n:'Nhắc lịch + mời đặt bàn trên Fanpage',who:'Fanpage',off:-1},
+ {n:'Chuẩn bị quà minigame và Giọng ca đêm nay',who:'Quản lý',off:0},
+ {n:'Phân công người quay/chụp, thêm 1 người quầy 19:00–20:30',who:'Quản lý',off:0},
+ {n:'Tập chuyển bài MC + kèn sax',who:'Ban nhạc',off:0},
+ {n:'Test âm thanh, micro không dây (18:45)',who:'Ban nhạc',off:0}
+];
+const THEMES=['Nhạc xưa & Bolero','Nhạc 8x–9x','Acoustic trẻ','Đêm đặc biệt'];
+function defTheme(d){const day=+d.slice(8);if(day>=22&&addD(d,7).slice(5,7)!==d.slice(5,7))return THEMES[3];return THEMES[Math.min(3,Math.floor((day-1)/7))]}
+
+/* ---------- dữ liệu (Firebase hoặc giả lập) ---------- */
+const MOCK=/[?&]mock=1/.test(location.search);
+let db,auth,me=null;
+const Store=MOCK?mockStore():fbStore();
+function fbStore(){
+  const app=firebase.initializeApp(CFG,'demnhac');auth=app.auth();db=app.firestore();
+  const ready=new Promise(r=>{const off=auth.onAuthStateChanged(u=>{off();r(u)})}).then(u=>u||auth.signInAnonymously().then(c=>c.user));
+  return{
+    ready,
+    pub:()=>ready.then(()=>db.doc('config/pos').get()).then(s=>(s.exists&&s.data().dn)||null),
+    setPub:v=>db.doc('config/pos').update({dn:v}),
+    watch:(id,cb)=>db.doc(COL+'/'+id).onSnapshot(s=>cb(s.exists?s.data():null),e=>{console.warn(e);toast('Không đọc được dữ liệu – đăng nhập lại')}),
+    get:id=>db.doc(COL+'/'+id).get().then(s=>s.exists?s.data():null),
+    getMany:ids=>Promise.all(ids.map(id=>db.doc(COL+'/'+id).get().then(s=>s.exists?s.data():null))),
+    set:(id,d)=>db.doc(COL+'/'+id).set(Object.assign({},d,{at:Date.now(),by:me?me.name:''}),{merge:true}),
+    login:(code,pin)=>fetch(FN+'dangNhap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:code?{code,pin}:{role:'manager',pin}})})
+      .then(r=>r.json().catch(()=>({})).then(j=>{if(!r.ok||j.error||!j.result)throw new Error((j.error&&j.error.message)||'Sai mã hoặc PIN');return j.result}))
+      .then(r=>{if(code&&r.noPin)throw new Error('Bạn chưa có PIN, nhờ quản lý cấp trong Web vận hành.');
+        return auth.signInWithCustomToken(r.token).then(()=>code?db.doc('staff/'+(r.code||code)).get().then(s=>{const d=s.exists?s.data():null;if(!d||d.active===false)throw new Error('Tài khoản đã nghỉ hoặc bị tắt.');return{code:r.code||code,name:d.name||code}}):{code:r.code||'QL',name:r.name||'Quản lý',mgr:1})}),
+    logout:()=>auth.signOut().then(()=>auth.signInAnonymously()),
+    isIn:()=>{const u=auth.currentUser;return !!(u&&!u.isAnonymous)}
+  };
+}
+function mockStore(){
+  const m={};let pub=null;const ws={};
+  const fire=id=>(ws[id]||[]).forEach(cb=>cb(m[id]?JSON.parse(JSON.stringify(m[id])):null));
+  return{ready:Promise.resolve(),pub:()=>Promise.resolve(pub),setPub:v=>{pub=v;return Promise.resolve()},
+    watch:(id,cb)=>{(ws[id]=ws[id]||[]).push(cb);setTimeout(()=>cb(m[id]?JSON.parse(JSON.stringify(m[id])):null),10);return()=>{ws[id]=ws[id].filter(f=>f!==cb)}},
+    get:id=>Promise.resolve(m[id]?JSON.parse(JSON.stringify(m[id])):null),
+    getMany:ids=>Promise.resolve(ids.map(id=>m[id]?JSON.parse(JSON.stringify(m[id])):null)),
+    set:(id,d)=>{m[id]=Object.assign(m[id]||{},JSON.parse(JSON.stringify(d)),{at:Date.now(),by:me?me.name:''});fire(id);return Promise.resolve()},
+    login:(c,p)=>p==='0000'?Promise.reject(new Error('Sai mã hoặc PIN')):Promise.resolve({code:c||'QL',name:c?'Hậu':'Quản lý',mgr:!c}),
+    logout:()=>Promise.resolve(),isIn:()=>!!me};
+}
+
+/* ---------- mẫu (template) ---------- */
+let TPL=null;
+const loadTpl=()=>Store.get('_mau').then(t=>{TPL={segs:(t&&t.segs)||DEF_SEGS,tasks:(t&&t.tasks)||DEF_TASKS};return TPL});
+function newNight(d){return{d,theme:defTheme(d),guest:'',pub:true,note:'',segs:TPL.segs.map(s=>Object.assign({id:uid()},s)),
+  songs:[],tasks:TPL.tasks.map(t=>({id:uid(),n:t.n,who:t.who,due:addD(d,t.off||0),done:false}))}}
+
+/* ================= TRANG KHÁCH ================= */
+function renderPub(dn){
+  const days=nextTues(8);const map={};((dn&&dn.nights)||[]).forEach(n=>map[n.d]=n);
+  if(dn&&dn.intro)$('pIntro').textContent=dn.intro;
+  if(dn&&dn.time)$('pTime').textContent=dn.time;
+  const first=map[days[0]]||{d:days[0],theme:defTheme(days[0])};
+  $('pNext').textContent=fmtD(days[0]);$('pPoster').textContent=first.theme+' · '+fmtD(days[0]);
+  $('pCal').innerHTML=days.map((d,i)=>{const n=map[d]||{theme:defTheme(d)};
+    return `<div class="night${i?'':' next'}"><div class="dt">${esc(fmtD(d))}${i?'':' · đêm tới'}</div><div class="th">${esc(n.theme||'Đêm nhạc Chata')}</div>${n.guest?`<div class="gs">Khách mời: ${esc(n.guest)}</div>`:''}</div>`}).join('');
+}
+function publish(){
+  // gom chủ đề 8 đêm tới lên config/pos.dn để khách xem (không cần đăng nhập)
+  const days=nextTues(8);
+  return Promise.all([Store.getMany(days),Store.get('_gt')]).then(([ns,gt])=>{
+    const nights=days.map((d,i)=>{const n=ns[i];return n&&n.pub===false?null:{d,theme:(n&&n.theme)||defTheme(d),guest:(n&&n.guest)||''}}).filter(Boolean);
+    const v={nights,at:Date.now()};if(gt&&gt.intro)v.intro=gt.intro;if(gt&&gt.time)v.time=gt.time;
+    return Store.setPub(v);
+  }).catch(e=>console.warn('publish',e));
+}
+
+/* ================= KHU QUẢN LÝ ================= */
+let tab='lich',cur=null,curSub='kb',unw=null,night=null;
+function setTab(t){tab=t;cur=null;if(unw){unw();unw=null}document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));draw()}
+$('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setTab(b.dataset.t)});
+function draw(){
+  if(cur)return drawNight();
+  if(tab==='lich')return drawList();
+  if(tab==='mau')return drawTpl();
+  if(tab==='kho')return drawLib();
+  if(tab==='gt')return drawGt();
+}
+function prog(n){const t=(n&&n.tasks)||[];const d=t.filter(x=>x.done).length;return{d,t:t.length,p:t.length?Math.round(d/t.length*100):0}}
+function drawList(){
+  const days=nextTues(8);$('view').innerHTML='<h2>Lịch các đêm</h2><p class="sub">8 tối thứ 3 sắp tới. Bấm vào một đêm để lên kịch bản, bài hát và việc chuẩn bị.</p><div class="ncards" id="nl"><div class="empty">Đang tải…</div></div>';
+  Store.getMany(days).then(ns=>{
+    $('nl').innerHTML=days.map((d,i)=>{const n=ns[i];const p=prog(n);const late=n&&(n.tasks||[]).some(t=>!t.done&&t.due<todayS());
+      const st=!n?'<span class="tag">Chưa lên kịch bản</span>':p.p===100?'<span class="tag ok">Sẵn sàng</span>':late?'<span class="tag warn">Có việc trễ</span>':'<span class="tag">Đang chuẩn bị</span>';
+      return `<button class="nc${i?'':' next'}" data-d="${d}"><div class="dt"><span>${fmtD(d)}${i?'':' · đêm tới'}</span>${st}</div>
+      <div class="th">${esc((n&&n.theme)||defTheme(d))}</div><div class="bar"><i style="width:${p.p}%"></i></div>
+      <div class="pc"><span>Chuẩn bị ${p.d}/${p.t||TPL.tasks.length}</span><span>${n?(n.songs||[]).length+' bài':''}</span></div></button>`}).join('');
+  });
+}
+$('view').addEventListener('click',e=>{
+  const nc=e.target.closest('.nc');if(nc){openNight(nc.dataset.d);return}
+  const a=e.target.closest('[data-a]');if(a)act(a.dataset.a,a.dataset.i,a);
+});
+function openNight(d){
+  cur=d;curSub=curSub||'kb';night=undefined;$('view').innerHTML='<div class="empty">Đang tải…</div>';
+  if(unw)unw();
+  unw=Store.watch(d,n=>{if(!n){const nn=newNight(d);Store.set(d,nn);return}night=n;drawNight()});
+}
+function save(patch,msg){Object.assign(night,patch);drawNight();return Store.set(cur,patch).then(()=>{if(msg)toast(msg);if('theme' in patch||'guest' in patch||'pub' in patch)publish()},e=>{console.warn(e);toast('Chưa lưu được – kiểm tra mạng hoặc đăng nhập lại')})}
+function drawNight(){
+  if(!night)return;const n=night,p=prog(n);
+  const sub=[['kb','Kịch bản'],['bh','Bài hát & lời dẫn ('+(n.songs||[]).length+')'],['cb','Chuẩn bị '+p.d+'/'+p.t],['gc','Thông tin đêm']];
+  let h=`<button class="back" data-a="back">‹ Lịch các đêm</button>
+  <div class="nhead"><div><div class="muted" style="color:var(--mute2)">${fmtD(n.d)} · 19:15–21:15</div><h2>${esc(n.theme)}</h2>${n.guest?`<div class="sub" style="margin:4px 0 0">Khách mời: ${esc(n.guest)}</div>`:''}</div>
+  <div style="min-width:200px"><div class="prog"><div class="bar"><i style="width:${p.p}%"></i></div><b>${p.p}%</b></div></div></div>
+  <div class="stabs">${sub.map(s=>`<button class="chip${curSub===s[0]?' on':''}" data-a="sub" data-i="${s[0]}">${s[1]}</button>`).join('')}</div>`;
+  if(curSub==='kb')h+=segView(n);else if(curSub==='bh')h+=songView(n);else if(curSub==='cb')h+=taskView(n);else h+=infoView(n);
+  $('view').innerHTML=h;
+}
+function segView(n){
+  const segs=(n.segs||[]).slice().sort((a,b)=>a.t.localeCompare(b.t));
+  return `<div class="panel"><div class="nhead"><h3>Các đoạn theo giờ</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" data-a="segAdd">＋ Thêm đoạn</button><button class="btn gh sm" data-a="segTpl">Lấy lại theo mẫu</button></div></div>
+  ${segs.length?segs.map(s=>`<div class="seg"><div class="tm">${esc(s.t)}</div><div><div class="tt">${esc(s.title)}</div><div class="ds">${esc(s.desc)}</div>${s.who?`<div class="wh">👤 ${esc(s.who)}</div>`:''}</div>
+  <div style="display:flex;gap:6px"><button class="ico" title="Sửa" data-a="segEd" data-i="${s.id}">✎</button><button class="ico" title="Xóa" data-a="segDel" data-i="${s.id}">✕</button></div></div>`).join(''):'<div class="empty">Chưa có đoạn nào.</div>'}</div>
+  <div class="panel"><h3>Nguyên tắc chạy chương trình</h3><div class="ds" style="color:#4d3640;font-size:15px">• Chuyển bài: hết bài → kèn sax vào khi tiếng vỗ tay dịu → MC cảm ơn 1 câu → kể chuyện bài kế (30–40 giây) → gọi tên người hát → kèn dừng ở hợp âm chờ, đàn vào bài.<br>• Người hát kế tiếp được gọi chuẩn bị từ giữa bài trước, hỏi tông báo người thổi sax.<br>• Ít hơn 7 khách đăng ký: ban nhạc bù bài yêu cầu. Nhiều hơn 9: ưu tiên người lần đầu, đăng ký sớm.<br>• 21:15 kết thúc. Trễ giờ thì cắt bài yêu cầu trước, giữ lượt khách.</div></div>`;
+}
+function songView(n){
+  const ss=n.songs||[];
+  return `<div class="panel"><div class="nhead"><h3>Danh sách bài</h3><button class="btn sm" data-a="songAdd">＋ Thêm bài</button></div>
+  ${ss.length?ss.map((s,i)=>`<div class="song"><div class="sh"><div><div class="sn">${i+1}. ${esc(s.n)}</div><div class="muted" style="color:var(--mute2);font-size:14px">${esc(s.who||'Ban nhạc')}${s.seg?' · '+esc(s.seg):''}</div></div>
+  <div style="display:flex;gap:6px"><button class="ico" title="Lên" data-a="songUp" data-i="${s.id}">↑</button><button class="ico" title="Sửa" data-a="songEd" data-i="${s.id}">✎</button><button class="ico" title="Xóa" data-a="songDel" data-i="${s.id}">✕</button></div></div>
+  <div class="meta">${s.key?`<span class="tag">Tông ${esc(s.key)}</span>`:'<span class="tag warn">Chưa có tông</span>'}${s.tempo?`<span class="tag">${esc(s.tempo)}</span>`:''}${s.intro?'<span class="tag ok">Có lời dẫn</span>':'<span class="tag warn">Chưa có lời dẫn</span>'}</div>
+  ${s.story?`<div style="font-size:14px;color:#4d3640;margin-bottom:6px">💬 Kỷ niệm: ${esc(s.story)}</div>`:''}
+  ${s.intro?`<div class="intro">${esc(s.intro)}</div>`:''}${s.sax?`<div class="sax">🎷 ${esc(s.sax)}</div>`:''}</div>`).join(''):'<div class="empty">Chưa có bài nào. Thêm các bài ban nhạc sẽ hát; bài khách đăng ký vẫn xem ở trang quầy nhạc.</div>'}</div>`;
+}
+function taskView(n){
+  const ts=(n.tasks||[]).slice().sort((a,b)=>(a.done-b.done)||a.due.localeCompare(b.due));const t0=todayS();
+  return `<div class="panel"><div class="nhead"><h3>Việc chuẩn bị</h3><button class="btn sm" data-a="taskAdd">＋ Thêm việc</button></div>
+  ${ts.length?ts.map(t=>{const late=!t.done&&t.due<t0;return `<div class="task${t.done?' done':''}"><button class="ck" data-a="taskCk" data-i="${t.id}" aria-label="Đánh dấu xong">${t.done?'✓':''}</button>
+  <div><div class="tn">${esc(t.n)}</div><div class="tw">${esc(t.who||'')} · <span class="${late?'late':''}">${late?'Trễ · ':''}hạn ${esc(fmtD(t.due))}</span>${t.done&&t.doneBy?' · ✓ '+esc(t.doneBy):''}</div></div>
+  <div style="display:flex;gap:6px"><button class="ico" title="Sửa" data-a="taskEd" data-i="${t.id}">✎</button><button class="ico" title="Xóa" data-a="taskDel" data-i="${t.id}">✕</button></div></div>`}).join(''):'<div class="empty">Chưa có việc nào.</div>'}</div>`;
+}
+function infoView(n){
+  return `<div class="panel"><h3>Thông tin đêm</h3>
+  <div class="row2"><div><label class="f" for="iTheme">Chủ đề</label><input class="i" id="iTheme" value="${esc(n.theme)}" list="thl"><datalist id="thl">${THEMES.map(t=>`<option value="${esc(t)}">`).join('')}</datalist></div>
+  <div><label class="f" for="iGuest">Khách mời (nếu có)</label><input class="i" id="iGuest" value="${esc(n.guest||'')}"></div></div>
+  <label class="f" for="iNote">Ghi chú nội bộ</label><textarea class="i" id="iNote">${esc(n.note||'')}</textarea>
+  <label class="f" style="display:flex;gap:10px;align-items:center;color:var(--ink2)"><input type="checkbox" id="iPub" ${n.pub===false?'':'checked'} style="width:22px;height:22px"> Hiện đêm này trên trang khách</label>
+  <div class="acts"><button class="btn" data-a="infoSave">Lưu</button></div>
+  <p class="sub" style="margin-top:14px">Lưu lần cuối: ${n.at?new Date(n.at).toLocaleString('vi-VN',{timeZone:TZ}):'–'}${n.by?' · '+esc(n.by):''}</p></div>`;
+}
+
+/* ---------- hộp sửa ---------- */
+function form(title,fields,onOk){
+  const f=$('edForm');
+  f.innerHTML=`<h3>${esc(title)}</h3>${fields.map(x=>`<label class="f" for="e_${x.k}">${esc(x.l)}</label>${x.ta?`<textarea class="i" id="e_${x.k}" rows="${x.ta}" placeholder="${esc(x.ph||'')}">${esc(x.v||'')}</textarea>`:`<input class="i" id="e_${x.k}" type="${x.type||'text'}" value="${esc(x.v||'')}" placeholder="${esc(x.ph||'')}">`}`).join('')}
+  <div class="err" id="eErr"></div><div class="acts"><button type="button" class="btn gh" id="eNo">Hủy</button><button class="btn">Lưu</button></div>`;
+  $('ed').classList.remove('hide');setTimeout(()=>{const i=f.querySelector('input,textarea');i&&i.focus()},30);
+  $('eNo').onclick=()=>$('ed').classList.add('hide');
+  f.onsubmit=e=>{e.preventDefault();const v={};fields.forEach(x=>v[x.k]=$('e_'+x.k).value.trim());const er=onOk(v);if(er){$('eErr').textContent=er;return}$('ed').classList.add('hide')};
+}
+const byId=(arr,id)=>(arr||[]).find(x=>x.id===id);
+function act(a,id,el){
+  const n=night;
+  if(a==='back'){cur=null;if(unw){unw();unw=null}return drawList()}
+  if(a==='sub'){curSub=id;return drawNight()}
+  if(a==='segAdd'||a==='segEd'){const s=a==='segEd'?byId(n.segs,id):{};
+    return form(a==='segAdd'?'Thêm đoạn':'Sửa đoạn',[{k:'t',l:'Giờ bắt đầu',type:'time',v:s.t||'20:00'},{k:'title',l:'Tên đoạn',v:s.title},{k:'desc',l:'Diễn biến',ta:5,v:s.desc},{k:'who',l:'Ai phụ trách',v:s.who}],v=>{
+      if(!v.title)return'Nhập tên đoạn';const segs=(n.segs||[]).slice();if(s.id)Object.assign(byId(segs,s.id),v);else segs.push(Object.assign({id:uid()},v));save({segs},'Đã lưu đoạn')})}
+  if(a==='segDel'){const s=byId(n.segs,id);if(s&&confirmBox('Xóa đoạn “'+s.title+'”?',()=>save({segs:n.segs.filter(x=>x.id!==id)},'Đã xóa')))return}
+  if(a==='segTpl')return confirmBox('Thay các đoạn của đêm này bằng mẫu?',()=>save({segs:TPL.segs.map(s=>Object.assign({id:uid()},s))},'Đã lấy theo mẫu'));
+  if(a==='songAdd'||a==='songEd'){const s=a==='songEd'?byId(n.songs,id):{};
+    return form(a==='songAdd'?'Thêm bài':'Sửa bài',[{k:'n',l:'Tên bài',v:s.n},{k:'who',l:'Người hát',v:s.who,ph:'Ca sĩ A, Ca sĩ B, tên khách…'},{k:'seg',l:'Đoạn',v:s.seg,ph:'VD: Mở màn, Lượt 1, Cao trào'},
+      {k:'key',l:'Tông',v:s.key,ph:'VD: C, Am, Bb'},{k:'tempo',l:'Nhịp',v:s.tempo,ph:'VD: Chậm 70, Vừa, Nhanh'},{k:'story',l:'Kỷ niệm / câu chuyện (nếu có)',ta:2,v:s.story},
+      {k:'intro',l:'Lời dẫn (MC đọc trên nền kèn, 30–40 giây)',ta:5,v:s.intro},{k:'sax',l:'Ghi chú cho kèn sax',ta:2,v:s.sax,ph:'VD: dạo 4 nốt đầu điệp khúc, kết ở G7'}],v=>{
+      if(!v.n)return'Nhập tên bài';const songs=(n.songs||[]).slice();if(s.id)Object.assign(byId(songs,s.id),v);else songs.push(Object.assign({id:uid()},v));save({songs},'Đã lưu bài')})}
+  if(a==='songDel'){const s=byId(n.songs,id);return confirmBox('Xóa bài “'+s.n+'”?',()=>save({songs:n.songs.filter(x=>x.id!==id)},'Đã xóa'))}
+  if(a==='songUp'){const ss=n.songs.slice(),i=ss.findIndex(x=>x.id===id);if(i>0){[ss[i-1],ss[i]]=[ss[i],ss[i-1]];save({songs:ss})}return}
+  if(a==='taskAdd'||a==='taskEd'){const t=a==='taskEd'?byId(n.tasks,id):{due:n.d};
+    return form(a==='taskAdd'?'Thêm việc':'Sửa việc',[{k:'n',l:'Việc cần làm',v:t.n},{k:'who',l:'Người phụ trách',v:t.who},{k:'due',l:'Hạn',type:'date',v:t.due}],v=>{
+      if(!v.n)return'Nhập việc cần làm';if(!/^\d{4}-\d\d-\d\d$/.test(v.due))return'Chọn ngày hạn';const tasks=(n.tasks||[]).slice();if(t.id)Object.assign(byId(tasks,t.id),v);else tasks.push(Object.assign({id:uid(),done:false},v));save({tasks},'Đã lưu việc')})}
+  if(a==='taskCk'){const tasks=n.tasks.map(t=>t.id===id?Object.assign({},t,{done:!t.done,doneBy:!t.done?me.name:'',doneAt:!t.done?Date.now():0}):t);return save({tasks})}
+  if(a==='taskDel'){const t=byId(n.tasks,id);return confirmBox('Xóa việc “'+t.n+'”?',()=>save({tasks:n.tasks.filter(x=>x.id!==id)},'Đã xóa'))}
+  if(a==='infoSave')return save({theme:$('iTheme').value.trim()||defTheme(n.d),guest:$('iGuest').value.trim(),note:$('iNote').value,pub:$('iPub').checked},'Đã lưu thông tin đêm');
+  if(a&&a.startsWith('tpl'))return tplAct(a,id);
+  if(a&&a.startsWith('lib'))return libAct(a,id);
+  if(a==='gtSave'){const v={intro:$('gIntro').value.trim(),time:$('gTime').value.trim()};return Store.set('_gt',v).then(publish).then(()=>toast('Đã cập nhật trang khách'))}
+}
+function confirmBox(msg,yes){
+  const f=$('edForm');f.innerHTML=`<h3>${esc(msg)}</h3><div class="acts"><button type="button" class="btn gh" id="cNo">Không</button><button class="btn" id="cYes">Đồng ý</button></div>`;
+  $('ed').classList.remove('hide');$('cNo').onclick=()=>$('ed').classList.add('hide');f.onsubmit=e=>{e.preventDefault();$('ed').classList.add('hide');yes()};return true;
+}
+
+/* ---------- mẫu ---------- */
+function drawTpl(){
+  const segs=TPL.segs.slice().sort((a,b)=>a.t.localeCompare(b.t));
+  $('view').innerHTML=`<h2>Mẫu kịch bản & việc chuẩn bị</h2><p class="sub">Đêm mới tạo sẽ lấy theo mẫu này. Sửa mẫu không đổi các đêm đã tạo.</p>
+  <div class="panel"><div class="nhead"><h3>Các đoạn</h3><button class="btn sm" data-a="tplSegAdd">＋ Thêm đoạn</button></div>
+  ${segs.map((s,i)=>`<div class="seg"><div class="tm">${esc(s.t)}</div><div><div class="tt">${esc(s.title)}</div><div class="ds">${esc(s.desc)}</div>${s.who?`<div class="wh">👤 ${esc(s.who)}</div>`:''}</div>
+  <div style="display:flex;gap:6px"><button class="ico" data-a="tplSegEd" data-i="${TPL.segs.indexOf(s)}">✎</button><button class="ico" data-a="tplSegDel" data-i="${TPL.segs.indexOf(s)}">✕</button></div></div>`).join('')}</div>
+  <div class="panel"><div class="nhead"><h3>Việc chuẩn bị mỗi đêm</h3><button class="btn sm" data-a="tplTaskAdd">＋ Thêm việc</button></div>
+  ${TPL.tasks.slice().sort((a,b)=>a.off-b.off).map(t=>{const i=TPL.tasks.indexOf(t);return `<div class="task"><span class="tag">${t.off?DOW[(2+t.off+70)%7]:'Thứ 3'}</span><div><div class="tn">${esc(t.n)}</div><div class="tw">${esc(t.who||'')} · ${t.off?(-t.off)+' ngày trước đêm nhạc':'ngày diễn'}</div></div>
+  <div style="display:flex;gap:6px"><button class="ico" data-a="tplTaskEd" data-i="${i}">✎</button><button class="ico" data-a="tplTaskDel" data-i="${i}">✕</button></div></div>`}).join('')}</div>`;
+}
+function saveTpl(msg){return Store.set('_mau',{segs:TPL.segs,tasks:TPL.tasks}).then(()=>{toast(msg);drawTpl()})}
+function tplAct(a,i){
+  i=+i;
+  if(a==='tplSegAdd'||a==='tplSegEd'){const s=a==='tplSegEd'?TPL.segs[i]:{};
+    return form('Đoạn trong mẫu',[{k:'t',l:'Giờ bắt đầu',type:'time',v:s.t||'20:00'},{k:'title',l:'Tên đoạn',v:s.title},{k:'desc',l:'Diễn biến',ta:5,v:s.desc},{k:'who',l:'Ai phụ trách',v:s.who}],v=>{
+      if(!v.title)return'Nhập tên đoạn';TPL.segs=TPL.segs.slice();if(a==='tplSegEd')TPL.segs[i]=v;else TPL.segs.push(v);saveTpl('Đã lưu mẫu')})}
+  if(a==='tplSegDel')return confirmBox('Xóa đoạn này khỏi mẫu?',()=>{TPL.segs=TPL.segs.filter((_,k)=>k!==i);saveTpl('Đã xóa')});
+  if(a==='tplTaskAdd'||a==='tplTaskEd'){const t=a==='tplTaskEd'?TPL.tasks[i]:{off:-1};
+    return form('Việc trong mẫu',[{k:'n',l:'Việc cần làm',v:t.n},{k:'who',l:'Người phụ trách',v:t.who},{k:'off',l:'Làm trước đêm nhạc mấy ngày (0 = ngày diễn)',type:'number',v:String(-(t.off||0))}],v=>{
+      if(!v.n)return'Nhập việc cần làm';const off=-Math.max(0,Math.min(13,parseInt(v.off||'0',10)||0));const nt={n:v.n,who:v.who,off};TPL.tasks=TPL.tasks.slice();if(a==='tplTaskEd')TPL.tasks[i]=nt;else TPL.tasks.push(nt);saveTpl('Đã lưu mẫu')})}
+  if(a==='tplTaskDel')return confirmBox('Xóa việc này khỏi mẫu?',()=>{TPL.tasks=TPL.tasks.filter((_,k)=>k!==i);saveTpl('Đã xóa')});
+}
+
+/* ---------- kho lời dẫn ---------- */
+let LIB=null;
+const LIB0=[
+ {song:'Nàng thơ',text:'Ai trong chúng ta cũng từng có một người như thế. Người làm mình bỗng muốn viết vài dòng, muốn hát một câu, muốn tốt hơn một chút mỗi ngày. Có thể người ấy đang ngồi cạnh bạn tối nay. Cũng có thể, chỉ còn lại trong ký ức. Nhưng dù ở đâu, người ấy vẫn là nàng thơ của riêng mình. Mời bạn [tên] với ca khúc Nàng thơ.',demo:'https://claude.ai/artifact/E3YKPXHsJph3Vkq2iBAk3k'},
+ {song:'Tháng tư là lời nói dối của em',text:'Có những câu nói, mình chỉ dám nói vào một ngày mà ai cũng nghĩ là đùa. Như ngày đầu tháng tư. Một lời thật lòng có thể được cười xòa cho qua. Còn một lời tạm biệt, mình lại mong đó chỉ là đùa thôi. Ở đây có ai từng mong một điều gì đó, chỉ là lời nói dối không? Tối nay, mình cùng nghe lại cảm giác ấy. Mời bạn [tên] với ca khúc Tháng tư là lời nói dối của em.',demo:'https://claude.ai/artifact/JkmAUodeP5UMNZXPoMx3J7'}
+];
+function drawLib(){
+  Store.get('_kho').then(k=>{LIB=(k&&k.items)||LIB0;
+    $('view').innerHTML=`<h2>Kho lời dẫn</h2><p class="sub">Lời dẫn đã viết, dùng lại cho những đêm sau. Khung 3 câu: hình ảnh ai cũng có → cảm xúc của bài → mời người hát. Không bịa chuyện về người thật, không trích lời bài hát.</p>
+    <div class="panel"><div class="nhead"><h3>${LIB.length} lời dẫn</h3><button class="btn sm" data-a="libAdd">＋ Thêm lời dẫn</button></div>
+    ${LIB.map((x,i)=>`<div class="lib"><div class="sh" style="display:flex;justify-content:space-between;gap:10px"><b>${esc(x.song)}</b><div style="display:flex;gap:6px"><button class="ico" data-a="libEd" data-i="${i}">✎</button><button class="ico" data-a="libDel" data-i="${i}">✕</button></div></div>
+    <div class="song"><div class="intro">${esc(x.text)}</div>${x.demo?`<div style="margin-top:6px"><a href="${esc(x.demo)}" target="_blank" rel="noopener" style="color:var(--pink)">▶ Nghe thử bản kèn + giọng đọc</a></div>`:''}</div></div>`).join('')}</div>`});
+}
+function libAct(a,i){
+  i=+i;const sv=m=>Store.set('_kho',{items:LIB}).then(()=>{toast(m);drawLib()});
+  if(a==='libAdd'||a==='libEd'){const x=a==='libEd'?LIB[i]:{};
+    return form('Lời dẫn',[{k:'song',l:'Tên bài',v:x.song},{k:'text',l:'Lời dẫn',ta:7,v:x.text},{k:'demo',l:'Link nghe thử (nếu có)',v:x.demo}],v=>{
+      if(!v.song||!v.text)return'Nhập tên bài và lời dẫn';if(v.demo&&!/^https:\/\//.test(v.demo))return'Link phải bắt đầu bằng https://';LIB=LIB.slice();if(a==='libEd')LIB[i]=v;else LIB.unshift(v);sv('Đã lưu lời dẫn')})}
+  if(a==='libDel')return confirmBox('Xóa lời dẫn “'+LIB[i].song+'”?',()=>{LIB=LIB.filter((_,k)=>k!==i);sv('Đã xóa')});
+}
+
+/* ---------- trang giới thiệu ---------- */
+function drawGt(){
+  Store.get('_gt').then(g=>{g=g||{};
+    $('view').innerHTML=`<h2>Trang giới thiệu cho khách</h2><p class="sub">Khách xem không cần đăng nhập. Lịch và chủ đề lấy từ “Lịch các đêm” (đêm có bật “Hiện trên trang khách”).</p>
+    <div class="panel"><label class="f" for="gIntro">Câu giới thiệu đầu trang</label><textarea class="i" id="gIntro" rows="3" placeholder="Để trống = dùng câu mặc định">${esc(g.intro||'')}</textarea>
+    <label class="f" for="gTime">Giờ diễn</label><input class="i" id="gTime" value="${esc(g.time||'19:15 – 21:15')}">
+    <div class="acts"><button class="btn gh" data-a="gtView" type="button">Xem trang khách</button><button class="btn" data-a="gtSave">Lưu & cập nhật trang khách</button></div></div>`});
+}
+
+/* ---------- đăng nhập / chuyển màn ---------- */
+function showApp(){document.body.classList.add('in');$('who').textContent='👤 '+me.name;loadTpl().then(()=>{publish();setTab(tab)})}
+function showPub(){document.body.classList.remove('in');Store.pub().then(renderPub).catch(()=>renderPub(null))}
+$('openLogin').onclick=()=>{if(me)return showApp();$('login').classList.remove('hide');$('lErr').textContent='';$('lCode').focus()};
+$('lCancel').onclick=()=>$('login').classList.add('hide');
+$('loginForm').onsubmit=e=>{e.preventDefault();const c=$('lCode').value.trim().toUpperCase(),p=$('lPin').value.trim();if(!p){$('lErr').textContent='Nhập PIN';return}
+  $('lGo').disabled=true;$('lErr').textContent='';
+  Store.ready.then(()=>Store.login(c,p)).then(u=>{me=u;try{localStorage.setItem(SES,JSON.stringify(u))}catch(e){}$('login').classList.add('hide');$('lPin').value='';showApp()},
+    er=>{$('lErr').textContent=er.message||'Không đăng nhập được'}).finally(()=>$('lGo').disabled=false)};
+$('logout').onclick=()=>{me=null;try{localStorage.removeItem(SES)}catch(e){}Store.logout().then(showPub)};
+$('viewPub').onclick=showPub;
+document.addEventListener('click',e=>{if(e.target.closest('[data-a="gtView"]'))showPub()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('ed').classList.add('hide');$('login').classList.add('hide')}});
+
+Store.ready.then(()=>{
+  try{const s=JSON.parse(localStorage.getItem(SES)||'null');if(s&&Store.isIn()){me=s}}catch(e){}
+  showPub();if(me&&location.hash==='#ql')showApp();
+}).catch(()=>renderPub(null));
+}
+</script>
+</body>
+</html>
